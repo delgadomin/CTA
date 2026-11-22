@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#171a19" />
+    <meta name="description" content="Cáceres Criminal: prototipo técnico de una ciudad abierta en el navegador." />
+    <title>Cáceres Criminal — prototipo</title>
+  </head>
+  <body>
+    <main id="game" aria-label="Prototipo 3D de Cáceres Criminal">
+      <canvas id="world" aria-label="Escena 3D de diagnóstico"></canvas>
+      <section class="debug-panel" aria-live="polite">
+        <p class="eyebrow">CÁCERES CRIMINAL <span>·</span> PROTOTIPO TÉCNICO</p>
+        <h1>Un mundo por construir</h1>
+        <p class="status"><span class="status-dot"></span> Motor gráfico inicializado</p>
+        <dl>
+          <div><dt>FPS</dt><dd id="fps">--</dd></div>
+          <div><dt>Draw calls</dt><dd id="draw-calls">--</dd></div>
+          <div><dt>Triángulos</dt><dd id="triangles">--</dd></div>
+        </dl>
+        <p class="hint">Pulsa <kbd>F3</kbd> para ocultar el diagnóstico</p>
+      </section>
+      <p class="phase-tag">FASE 0 <span>/</span> ESCENA DE DIAGNÓSTICO</p>
+    </main>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
