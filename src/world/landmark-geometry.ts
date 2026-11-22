@@ -196,4 +196,3 @@ export function addLandmarkGeometry(writer: BuildingGeometryWriter, features: re
     addTowerMerlons(writer, feature, terrain, lod);
   }
 }
-
