@@ -1,6 +1,6 @@
 # Progreso del proyecto
 
-## Fase actual: 2 - Pipeline de datos geográficos
+## Fase actual: 3 - Terreno y chunks
 
 ### Hecho
 - Repositorio inicializado desde `hhg-ptm/CTA`.
@@ -25,13 +25,21 @@
 - `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`
 - Despliegue en GitHub Actions a Pages tras habilitar Pages desde Actions en la configuración del repositorio.
 
-## Fase 2 - Pipeline de datos geográficos
+## Fase 2 - Pipeline de datos geográficos (completada)
 
 ### Plan
-- Consultar fuentes geográficas verificables para definir el rectángulo de `cc-monumental` y documentar procedencia/licencia.
-- Añadir configuración de región, descarga con reintentos y caché local, normalización y proyección EPSG:25829.
-- Generar chunks/manifest deterministas, informe de fidelidad, revisión de marcas e inspector 2D sin llamadas de red durante el juego.
-- Probar con fixtures sin red y verificar hashes/estabilidad; después ejecutar lint, typecheck, pruebas y build.
+- Definir `cc-monumental` alrededor de Plaza Mayor en EPSG:25829 y documentar OpenStreetMap ODbL y CNIG MDT05 CC BY 4.0.
+- Implementar consulta Overpass con caché local, conversión de geometría, proyección UTM, normalización de categorías, filtro de marcas y empaquetado CTA2 comprimido.
+- Añadir lector local de ESRI ASCII Grid, manifiesto con hashes, informes de fidelidad/marcas e inspector 2D.
+- Añadir fixtures locales para proyección, muestreo de elevación, normalización y sustitución de nombres comerciales.
+- Descargar y validar el extracto OSM (4.549 elementos) y una malla regional MDT05 servida por WCS oficial IGN/CNIG en EPSG:25829.
+- Generar 16 chunks deterministas con cabecera CTA2, hashes SHA-256, malla de terreno cuantizada y geometría normalizada.
+- Validación local: lint, typecheck, 11 pruebas y build pasan; cero muestras de terreno ausentes.
 
-### Pendiente
-- Implementar la fase geográfica; no fabricar datos cuando falte una fuente verificable.
+Los datos fuente se guardan en caché local ignorada por git; el juego usa los chunks estáticos y no consulta servicios remotos. El informe registra edificios sin altura y comercios por revisar, sin inventar alturas ni conservar nombres reales de negocios.
+
+### Cómo probar la fase 2
+- `npm run data:build` usa cachés locales; descarga automáticamente el extracto OSM o MDT05 que falte.
+- `npm run data:build:fresh` vuelve a descargar ambas fuentes oficiales.
+- `npm run data:elevation` renueva solo la tesela MDT05 acotada de la región.
+- Abrir `/debug/map.html` con el servidor Vite después de generar el manifest.

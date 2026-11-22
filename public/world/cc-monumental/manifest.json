@@ -1,0 +1,280 @@
+{
+  "schemaVersion": 1,
+  "region": "cc-monumental",
+  "crs": "EPSG:25829",
+  "origin": {
+    "lat": 39.474414,
+    "lon": -6.371556,
+    "reference": "Plaza Mayor de Cáceres"
+  },
+  "extentMeters": 1000,
+  "chunkMeters": 256,
+  "bounds": {
+    "south": 39.46978196661142,
+    "west": -6.377532216230207,
+    "north": 39.479045782003126,
+    "east": -6.36557903378407
+  },
+  "source": {
+    "osm": {
+      "attribution": "© OpenStreetMap contributors",
+      "license": "ODbL 1.0",
+      "url": "https://www.openstreetmap.org/copyright",
+      "retrievedAt": "2026-11-22T12:32:59Z",
+      "bytes": 2289545,
+      "sha256": "7295e8e28dd84de8083b274d550f5c93295f8692616596434a472c92b2b81ca9"
+    },
+    "terrain": {
+      "attribution": "Obra derivada de MDT05-cob1 2008-2015 CC-BY 4.0 scne.es",
+      "product": "IGN/CNIG PNOA MDT05 1ª cobertura (Elevacion25830_5), servido por WCS 2.0.1",
+      "url": "https://servicios.idee.es/wcs-inspire/mdt?service=WCS&version=2.0.1&request=GetCoverage&coverageId=Elevacion25830_5&subsettingCrs=http%3A%2F%2Fwww.opengis.net%2Fdef%2Fcrs%2FEPSG%2F0%2F25829&outputCrs=http%3A%2F%2Fwww.opengis.net%2Fdef%2Fcrs%2FEPSG%2F0%2F25829&format=application%2Fasc&subset=x%28725577.2276890515%2C726601.2276890515%29&subset=y%284372211.106076299%2C4373235.106076299%29",
+      "license": "CC BY 4.0 scne.es",
+      "retrievedAt": "2026-11-22T12:44:49.328Z",
+      "outputCrs": "EPSG:25829",
+      "sha256": "408000206307ec3414ea234b62fe9a6d91fe1a59a5f6e396fac18960e1ad4e86",
+      "grid": {
+        "cols": 194,
+        "rows": 189,
+        "width": 5.278350515464,
+        "height": 5.41798941799,
+        "left": 725577.2276890515,
+        "bottom": 4372211.106076299,
+        "min": 383.035,
+        "max": 472
+      }
+    }
+  },
+  "counts": {
+    "roads": 689,
+    "buildings": 2847,
+    "surfaces": 132,
+    "props": 622,
+    "pois": 377
+  },
+  "chunks": [
+    {
+      "id": "-2_-2",
+      "path": "-2_-2.bin",
+      "bounds": {
+        "minX": -512,
+        "minZ": -512,
+        "maxX": -256,
+        "maxZ": -256
+      },
+      "bytes": 34979,
+      "sha256": "758646178bc83039562b35672202d1d5dcdad6e3ea9da69610c9bf4dedb128b3",
+      "featureCount": 250,
+      "missingTerrainSamples": 0
+    },
+    {
+      "id": "-1_-2",
+      "path": "-1_-2.bin",
+      "bounds": {
+        "minX": -256,
+        "minZ": -512,
+        "maxX": 0,
+        "maxZ": -256
+      },
+      "bytes": 38622,
+      "sha256": "07ccea24612ab5f5f20364e987eee6536cdb106cc290915e0eb5fdebb5ee5f01",
+      "featureCount": 247,
+      "missingTerrainSamples": 0
+    },
+    {
+      "id": "0_-2",
+      "path": "0_-2.bin",
+      "bounds": {
+        "minX": 0,
+        "minZ": -512,
+        "maxX": 256,
+        "maxZ": -256
+      },
+      "bytes": 56065,
+      "sha256": "8c98f310adb976fb71987a0b5b3ef1e2927ad7dac78ba7d910c30b41adbd177e",
+      "featureCount": 308,
+      "missingTerrainSamples": 0
+    },
+    {
+      "id": "1_-2",
+      "path": "1_-2.bin",
+      "bounds": {
+        "minX": 256,
+        "minZ": -512,
+        "maxX": 512,
+        "maxZ": -256
+      },
+      "bytes": 25240,
+      "sha256": "c22cd17b3acce394c0c75a58e87f34b4c7879ceb114adce3e8af9822ced956ea",
+      "featureCount": 42,
+      "missingTerrainSamples": 0
+    },
+    {
+      "id": "-2_-1",
+      "path": "-2_-1.bin",
+      "bounds": {
+        "minX": -512,
+        "minZ": -256,
+        "maxX": -256,
+        "maxZ": 0
+      },
+      "bytes": 45258,
+      "sha256": "d0551401bc4b806eab95a8b60ed5601609f98f8635134a5fe0cbdd84d8d98422",
+      "featureCount": 306,
+      "missingTerrainSamples": 0
+    },
+    {
+      "id": "-1_-1",
+      "path": "-1_-1.bin",
+      "bounds": {
+        "minX": -256,
+        "minZ": -256,
+        "maxX": 0,
+        "maxZ": 0
+      },
+      "bytes": 67983,
+      "sha256": "59d23186d9520a960b648749bc369ce47bf932e4305f76da263d56d16d94f2fe",
+      "featureCount": 449,
+      "missingTerrainSamples": 0
+    },
+    {
+      "id": "0_-1",
+      "path": "0_-1.bin",
+      "bounds": {
+        "minX": 0,
+        "minZ": -256,
+        "maxX": 256,
+        "maxZ": 0
+      },
+      "bytes": 65266,
+      "sha256": "51d9b4f29bdc0c0114ced527bdbb27e3de3428b167c9712c99ff5333ae9db2b6",
+      "featureCount": 359,
+      "missingTerrainSamples": 0
+    },
+    {
+      "id": "1_-1",
+      "path": "1_-1.bin",
+      "bounds": {
+        "minX": 256,
+        "minZ": -256,
+        "maxX": 512,
+        "maxZ": 0
+      },
+      "bytes": 43184,
+      "sha256": "50c8446c75b9e08ee4dec0f1537206a61003fdb18f1dce9dd3eea85557b87557",
+      "featureCount": 240,
+      "missingTerrainSamples": 0
+    },
+    {
+      "id": "-2_0",
+      "path": "-2_0.bin",
+      "bounds": {
+        "minX": -512,
+        "minZ": 0,
+        "maxX": -256,
+        "maxZ": 256
+      },
+      "bytes": 59782,
+      "sha256": "1458c15ebebd1bf327ed835960b3a50911ae895b1cc52de54d3c043fb904bad8",
+      "featureCount": 430,
+      "missingTerrainSamples": 0
+    },
+    {
+      "id": "-1_0",
+      "path": "-1_0.bin",
+      "bounds": {
+        "minX": -256,
+        "minZ": 0,
+        "maxX": 0,
+        "maxZ": 256
+      },
+      "bytes": 59239,
+      "sha256": "93cd7fab08e67c9213dc91bc72c9a025fd2f2d5a4b2d2f09edbfbb2ebdac9347",
+      "featureCount": 406,
+      "missingTerrainSamples": 0
+    },
+    {
+      "id": "0_0",
+      "path": "0_0.bin",
+      "bounds": {
+        "minX": 0,
+        "minZ": 0,
+        "maxX": 256,
+        "maxZ": 256
+      },
+      "bytes": 77436,
+      "sha256": "d00e0e2dc456a508e3286fdb08acbe7e75cf8bbcf273f0611ccc674599bc2070",
+      "featureCount": 489,
+      "missingTerrainSamples": 0
+    },
+    {
+      "id": "1_0",
+      "path": "1_0.bin",
+      "bounds": {
+        "minX": 256,
+        "minZ": 0,
+        "maxX": 512,
+        "maxZ": 256
+      },
+      "bytes": 48993,
+      "sha256": "56b01fbca190e8088246326edeebe6dc07496767419de610b19f2666d519011b",
+      "featureCount": 281,
+      "missingTerrainSamples": 0
+    },
+    {
+      "id": "-2_1",
+      "path": "-2_1.bin",
+      "bounds": {
+        "minX": -512,
+        "minZ": 256,
+        "maxX": -256,
+        "maxZ": 512
+      },
+      "bytes": 55001,
+      "sha256": "68b703ae99c9a64b6f7ca61d5b085ecaec2ed0fb81f5253af33079eea0c23dfc",
+      "featureCount": 413,
+      "missingTerrainSamples": 0
+    },
+    {
+      "id": "-1_1",
+      "path": "-1_1.bin",
+      "bounds": {
+        "minX": -256,
+        "minZ": 256,
+        "maxX": 0,
+        "maxZ": 512
+      },
+      "bytes": 50283,
+      "sha256": "c0cb994d5fd07b70fbf3b0eff8dbfa3e5629e05e02435f228d3d2dea0755313d",
+      "featureCount": 331,
+      "missingTerrainSamples": 0
+    },
+    {
+      "id": "0_1",
+      "path": "0_1.bin",
+      "bounds": {
+        "minX": 0,
+        "minZ": 256,
+        "maxX": 256,
+        "maxZ": 512
+      },
+      "bytes": 54646,
+      "sha256": "da65cb1eee8eb686f774ae68bb35e4e88bc6fb4e34be3e03071e40f600cacfaa",
+      "featureCount": 351,
+      "missingTerrainSamples": 0
+    },
+    {
+      "id": "1_1",
+      "path": "1_1.bin",
+      "bounds": {
+        "minX": 256,
+        "minZ": 256,
+        "maxX": 512,
+        "maxZ": 512
+      },
+      "bytes": 44725,
+      "sha256": "93300a31cb533dc7fc11a843dd2e6d3c107dbdc8dfe3ac1c280aabd1e4d50b97",
+      "featureCount": 248,
+      "missingTerrainSamples": 0
+    }
+  ]
+}

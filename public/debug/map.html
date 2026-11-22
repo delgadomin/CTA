@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#191f1b" />
+    <title>Inspector de datos — Cáceres Criminal</title>
+    <style>
+      :root { color-scheme: dark; font-family: "Segoe UI", sans-serif; background: #191f1b; color: #f4f1e7; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-width: 320px; }
+      header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 22px; border-bottom: 1px solid #3a433b; }
+      h1 { margin: 0; font-size: 18px; font-weight: 600; }
+      header p { margin: 4px 0 0; color: #aab5a9; font-size: 12px; }
+      a { color: #e5bd7e; font-size: 12px; }
+      #canvas { display: block; width: 100vw; height: calc(100vh - 76px); touch-action: none; }
+      #status { position: fixed; left: 22px; bottom: 18px; padding: 8px 11px; color: #d6ded5; background: #191f1b; border: 1px solid #3a433b; font-size: 12px; }
+      .legend { display: flex; gap: 13px; margin-top: 6px; color: #aab5a9; font-size: 11px; }
+      .legend span::before { display: inline-block; width: 8px; height: 8px; margin-right: 5px; content: ""; background: var(--color); }
+      @media (max-width: 560px) { header { align-items: flex-start; flex-direction: column; gap: 8px; } #canvas { height: calc(100vh - 102px); } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Inspector geográfico · Ciudad Monumental</h1>
+        <p>Calles, edificios, terreno y elementos OSM procesados · © OpenStreetMap contributors · terreno derivado MDT05 CNIG · arrastra para desplazar, rueda para acercar</p>
+        <div class="legend"><span style="--color:#596d57">superficies</span><span style="--color:#578da0">agua</span><span style="--color:#cbb998">edificios</span><span style="--color:#d66a49">calles</span><span style="--color:#c39a58">sendas</span><span style="--color:#8baa73">mobiliario</span><span style="--color:#e5bd7e">puntos</span></div>
+      </div>
+      <a id="osm-link" href="https://www.openstreetmap.org/" target="_blank" rel="noreferrer">Comparar con OpenStreetMap ↗</a>
+    </header>
+    <canvas id="canvas" aria-label="Vista 2D de la geometría generada"></canvas>
+    <output id="status">Esperando datos generados en public/world/cc-monumental/</output>
+    <script type="module">
+      const canvas = document.querySelector('#canvas');
+      const context = canvas.getContext('2d');
+      const status = document.querySelector('#status');
+      const colors = { road: '#d66a49', pedestrian: '#c39a58', building: '#cbb998', water: '#578da0', surface: '#596d57', prop: '#8baa73', poi: '#e5bd7e' };
+      const world = [];
+      const view = { scale: 0.55, offsetX: 0, offsetY: 0 };
+      let manifest;
+      let dragging = false;
+      let dragX = 0;
+      let dragY = 0;
+
+      function resize() {
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(canvas.clientWidth * ratio);
+        canvas.height = Math.round(canvas.clientHeight * ratio);
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        draw();
+      }
+
+      function screen(point) {
+        return [canvas.clientWidth / 2 + point[0] * view.scale + view.offsetX, canvas.clientHeight / 2 - point[1] * view.scale + view.offsetY];
+      }
+
+      function drawFeature(feature) {
+        if (feature.points?.length) {
+          const type = feature.featureType === 'road' ? 'road' : feature.featureType === 'pedestrian' ? 'pedestrian' : feature.featureType === 'building' ? 'building' : feature.featureType === 'surface' && ['water', 'waterway'].includes(feature.kind) ? 'water' : 'surface';
+          context.strokeStyle = colors[type];
+          context.fillStyle = type === 'building' ? colors.building : type === 'water' ? colors.water : type === 'surface' ? colors.surface : 'transparent';
+          context.lineWidth = type === 'road' ? 2.2 : type === 'pedestrian' ? 1.5 : 0.7;
+          context.beginPath();
+          feature.points.forEach((point, index) => {
+            const [x, y] = screen(point);
+            if (index === 0) context.moveTo(x, y); else context.lineTo(x, y);
+          });
+          if (type === 'building' || type === 'surface' || type === 'water') { context.closePath(); context.fill(); }
+          context.stroke();
+          return;
+        }
+        if (feature.position) {
+          const [x, y] = screen(feature.position);
+          context.fillStyle = feature.featureType === 'poi' ? colors.poi : colors.prop;
+          context.beginPath();
+          context.arc(x, y, feature.featureType === 'poi' ? 3.4 : 2, 0, Math.PI * 2);
+          context.fill();
+        }
+      }
+
+      function draw() {
+        if (!context) return;
+        context.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+        context.fillStyle = '#596d57';
+        context.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+        context.strokeStyle = 'rgb(255 255 255 / 20%)';
+        context.lineWidth = 1;
+        const half = (manifest?.extentMeters ?? 1000) / 2;
+        const topLeft = screen([-half, half]);
+        const bottomRight = screen([half, -half]);
+        context.strokeRect(topLeft[0], topLeft[1], bottomRight[0] - topLeft[0], bottomRight[1] - topLeft[1]);
+        for (const feature of world) drawFeature(feature);
+      }
+
+      async function loadChunk(path) {
+        const response = await fetch(`../world/cc-monumental/${path}`);
+        if (!response.ok) throw new Error(`No se pudo leer el chunk ${path}.`);
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        if (new TextDecoder().decode(bytes.subarray(0, 4)) !== 'CTA2') throw new Error(`Formato desconocido en ${path}.`);
+        const stream = new Blob([bytes.subarray(12)]).stream().pipeThrough(new DecompressionStream('deflate'));
+        const payload = await new Response(stream).json();
+        world.push(...payload.features);
+      }
+
+      try {
+        const response = await fetch('../world/cc-monumental/manifest.json');
+        if (!response.ok) throw new Error('Aún no existe el manifest. Ejecuta npm run data:build después de preparar OSM y MDT05.');
+        manifest = await response.json();
+        document.querySelector('#osm-link').href = `https://www.openstreetmap.org/?mlat=${manifest.origin.lat}&mlon=${manifest.origin.lon}#map=16/${manifest.origin.lat}/${manifest.origin.lon}`;
+        await Promise.all(manifest.chunks.map((chunk) => loadChunk(chunk.path)));
+        status.textContent = `${manifest.counts.roads} calles · ${manifest.counts.buildings} edificios · ${world.length} elementos · EPSG:25829`;
+        resize();
+      } catch (error) {
+        status.textContent = error instanceof Error ? error.message : 'No se pudieron cargar los datos.';
+      }
+
+      canvas.addEventListener('wheel', (event) => { event.preventDefault(); view.scale = Math.max(0.18, Math.min(2.4, view.scale * (event.deltaY < 0 ? 1.12 : 0.89))); draw(); }, { passive: false });
+      canvas.addEventListener('pointerdown', (event) => { dragging = true; dragX = event.clientX; dragY = event.clientY; canvas.setPointerCapture(event.pointerId); });
+      canvas.addEventListener('pointermove', (event) => { if (!dragging) return; view.offsetX += event.clientX - dragX; view.offsetY += event.clientY - dragY; dragX = event.clientX; dragY = event.clientY; draw(); });
+      canvas.addEventListener('pointerup', () => { dragging = false; });
+      window.addEventListener('resize', resize);
+    </script>
+  </body>
+</html>

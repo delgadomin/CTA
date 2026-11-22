@@ -3,5 +3,5 @@ dist/
 playwright-report/
 test-results/
 coverage/
-data/raw/*
+data/raw/**
 !data/raw/.gitkeep

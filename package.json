@@ -10,7 +10,11 @@
     "lint": "eslint .",
     "typecheck": "tsc -b --pretty",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "data:build": "node tools/data-build.mjs",
+    "data:build:fresh": "node tools/data-build.mjs --fresh",
+    "data:elevation": "node tools/fetch-elevation.mjs",
+    "data:verify": "node tools/verify-world.mjs"
   },
   "dependencies": {
     "three": "^0.180.0"
