@@ -20,7 +20,7 @@ export async function createPhysicsWorld(): Promise<World> {
 
 export class TerrainColliders {
   private readonly world: World;
-  private readonly colliders = new Map<string, ReturnType<World['createCollider']>>();
+  private readonly colliders = new Map<string, ReturnType<World['createCollider']>[]>();
 
   constructor(world: World) {
     this.world = world;
@@ -34,18 +34,32 @@ export class TerrainColliders {
       toRapierColumnMajor(heights, samples),
       new RAPIER.Vector3(chunkMeters, 1, chunkMeters),
     ).setTranslation((bounds.minX + bounds.maxX) / 2, 0, (bounds.minZ + bounds.maxZ) / 2).setFriction(0.85);
-    this.colliders.set(id, this.world.createCollider(descriptor));
+    this.addCollider(id, this.world.createCollider(descriptor));
+  }
+
+  addRoads(id: string, centerX: number, centerZ: number, positions: Float32Array, indices: Uint32Array): void {
+    if (positions.length < 9 || indices.length < 3) return;
+    const descriptor = RAPIER.ColliderDesc.trimesh(positions, indices)
+      .setTranslation(centerX, 0, centerZ)
+      .setFriction(0.9);
+    this.addCollider(id, this.world.createCollider(descriptor));
+  }
+
+  private addCollider(id: string, collider: ReturnType<World['createCollider']>): void {
+    const current = this.colliders.get(id) ?? [];
+    current.push(collider);
+    this.colliders.set(id, current);
   }
 
   remove(id: string): void {
-    const collider = this.colliders.get(id);
-    if (!collider) return;
-    this.world.removeCollider(collider, true);
+    const colliders = this.colliders.get(id);
+    if (!colliders) return;
+    for (const collider of colliders) this.world.removeCollider(collider, true);
     this.colliders.delete(id);
   }
 
   get count(): number {
-    return this.colliders.size;
+    return [...this.colliders.values()].reduce((sum, colliders) => sum + colliders.length, 0);
   }
 
   clear(): void {

@@ -10,7 +10,7 @@ const MAX_OSM_BYTES = 64 * 1024 * 1024;
 
 export function makeOverpassQuery(bounds) {
   const box = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
-  return `[out:json][timeout:120];(way[highway](${box});way[building](${box});way[landuse](${box});way[natural](${box});way[waterway](${box});way[leisure](${box});way[historic](${box});way[shop](${box});way[craft](${box});way[office](${box});way[amenity](${box});way[tourism](${box});node[shop](${box});node[craft](${box});node[office](${box});node[amenity](${box});node[tourism](${box});node[historic](${box});node[memorial](${box});node[natural=tree](${box});node[highway~"traffic_signals|street_lamp|crossing"](${box}););out body geom;`;
+  return `[out:json][timeout:120];(way[highway](${box});way[building](${box});way[landuse](${box});way[natural](${box});way[waterway](${box});way[leisure](${box});way[historic](${box});way[shop](${box});way[craft](${box});way[office](${box});way[amenity](${box});way[tourism](${box});node[shop](${box});node[craft](${box});node[office](${box});node[amenity](${box});node[tourism](${box});node[historic](${box});node[memorial](${box});node[natural=tree](${box});node[highway~"traffic_signals|street_lamp|crossing|stop|give_way"](${box});node[traffic_sign](${box}););out body geom;`;
 }
 
 async function fetchWithRetry(query, fetchImpl = fetch) {
@@ -79,4 +79,13 @@ export async function getOsmData(regionName, region, { fresh = false, fetchImpl 
     elementCount: data.elements.length,
   }, null, 2)}\n`, 'utf8');
   return data;
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const regionName = process.argv.find((argument) => argument.startsWith('--region='))?.split('=')[1] ?? 'cc-monumental';
+  const config = JSON.parse(await readFile(path.join(ROOT, 'tools/config/regions.json'), 'utf8'));
+  const region = config[regionName];
+  if (!region) throw new Error(`Unknown region: ${regionName}`);
+  const data = await getOsmData(regionName, region, { fresh: process.argv.includes('--fresh') });
+  console.info(`Cached ${data.elements.length} OSM elements for ${regionName}.`);
 }

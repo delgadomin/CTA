@@ -1,4 +1,4 @@
-export type GameAction = 'moveForward' | 'moveBack' | 'moveLeft' | 'moveRight' | 'lookToggle';
+export type GameAction = 'moveForward' | 'moveBack' | 'moveLeft' | 'moveRight' | 'sprint' | 'lookToggle';
 export type InputBindings = Readonly<Record<GameAction, string>>;
 
 export const DEFAULT_BINDINGS: InputBindings = {
@@ -6,6 +6,7 @@ export const DEFAULT_BINDINGS: InputBindings = {
   moveBack: 'KeyS',
   moveLeft: 'KeyA',
   moveRight: 'KeyD',
+  sprint: 'ShiftLeft',
   lookToggle: 'Tab',
 };
 
@@ -51,6 +52,7 @@ export class InputManager {
   }
 
   isPressed(action: GameAction): boolean {
+    if (action === 'sprint' && (this.pressed.has('ShiftLeft') || this.pressed.has('ShiftRight'))) return true;
     const code = this.bindingMap.get(action);
     return code !== undefined && this.pressed.has(code);
   }

@@ -64,7 +64,8 @@ export class CameraRig {
 
     this.input.movement(this.axes);
     this.direction.set(this.axes.horizontal, 0, -this.axes.vertical).applyAxisAngle(this.upAxis, this.yaw);
-    this.camera.position.addScaledVector(this.direction, this.moveSpeed * deltaSeconds);
+    const speedMultiplier = this.input.isPressed('sprint') ? 5 : 1;
+    this.camera.position.addScaledVector(this.direction, this.moveSpeed * speedMultiplier * deltaSeconds);
   }
 
   private syncRotation(): void {

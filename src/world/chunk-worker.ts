@@ -1,4 +1,5 @@
 import { buildTerrainChunk } from './mesh-builder';
+import { buildRoadChunk } from './road-builder';
 import type { BuiltTerrainChunk, RawTerrainChunk } from './types';
 
 interface BuildRequest {
@@ -30,14 +31,24 @@ async function decodeChunk(request: BuildRequest): Promise<BuiltTerrainChunk> {
   if (payload.byteLength !== payloadLength) throw new Error(`Chunk ${request.id} payload size does not match its header.`);
   const raw = JSON.parse(new TextDecoder().decode(payload)) as RawTerrainChunk;
   if (raw.id !== request.id) throw new Error(`Chunk identity mismatch: ${request.id}`);
-  return buildTerrainChunk(raw);
+  const terrain = buildTerrainChunk(raw);
+  return { ...terrain, roads: buildRoadChunk(raw.features, terrain, raw.bounds) };
 }
 
 function transferables(result: BuiltTerrainChunk): Transferable[] {
-  return [
+  const terrainBuffers: Transferable[] = [
     result.heights.buffer,
     ...result.levels.flatMap((level) => [level.positions.buffer, level.normals.buffer, level.colors.buffer, level.indices.buffer]),
   ];
+  const roads = result.roads;
+  if (!roads) return terrainBuffers;
+  const roadBuffers: Transferable[] = [
+    ...roads.surfaces.flatMap((surface) => [surface.positions.buffer, surface.normals.buffer, surface.colors.buffer, surface.uvs.buffer, surface.indices.buffer]),
+    roads.markings.positions.buffer, roads.markings.normals.buffer, roads.markings.colors.buffer, roads.markings.uvs.buffer, roads.markings.indices.buffer,
+    roads.colliderPositions.buffer, roads.colliderIndices.buffer,
+    ...roads.props.flatMap((prop) => [prop.positions.buffer, prop.headings.buffer]),
+  ];
+  return [...terrainBuffers, ...roadBuffers];
 }
 
 scope.onmessage = (event): void => {

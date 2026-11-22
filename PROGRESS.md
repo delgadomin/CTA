@@ -1,6 +1,6 @@
 # Progreso del proyecto
 
-## Fase actual: 3 - Terreno y chunks (completada)
+## Fase actual: 5 - Edificios
 
 ### Hecho
 - Repositorio inicializado desde `hhg-ptm/CTA`.
@@ -72,14 +72,38 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - Prueba unitaria: la geometría del borde usa muestras de elevación y se eleva 0,15 m para evitar z-fighting.
 - F4 alterna el panel y los bordes; la geometría de borde se eleva 0,15 m siguiendo el MDT05 para evitar z-fighting.
 
-## Fase 4 - Red viaria (pendiente)
+## Fase 4 - Red viaria (completada)
 
 ### Plan
 - Ampliar la normalización OSM con nodos compartidos, sentidos, carriles, superficie, aceras, rampas, puentes, túneles, escaleras y nodos de cruce/señal; actualizar la consulta y refrescar solo la fuente OSM oficial necesaria.
 - Generar un grafo navegable estable con nodos, segmentos por carril y conexiones de intersección, listo para IA futura; guardar hash y atribución.
-- Añadir geometría fusionada por chunk para calzadas, aceras, bordillos, intersecciones, pasos peatonales y escaleras, ajustada a elevación MDT05 y con materiales repetibles por superficie.
+- Añadir geometría fusionada por chunk para calzadas, aceras, bordillos, intersecciones, pasos peatonales, flechas, marcas de stop/ceda y escaleras, ajustada a elevación MDT05 y con materiales repetibles por superficie.
 - Añadir señalización vertical y semáforos instanciados en nodos OSM; crear colisionadores viales simplificados solo cerca del jugador.
 - Integrar los datos y mallas en el worker/streaming y mostrar la ruta Plaza Mayor → Arco de la Estrella → Plaza de San Jorge en el inspector.
 - Validar posición/topología contra OSM, ausencia de parpadeo entre superficies, presupuesto de draw calls, lint, typecheck, tests y build; registrar límites de datos ausentes sin inventarlos.
 
-Alcance excluido en esta fase: vehículos y tráfico de IA.
+### Hecho
+- Consulta Overpass actualizada y renovada: 4.561 elementos; se incluyen 156 nodos de cruce, 10 semáforos y 6 cedas el paso.
+- Las 689 vías conservan nodos, sentidos, carriles, anchos/superficies conocidos, aceras y atributos de puentes/túneles/escaleras.
+- `road-network.json` generado con 2.433 nodos, 2.744 segmentos, 569 intersecciones y 4.144 conexiones; manifiesto guarda tamaño y SHA-256.
+- Mallas de calzada por superficie con UV repetibles y desgaste de vértice estable, aceras/bordillos inferidos, áreas peatonales rellenas, parches de intersección, curvas limitadas a 0,3 m, pasos zebra, carriles, flechas y líneas de stop/ceda.
+- Puentes con perfil de tablero visual y rampas; túneles conservan la cota MDT05 mientras se difiere la excavación del terreno. Pasos `highway=steps` tienen peldaños individuales.
+- Semáforos, cedas, stops y farolas se dibujan como lotes instanciados; los colliders triangulares de calles se activan junto a la altura del terreno en chunks cercanos.
+- El inspector 2D resalta el trayecto de 403 m Plaza Mayor → Arco de la Estrella → Plaza de San Jorge desde elementos OSM confirmados; el manifiesto y el verificador validan tamaño, SHA-256 y referencias del grafo/ruta.
+
+### Validación de fase 4
+- `eslint .`, `tsc -b --pretty`, 26 pruebas Vitest y build Vite pasan; el build gzip de 887,8 kB permanece debajo del máximo de 25 MB.
+- Recorrido automatizado de 5 minutos con carrera de QA: 16/16 chunks descargados; 5–16 activos; 75 FPS; máximo 53 llamadas de dibujo y 186.927 triángulos, frente a límites de 300 y 600.000.
+- Máximo de frame durante streaming: 15,7 ms; cero intervalos >16 ms. Memoria geométrica estimada: 9–28,7 MiB, termina en 14,6 MiB con 8 chunks activos. Dos intervalos iniciales (20,5 y 93,4 ms) ocurrieron antes del primer chunk mientras arrancaba Rapier.
+- El inspector confirma 689 calles, 2.847 edificios, 5.156 elementos y la ruta de referencia de 403 m; el grafo conserva one-way para futura IA y la ruta peatonal admite ambos sentidos.
+
+### Cómo validar la fase 4
+- `npm run data:build` reconstruye los chunks y el grafo desde cachés locales.
+- `node tools/verify-world.mjs` comprueba integridad/hash, topología, ruta y nombres bloqueados.
+- `npm run dev` y abrir `/debug/map.html` para comparar el trayecto con OpenStreetMap.
+- `node tools/verify-streaming.mjs` hace el barrido de cinco minutos; falla si no visita las 16 teselas, rebasa 300 llamadas/600.000 triángulos, supera 16 ms durante streaming o no carga la ruta del inspector.
+- Alcance excluido de la fase 4: vehículos y tráfico de IA.
+
+## Fase actual: 5 - Edificios
+
+Pendiente de implementación. Antes de empezar, se extraerá del PDF la especificación y los criterios de aceptación de esta fase y se presentará el plan de archivos/pasos.

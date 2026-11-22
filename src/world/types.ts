@@ -19,15 +19,50 @@ export interface WorldManifest {
   readonly region: string;
   readonly extentMeters: number;
   readonly chunkMeters: number;
+  readonly roadNetwork?: {
+    readonly path: string;
+    readonly bytes: number;
+    readonly sha256: string;
+    readonly nodes: number;
+    readonly segments: number;
+    readonly connections: number;
+  };
+  readonly walkRoute?: {
+    readonly path: string;
+    readonly bytes: number;
+    readonly sha256: string;
+    readonly lengthMeters: number;
+    readonly segments: number;
+  };
   readonly chunks: readonly ChunkEntry[];
 }
 
 export interface ChunkFeature {
   readonly featureType: 'road' | 'pedestrian' | 'building' | 'surface' | 'prop' | 'poi';
+  readonly id?: string;
   readonly kind?: string;
   readonly value?: string;
   readonly surface?: string;
+  readonly highway?: string;
+  readonly nodeIds?: readonly number[];
+  readonly lanes?: number | null;
+  readonly maxSpeedKph?: number | null;
+  readonly widthMeters?: number | null;
+  readonly oneway?: -1 | 0 | 1;
+  readonly sidewalk?: string;
+  readonly sidewalkLeft?: string;
+  readonly sidewalkRight?: string;
+  readonly turnLanes?: string;
+  readonly bridge?: boolean;
+  readonly tunnel?: boolean;
+  readonly layer?: number;
+  readonly incline?: string;
+  readonly junction?: string;
+  readonly area?: boolean;
+  readonly directionDegrees?: number | null;
+  readonly trafficSign?: string;
   readonly points?: readonly (readonly [number, number])[];
+  readonly position?: readonly [number, number];
 }
 
 export interface RawTerrainChunk {
@@ -52,6 +87,32 @@ export interface TerrainLodData {
   readonly indices: Uint32Array;
 }
 
+export type RoadSurfaceStyle = 'asphalt' | 'stone' | 'concrete' | 'earth' | 'marking';
+
+export interface RoadSurfaceGeometry {
+  readonly style: RoadSurfaceStyle;
+  readonly positions: Float32Array;
+  readonly normals: Float32Array;
+  readonly colors: Float32Array;
+  readonly uvs: Float32Array;
+  readonly indices: Uint32Array;
+}
+
+export interface RoadPropBatch {
+  readonly kind: 'traffic_signals' | 'stop' | 'give_way' | 'street_lamp';
+  readonly positions: Float32Array;
+  readonly headings: Float32Array;
+}
+
+export interface BuiltRoadChunk {
+  readonly surfaces: readonly RoadSurfaceGeometry[];
+  readonly markings: RoadSurfaceGeometry;
+  readonly colliderPositions: Float32Array;
+  readonly colliderIndices: Uint32Array;
+  readonly props: readonly RoadPropBatch[];
+  readonly triangleCount: number;
+}
+
 export interface BuiltTerrainChunk {
   readonly id: string;
   readonly bounds: ProjectedBounds;
@@ -61,9 +122,53 @@ export interface BuiltTerrainChunk {
   readonly minimumHeight: number;
   readonly maximumHeight: number;
   readonly levels: readonly TerrainLodData[];
+  roads?: BuiltRoadChunk;
 }
 
 export interface TerrainChunkEvents {
   chunkLoaded: { readonly id: string; readonly lod: number; readonly memoryBytes: number };
   chunkUnloaded: { readonly id: string };
+}
+
+export interface RoadNetworkNode {
+  readonly id: string;
+  readonly position: readonly [number, number];
+  readonly segmentIds: readonly string[];
+  readonly intersection: boolean;
+}
+
+export interface RoadNetworkSegment {
+  readonly id: string;
+  readonly wayId: string;
+  readonly fromNode: string;
+  readonly toNode: string;
+  readonly lengthMeters: number;
+  readonly highway: string;
+  readonly surface: string;
+  readonly laneCount: number;
+  readonly forwardLanes: number;
+  readonly reverseLanes: number;
+  readonly oneWay: -1 | 0 | 1;
+  readonly forwardAllowed: boolean;
+  readonly reverseAllowed: boolean;
+  readonly walkable: boolean;
+  readonly maxSpeedKph: number | null;
+  readonly bridge: boolean;
+  readonly tunnel: boolean;
+}
+
+export interface RoadNetworkConnection {
+  readonly intersectionNode: string;
+  readonly fromSegment: string;
+  readonly toSegment: string;
+  readonly maneuver: 'left' | 'right' | 'straight' | 'uturn';
+}
+
+export interface RoadNetwork {
+  readonly schemaVersion: number;
+  readonly crs: 'EPSG:25829';
+  readonly nodes: readonly RoadNetworkNode[];
+  readonly segments: readonly RoadNetworkSegment[];
+  readonly connections: readonly RoadNetworkConnection[];
+  readonly intersections: readonly string[];
 }

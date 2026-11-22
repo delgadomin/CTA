@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import type { World } from '@dimforge/rapier3d-compat';
 import { EventBus } from '../engine/event-bus';
 import { buildChunkBorderGeometry } from './chunk-debug';
+import { sampleHeight } from './road-geometry';
+import { RoadRenderer } from './road-renderer';
 import { TerrainColliders } from './terrain-physics';
 import type { BuiltTerrainChunk, ChunkEntry, TerrainChunkEvents, TerrainLodData, WorldManifest } from './types';
 
@@ -14,6 +16,7 @@ interface ChunkRecord {
   lod: number;
   result?: BuiltTerrainChunk;
   meshes?: THREE.Mesh[];
+  decorationMeshes?: THREE.Mesh[];
   debugBorder?: THREE.LineSegments;
   memoryBytes: number;
   debugMemoryBytes: number;
@@ -64,6 +67,7 @@ function byteSize(meshes: readonly THREE.Mesh[]): number {
     const geometry = mesh.geometry;
     for (const attribute of Object.values(geometry.attributes)) total += attribute.array.byteLength;
     if (geometry.index) total += geometry.index.array.byteLength;
+    if (mesh instanceof THREE.InstancedMesh) total += mesh.instanceMatrix.array.byteLength;
   }
   return total;
 }
@@ -75,6 +79,7 @@ export class ChunkManager {
   private readonly world: World;
   private readonly colliders: TerrainColliders;
   private readonly material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.94, side: THREE.DoubleSide });
+  private readonly roadRenderer = new RoadRenderer();
   private readonly debugBorderMaterial = new THREE.LineBasicMaterial({ color: '#f06d4e', depthTest: true, toneMapped: false });
   private readonly records = new Map<string, ChunkRecord>();
   private readonly completed: CompletedChunk[] = [];
@@ -107,6 +112,10 @@ export class ChunkManager {
     this.manifest = manifest;
   }
 
+  prepareRenderer(renderer: THREE.WebGLRenderer, camera: THREE.Camera): Promise<void> {
+    return this.roadRenderer.prepare(renderer, this.scene, camera, this.material);
+  }
+
   update(camera: THREE.Camera, now: number): void {
     if (this.closed || !this.manifest) return;
     this.processCompleted();
@@ -137,8 +146,7 @@ export class ChunkManager {
       this.setLod(record, this.lodForDistance(distance));
       const needsCollider = distance <= colliderRadius;
       if (needsCollider && !record.hasCollider && record.result) {
-        this.colliders.add(entry.id, entry.bounds, this.manifest.chunkMeters, record.result.heights, record.result.samples);
-        record.hasCollider = true;
+        this.addColliders(record);
       } else if (!needsCollider && record.hasCollider) {
         this.colliders.remove(entry.id);
         record.hasCollider = false;
@@ -174,6 +182,16 @@ export class ChunkManager {
     return this.errorCount;
   }
 
+  groundHeightAt(x: number, z: number): number | undefined {
+    for (const record of this.records.values()) {
+      if (record.state !== 'loaded' || !record.result) continue;
+      const bounds = record.entry.bounds;
+      if (x < bounds.minX || x > bounds.maxX || z < bounds.minZ || z > bounds.maxZ) continue;
+      return sampleHeight(record.result, x, z);
+    }
+    return undefined;
+  }
+
   setDebugBorders(visible: boolean): void {
     if (this.closed || this.debugBordersVisible === visible) return;
     this.debugBordersVisible = visible;
@@ -192,6 +210,7 @@ export class ChunkManager {
     this.records.clear();
     this.colliders.clear();
     this.material.dispose();
+    this.roadRenderer.dispose();
     this.debugBorderMaterial.dispose();
     this.events.clear();
     this.world.free();
@@ -235,9 +254,16 @@ export class ChunkManager {
       });
       const activeMesh = meshes[record.lod];
       if (activeMesh) this.scene.add(activeMesh);
+      const decorationMeshes = this.roadRenderer.createMeshes(item.result.roads, centerX, centerZ);
+      for (const mesh of decorationMeshes) this.scene.add(mesh);
       record.result = item.result;
       record.meshes = meshes;
-      record.memoryBytes = byteSize(meshes) + item.result.heights.byteLength;
+      record.decorationMeshes = decorationMeshes;
+      const roadBuffers = item.result.roads;
+      const roadDataBytes = roadBuffers
+        ? roadBuffers.colliderPositions.byteLength + roadBuffers.colliderIndices.byteLength + roadBuffers.props.reduce((sum, prop) => sum + prop.positions.byteLength + prop.headings.byteLength, 0)
+        : 0;
+      record.memoryBytes = byteSize([...meshes, ...decorationMeshes]) + item.result.heights.byteLength + roadDataBytes;
       record.state = 'loaded';
       this.memoryBytes += record.memoryBytes;
       this.addDebugBorder(record);
@@ -249,10 +275,17 @@ export class ChunkManager {
 
   private syncCollider(record: ChunkRecord): void {
     if (!record.result || !this.manifest) return;
-    if (record.distance <= this.manifest.chunkMeters * 0.75 && !record.hasCollider) {
-      this.colliders.add(record.entry.id, record.entry.bounds, this.manifest.chunkMeters, record.result.heights, record.result.samples);
-      record.hasCollider = true;
-    }
+    if (record.distance <= this.manifest.chunkMeters * 0.75 && !record.hasCollider) this.addColliders(record);
+  }
+
+  private addColliders(record: ChunkRecord): void {
+    if (!record.result || !this.manifest || record.hasCollider) return;
+    this.colliders.add(record.entry.id, record.entry.bounds, this.manifest.chunkMeters, record.result.heights, record.result.samples);
+    const centerX = (record.entry.bounds.minX + record.entry.bounds.maxX) / 2;
+    const centerZ = (record.entry.bounds.minZ + record.entry.bounds.maxZ) / 2;
+    const roads = record.result.roads;
+    if (roads) this.colliders.addRoads(record.entry.id, centerX, centerZ, roads.colliderPositions, roads.colliderIndices);
+    record.hasCollider = true;
   }
 
   private addDebugBorder(record: ChunkRecord): void {
@@ -328,6 +361,12 @@ export class ChunkManager {
         mesh.geometry.dispose();
       }
       this.memoryBytes = Math.max(0, this.memoryBytes - record.memoryBytes);
+    }
+    if (record.decorationMeshes) {
+      for (const mesh of record.decorationMeshes) {
+        this.scene.remove(mesh);
+        mesh.geometry.dispose();
+      }
     }
     if (emit && record.state === 'loaded') this.events.emit('chunkUnloaded', { id: record.entry.id });
   }

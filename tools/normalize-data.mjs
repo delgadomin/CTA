@@ -1,6 +1,6 @@
 import { projectEtrs89Utm29, projectedRegionBounds } from './projection.mjs';
 
-const PEDESTRIAN_HIGHWAYS = new Set(['footway', 'pedestrian', 'steps', 'path', 'bridleway']);
+const PEDESTRIAN_HIGHWAYS = new Set(['footway', 'pedestrian', 'steps', 'ladder', 'path', 'bridleway']);
 const POI_KEYS = ['shop', 'craft', 'office', 'amenity', 'tourism', 'leisure'];
 const AMENITY_TYPES = new Set(['restaurant', 'cafe', 'bar', 'pub', 'nightclub', 'bank', 'fuel', 'pharmacy', 'hospital', 'school', 'university', 'police', 'fire_station', 'place_of_worship', 'toilets', 'bench', 'shelter', 'waste_basket', 'parking']);
 const NONCOMMERCIAL_AMENITIES = new Set(['hospital', 'school', 'university', 'police', 'fire_station', 'place_of_worship', 'toilets', 'bench', 'shelter', 'waste_basket', 'parking']);
@@ -101,18 +101,30 @@ export function normalizeOsm(osm, regionDefinition, brandBlocklist, elevation) {
       const points = element.geometry.map((point) => projectPoint(point, region));
       const bounds = featureBounds(points);
       if (tags.highway) {
+        const rawOneWay = tags.oneway ?? 'no';
+        const oneWay = ['yes', '1', 'true'].includes(rawOneWay) ? 1 : rawOneWay === '-1' ? -1 : 0;
         const record = {
           id: `w${element.id}`,
           featureType: PEDESTRIAN_HIGHWAYS.has(tags.highway) ? 'pedestrian' : 'road',
           kind: PEDESTRIAN_HIGHWAYS.has(tags.highway) ? 'pedestrian' : 'road',
           highway: tags.highway,
+          nodeIds: Array.isArray(element.nodes) ? element.nodes : [],
           name: tags.name ?? '',
           lanes: Number.parseInt(tags.lanes ?? '', 10) || null,
           maxSpeedKph: Number.parseFloat(tags.maxspeed ?? '') || null,
+          widthMeters: Number.parseFloat(String(tags.width ?? '').replace(',', '.')) || null,
+          oneway: oneWay,
+          sidewalk: tags.sidewalk ?? 'unknown',
+          sidewalkLeft: tags['sidewalk:left'] ?? 'unknown',
+          sidewalkRight: tags['sidewalk:right'] ?? 'unknown',
+          turnLanes: tags['turn:lanes'] ?? '',
           surface: tags.surface ?? 'unknown',
-          bridge: tags.bridge === 'yes',
-          tunnel: tags.tunnel === 'yes',
+          bridge: Boolean(tags.bridge && tags.bridge !== 'no'),
+          tunnel: Boolean(tags.tunnel && tags.tunnel !== 'no'),
           layer: Number.parseInt(tags.layer ?? '0', 10) || 0,
+          incline: tags.incline ?? '',
+          junction: tags.junction ?? '',
+          area: tags.area === 'yes',
           points,
           bounds,
         };
@@ -149,9 +161,16 @@ export function normalizeOsm(osm, regionDefinition, brandBlocklist, elevation) {
     }
     if (element.type === 'node' && Number.isFinite(element.lon) && Number.isFinite(element.lat)) {
       const propTag = PROP_TAGS.find((key) => tags[key] && (key !== 'natural' || tags[key] === 'tree'));
-      if (propTag && (tags.natural === 'tree' || ['bench', 'shelter', 'waste_basket'].includes(tags.amenity) || ['street_lamp', 'traffic_signals', 'crossing'].includes(tags.highway))) {
+      if ((propTag && (tags.natural === 'tree' || ['bench', 'shelter', 'waste_basket'].includes(tags.amenity) || ['street_lamp', 'traffic_signals', 'crossing', 'stop', 'give_way'].includes(tags.highway))) || tags.traffic_sign) {
         const point = projectPoint(element, region);
-        props.push({ id: `n${element.id}`, featureType: 'prop', kind: tags.natural === 'tree' ? 'tree' : tags.amenity ?? tags.highway, position: point });
+        props.push({
+          id: `n${element.id}`,
+          featureType: 'prop',
+          kind: tags.natural === 'tree' ? 'tree' : tags.amenity ?? tags.highway ?? 'traffic_sign',
+          position: point,
+          directionDegrees: Number.parseFloat(tags.direction ?? '') || null,
+          trafficSign: tags.traffic_sign ?? '',
+        });
         continue;
       }
       appendPoi(element, tags, element, undefined, region, brandBlocklist, brandReport, pois);

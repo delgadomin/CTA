@@ -19,6 +19,8 @@ const fpsLabel = requiredElement<HTMLElement>('#fps');
 const frameLabel = requiredElement<HTMLElement>('#frame-time');
 const chunksLabel = requiredElement<HTMLElement>('#chunks');
 const collidersLabel = requiredElement<HTMLElement>('#colliders');
+const drawCallsLabel = requiredElement<HTMLElement>('#draw-calls');
+const trianglesLabel = requiredElement<HTMLElement>('#triangles');
 const memoryLabel = requiredElement<HTMLElement>('#memory');
 const statusLabel = requiredElement<HTMLElement>('#world-status');
 const quality = QUALITY_PRESETS.medium;
@@ -33,9 +35,9 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color('#a9c2c4');
 scene.fog = new THREE.Fog('#a9c2c4', quality.viewDistance * 0.45, quality.viewDistance);
 const camera = new THREE.PerspectiveCamera(54, window.innerWidth / window.innerHeight, 0.5, quality.viewDistance + 50);
-camera.position.set(0, 570, 270);
+camera.position.set(0, 570, 72);
 const input = new InputManager(canvas);
-const cameraRig = new CameraRig(camera, input, 64, 0.002, 0, -0.58);
+const cameraRig = new CameraRig(camera, input, 5.2, 0.002, 2.07, -0.12);
 const logger = new Logger('world', 'info');
 scene.add(new THREE.HemisphereLight('#e7eff0', '#475447', 2.25));
 const sun = new THREE.DirectionalLight('#fff0d2', 3.0);
@@ -54,8 +56,10 @@ function updateDebug(timestamp: number): void {
   if (!chunks || timestamp - lastStatsUpdate < 250) return;
   chunksLabel.textContent = `${chunks.loadedCount} cargados · ${chunks.pendingCount} en cola · ${chunks.failures} errores`;
   collidersLabel.textContent = String(chunks.colliderCount);
+  drawCallsLabel.textContent = String(renderer.info.render.calls);
+  trianglesLabel.textContent = renderer.info.render.triangles.toLocaleString('es-ES');
   memoryLabel.textContent = `≈ ${chunks.memoryMiB.toFixed(1)} MiB`;
-  statusLabel.textContent = chunks.loadedCount > 0 ? 'Terreno MDT05 en streaming' : 'Preparando terreno oficial…';
+  statusLabel.textContent = chunks.loadedCount > 0 ? 'Calles y terreno MDT05 en streaming' : 'Preparando la red vial oficial…';
   lastStatsUpdate = timestamp;
 }
 
@@ -67,6 +71,8 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
   cameraRig.update(frameSeconds);
   camera.position.x = THREE.MathUtils.clamp(camera.position.x, -500, 500);
   camera.position.z = THREE.MathUtils.clamp(camera.position.z, -500, 500);
+  const groundHeight = chunks?.groundHeightAt(camera.position.x, camera.position.z);
+  if (groundHeight !== undefined) camera.position.y = groundHeight + 1.7;
   chunks?.update(camera, timestamp);
   renderer.render(scene, camera);
   frameCount += 1;
@@ -110,8 +116,9 @@ async function initializeWorld(): Promise<void> {
   chunks.events.on('chunkLoaded', ({ id, lod }) => logger.debug('Terrain chunk loaded', { id, lod }));
   chunks.events.on('chunkUnloaded', ({ id }) => logger.debug('Terrain chunk unloaded', { id }));
   await chunks.initialize();
+  await chunks.prepareRenderer(renderer, camera);
   chunks.setDebugBorders(showDebug);
-  statusLabel.textContent = 'Terreno listo · WASD desplaza · clic captura el ratón';
+  statusLabel.textContent = 'Ciudad lista · WASD camina · clic captura el ratón';
   logger.info('World streaming initialized', { region: 'cc-monumental', stepHz: 60, lods: 3 });
 }
 

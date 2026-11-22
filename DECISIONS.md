@@ -29,3 +29,15 @@
 - Rapier 0.12 espera el número de celdas por eje (`samples - 1`) y una matriz column-major de `samples * samples`; la prueba integrada crea un collider real para evitar que una incompatibilidad de dimensiones llegue al navegador.
 - La validación automatizada de cinco minutos con el overlay F4 activo muestra frames de streaming de hasta 14,7 ms, cero intervalos >16 ms y buffers geométricos estimados de 6,9–16,5 MiB; la fase de inicialización previa al primer chunk se registra aparte.
 - Los bordes de depuración F4 siguen la elevación muestreada de cada perímetro y se elevan 0,15 m sobre la malla; sus buffers cuentan en la estimación de memoria mientras el overlay está visible.
+
+# Fase 4 - red viaria
+
+- Se conserva un grafo derivado de way/node OSM: cada segmento guarda carriles, sentido vehicular, superficie, puente/túnel y si el tipo de vía es peatonal. La ruta a pie trata ambos sentidos como transitables (salvo autopistas) y no cambia las restricciones de dirección del grafo para futura IA de vehículos.
+- Ancho de calzada: `width=*` en metros si existe; después `lanes * 3,1 m`; por último una tabla de defaults por `highway`. Los defaults y el ancho inferido son aproximaciones visuales y no se escriben de vuelta a OSM.
+- Para vías urbanas anchas sin `sidewalk=*`, se muestran aceras inferidas a ambos lados; las etiquetas explícitas `sidewalk`, `sidewalk:left/right` mandan. Estas aceras solo representan geometría y no se consideran atributos cartográficos confirmados.
+- Las calzadas, bordillos y aceras siguen la altura bilineal MDT05 y se levantan 5,5 cm, 9 cm adicionales para acera y 3,5 cm para bordillo para evitar z-fighting. Las curvas usan fillets con desviación limitada a 0,3 m.
+- OSM no aporta una altura de tablero fiable en estos puentes; la vista usa un perfil de rampa con elevación máxima 1,8 m y pendiente máxima aproximada 12 %. Los túneles conservan la cota del terreno más 7 cm para mantener continuidad peatonal; la excavación, bóveda y perforación de heightfields quedan pendientes de una fase de volumen de terreno.
+- Señales y semáforos se instancian por kind y chunk. Las colisiones de vía usan malla triangular por chunk y solo se activan a menos de 192 m; las cotas elevadas de puente se incluyen en esa malla.
+- Los mapas repetibles de asfalto, piedra, hormigón y tierra se generan desde Canvas en tiempo de ejecución; no se descargan texturas externas. El desgaste de vértice usa una semilla espacial estable para evitar costuras entre los segmentos de cada vía.
+- La ruta peatonal de referencia se calcula con los hitos OSM Plaza Mayor (`w62237623`), Arco de la Estrella (`n419385562`) y Plaza de San Jorge (`w35883265`). El inspector presenta las conexiones y distancias de ajuste para comparar con el mapa fuente.
+- Las conexiones topológicas cubren giros por nodos compartidos; la descarga actual no consulta relaciones OSM `type=restriction`, de modo que las restricciones de giro señalizadas no están aún modeladas.

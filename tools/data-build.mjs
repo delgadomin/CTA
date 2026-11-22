@@ -7,6 +7,8 @@ import { loadAsciiElevation } from './elevation.mjs';
 import { fetchElevation } from './fetch-elevation.mjs';
 import { getOsmData } from './fetch-osm.mjs';
 import { normalizeOsm, resolveRegion } from './normalize-data.mjs';
+import { buildRoadNetwork } from './road-network.mjs';
+import { buildWalkRoute } from './walk-route.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const regionName = process.argv.find((argument) => argument.startsWith('--region='))?.split('=')[1] ?? 'cc-monumental';
@@ -50,6 +52,8 @@ const elevation = await loadAsciiElevation(elevationPath, resolvedRegion.origin,
 const brandBlocklist = JSON.parse(await readFile(path.join(ROOT, 'tools/brand-blocklist.json'), 'utf8'));
 const region = { ...regionDefinition, lon: regionDefinition.origin.lon, lat: regionDefinition.origin.lat };
 const data = normalizeOsm(osm, region, brandBlocklist, elevation);
+const roadNetwork = buildRoadNetwork(data.roads);
+const walkRoute = regionName === 'cc-monumental' ? buildWalkRoute(osm, roadNetwork, regionDefinition.origin) : undefined;
 const elevationMetadata = JSON.parse(await readFile(path.join(ROOT, 'data/raw/elevation', `${regionName}.meta.json`), 'utf8'));
 if (data.issues.missingTerrainSamples === data.chunks.length * regionDefinition.heightGrid.samples ** 2) {
   throw new Error('The selected MDT05 file contains no usable height samples for this region.');
@@ -57,6 +61,21 @@ if (data.issues.missingTerrainSamples === data.chunks.length * regionDefinition.
 
 const destination = path.join(ROOT, 'public/world', regionName);
 await mkdir(destination, { recursive: true });
+const roadNetworkBytes = Buffer.from(`${JSON.stringify(roadNetwork)}\n`, 'utf8');
+const roadNetworkPath = path.join(destination, 'road-network.json');
+await writeFile(roadNetworkPath, roadNetworkBytes);
+let walkRouteMetadata;
+if (walkRoute) {
+  const routeBytes = Buffer.from(`${JSON.stringify(walkRoute)}\n`, 'utf8');
+  await writeFile(path.join(destination, 'walk-route.json'), routeBytes);
+  walkRouteMetadata = {
+    path: 'walk-route.json',
+    bytes: routeBytes.length,
+    sha256: createHash('sha256').update(routeBytes).digest('hex'),
+    lengthMeters: walkRoute.lengthMeters,
+    segments: walkRoute.segmentIds.length,
+  };
+}
 const chunkManifest = [];
 for (const chunk of data.chunks) {
   const payload = Buffer.from(JSON.stringify({
@@ -120,6 +139,15 @@ const manifest = {
     },
   },
   counts: { roads: data.roads.length, buildings: data.buildings.length, surfaces: data.surfaces.length, props: data.props.length, pois: data.pois.length },
+  roadNetwork: {
+    path: 'road-network.json',
+    bytes: roadNetworkBytes.length,
+    sha256: createHash('sha256').update(roadNetworkBytes).digest('hex'),
+    nodes: roadNetwork.nodes.length,
+    segments: roadNetwork.segments.length,
+    connections: roadNetwork.connections.length,
+  },
+  ...(walkRouteMetadata ? { walkRoute: walkRouteMetadata } : {}),
   chunks: chunkManifest,
 };
 await writeFile(path.join(destination, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
@@ -144,6 +172,14 @@ const fidelityLines = [
   '| Medida | Resultado |',
   '| --- | ---: |',
   `| Calles y sendas | ${data.roads.length} |`,
+  `| Segmentos de red vial topológica | ${roadNetwork.segments.length} |`,
+  `| Conexiones de intersección | ${roadNetwork.connections.length} |`,
+  `| Recorrido Plaza Mayor → Arco de la Estrella → Plaza de San Jorge | ${walkRoute ? `${walkRoute.lengthMeters} m / ${walkRoute.segmentIds.length} segmentos` : 'no generado'} |`,
+  `| Tramos de puente / túnel en el grafo | ${roadNetwork.segments.filter((segment) => segment.bridge).length} / ${roadNetwork.segments.filter((segment) => segment.tunnel).length} |`,
+  `| Vías con carriles OSM explícitos | ${data.roads.filter((road) => road.lanes !== null).length} |`,
+  `| Vías con ancho OSM explícito | ${data.roads.filter((road) => road.widthMeters !== null).length} |`,
+  `| Vías con superficie OSM explícita | ${data.roads.filter((road) => road.surface !== 'unknown').length} |`,
+  `| Vías con dirección OSM explícita | ${data.roads.filter((road) => road.oneway !== 0).length} |`,
   `| Huellas de edificios | ${data.buildings.length} |`,
   `| Superficies y agua | ${data.surfaces.length} |`,
   `| Árboles y mobiliario | ${data.props.length} |`,
@@ -152,7 +188,10 @@ const fidelityLines = [
   `| Muestras MDT05 ausentes | ${data.issues.missingTerrainSamples} |`,
   `| Comercios pendientes de revisión de marca | ${data.issues.pendingBrands} |`,
   '',
-  'Las alturas desconocidas permanecen nulas; no se asigna una altura inventada. Contrasta el visor 2D de `/debug/map.html` con la cartografía de OpenStreetMap y revisa hitos en la siguiente fase.',
+  'Los atributos de altura ausentes permanecen nulos en los datos fuente. Para la visualización, el ancho usa width=* → lanes × 3,1 m → default por tipo de vía; las aceras también se infieren solo cuando no hay etiqueta OSM explícita.',
+  `La ruta enlaza Plaza Mayor (snap ${walkRoute?.landmarks[0]?.snapDistanceMeters.toFixed(1) ?? '—'} m), Arco de la Estrella (snap ${walkRoute?.landmarks[1]?.snapDistanceMeters.toFixed(1) ?? '—'} m) y Plaza de San Jorge (snap ${walkRoute?.landmarks[2]?.snapDistanceMeters.toFixed(1) ?? '—'} m) mediante segmentos peatonales y calles locales.`,
+  'Los puentes reciben solo un perfil visual de rampa (máximo 1,8 m) porque la extracción no aporta una cota vertical fiable; los túneles se conservan transitables a cota MDT05 hasta que exista geometría de excavación.',
+  'Las conexiones de intersección se derivan de nodos compartidos. Esta versión no incluye relaciones OSM de restricción de giro.',
   '',
 ];
 await mkdir(path.join(ROOT, 'reports'), { recursive: true });

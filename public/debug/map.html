@@ -25,7 +25,7 @@
       <div>
         <h1>Inspector geográfico · Ciudad Monumental</h1>
         <p>Calles, edificios, terreno y elementos OSM procesados · © OpenStreetMap contributors · terreno derivado MDT05 CNIG · arrastra para desplazar, rueda para acercar</p>
-        <div class="legend"><span style="--color:#596d57">superficies</span><span style="--color:#578da0">agua</span><span style="--color:#cbb998">edificios</span><span style="--color:#d66a49">calles</span><span style="--color:#c39a58">sendas</span><span style="--color:#8baa73">mobiliario</span><span style="--color:#e5bd7e">puntos</span></div>
+        <div class="legend"><span style="--color:#596d57">superficies</span><span style="--color:#578da0">agua</span><span style="--color:#cbb998">edificios</span><span style="--color:#d66a49">calles</span><span style="--color:#c39a58">sendas</span><span style="--color:#8baa73">mobiliario</span><span style="--color:#e5bd7e">puntos</span><span style="--color:#ffcf54">recorrido a pie</span></div>
       </div>
       <a id="osm-link" href="https://www.openstreetmap.org/" target="_blank" rel="noreferrer">Comparar con OpenStreetMap ↗</a>
     </header>
@@ -39,6 +39,7 @@
       const world = [];
       const view = { scale: 0.55, offsetX: 0, offsetY: 0 };
       let manifest;
+      let walkRoute;
       let dragging = false;
       let dragX = 0;
       let dragY = 0;
@@ -79,6 +80,41 @@
         }
       }
 
+      function drawWalkRoute() {
+        if (!walkRoute?.points?.length) return;
+        context.save();
+        context.beginPath();
+        walkRoute.points.forEach((point, index) => {
+          const [x, y] = screen(point);
+          if (index === 0) context.moveTo(x, y); else context.lineTo(x, y);
+        });
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+        context.strokeStyle = '#352d1d';
+        context.lineWidth = 7;
+        context.stroke();
+        context.strokeStyle = '#ffcf54';
+        context.lineWidth = 4;
+        context.stroke();
+        walkRoute.landmarks.forEach((landmark, index) => {
+          const [x, y] = screen(landmark.position);
+          context.fillStyle = '#fff5d5';
+          context.beginPath();
+          context.arc(x, y, 7, 0, Math.PI * 2);
+          context.fill();
+          context.strokeStyle = '#4b3b1f';
+          context.lineWidth = 2;
+          context.stroke();
+          context.fillStyle = '#fff5d5';
+          context.font = '600 12px Segoe UI, sans-serif';
+          context.shadowColor = '#191f1b';
+          context.shadowBlur = 4;
+          const labelY = index === 0 ? y + 21 : y - 9;
+          context.fillText(`${index + 1}. ${landmark.name}`, x + 10, labelY);
+        });
+        context.restore();
+      }
+
       function draw() {
         if (!context) return;
         context.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
@@ -91,6 +127,7 @@
         const bottomRight = screen([half, -half]);
         context.strokeRect(topLeft[0], topLeft[1], bottomRight[0] - topLeft[0], bottomRight[1] - topLeft[1]);
         for (const feature of world) drawFeature(feature);
+        drawWalkRoute();
       }
 
       async function loadChunk(path) {
@@ -109,7 +146,12 @@
         manifest = await response.json();
         document.querySelector('#osm-link').href = `https://www.openstreetmap.org/?mlat=${manifest.origin.lat}&mlon=${manifest.origin.lon}#map=16/${manifest.origin.lat}/${manifest.origin.lon}`;
         await Promise.all(manifest.chunks.map((chunk) => loadChunk(chunk.path)));
-        status.textContent = `${manifest.counts.roads} calles · ${manifest.counts.buildings} edificios · ${world.length} elementos · EPSG:25829`;
+        if (manifest.walkRoute?.path) {
+          const routeResponse = await fetch(`../world/cc-monumental/${manifest.walkRoute.path}`);
+          if (!routeResponse.ok) throw new Error('No se pudo cargar la ruta peatonal de referencia.');
+          walkRoute = await routeResponse.json();
+        }
+        status.textContent = `${manifest.counts.roads} calles · ${manifest.counts.buildings} edificios · ${world.length} elementos · recorrido peatonal ${walkRoute?.lengthMeters ?? '—'} m · EPSG:25829`;
         resize();
       } catch (error) {
         status.textContent = error instanceof Error ? error.message : 'No se pudieron cargar los datos.';

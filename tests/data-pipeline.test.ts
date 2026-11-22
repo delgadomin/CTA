@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { loadAsciiElevation } from '../tools/elevation.mjs';
 import { normalizeOsm } from '../tools/normalize-data.mjs';
 import { projectEtrs89Utm29, unprojectEtrs89Utm29 } from '../tools/projection.mjs';
+import { makeOverpassQuery } from '../tools/fetch-osm.mjs';
 
 const region = {
   origin: { lat: 39.474414, lon: -6.371556 },
@@ -62,28 +63,40 @@ describe('ESRI ASCII elevation reader', () => {
 });
 
 describe('OSM normalization and brand scrubber', () => {
-  it('converts building and road geometry while removing source business names', () => {
+  it('converts building and road geometry, retaining navigation tags but removing source business names', () => {
     const osm = {
       elements: [
-        { type: 'way', id: 10, tags: { highway: 'residential', name: 'Calle Ejemplo' }, geometry: [{ lon: -6.371556, lat: 39.474414 }, { lon: -6.3714, lat: 39.4745 }] },
+        { type: 'way', id: 10, nodes: [101, 102], tags: { highway: 'residential', name: 'Calle Ejemplo', lanes: '2', oneway: 'yes', surface: 'asphalt', sidewalk: 'both', width: '5.5', bridge: 'yes' }, geometry: [{ lon: -6.371556, lat: 39.474414 }, { lon: -6.3714, lat: 39.4745 }] },
+        { type: 'way', id: 11, nodes: [111, 112, 113, 111], tags: { highway: 'pedestrian', area: 'yes', surface: 'paving_stones' }, geometry: [{ lon: -6.37156, lat: 39.47441 }, { lon: -6.3715, lat: 39.47441 }, { lon: -6.3715, lat: 39.47448 }, { lon: -6.37156, lat: 39.47441 }] },
         { type: 'way', id: 20, tags: { building: 'yes', 'building:levels': '3', shop: 'clothes', name: 'Example Outfitters' }, geometry: [{ lon: -6.37156, lat: 39.47441 }, { lon: -6.3715, lat: 39.47442 }, { lon: -6.3715, lat: 39.47448 }, { lon: -6.37156, lat: 39.47441 }] },
         { type: 'node', id: 30, lat: 39.474414, lon: -6.371556, tags: { shop: 'supermarket', brand: 'Mercadona', name: 'Mercadona' } },
         { type: 'node', id: 40, lat: 39.474414, lon: -6.371556, tags: { historic: 'tower', name: 'Torre de Prueba' } },
         { type: 'node', id: 50, lat: 39.474414, lon: -6.371556, tags: { amenity: 'bench' } },
         { type: 'node', id: 60, lat: 39.474414, lon: -6.371556, tags: { natural: 'tree' } },
+        { type: 'node', id: 70, lat: 39.474414, lon: -6.371556, tags: { highway: 'stop' } },
+        { type: 'node', id: 71, lat: 39.474414, lon: -6.371556, tags: { traffic_sign: 'DE:205' } },
       ],
     };
     const data = normalizeOsm(osm, region, blocklist, { sample: () => 420 });
     const serialized = JSON.stringify(data);
     expect(data.roads[0]?.name).toBe('Calle Ejemplo');
+    expect(data.roads[0]).toMatchObject({ nodeIds: [101, 102], lanes: 2, oneway: 1, surface: 'asphalt', sidewalk: 'both', widthMeters: 5.5, bridge: true });
+    expect(data.roads.find((road) => road.id === 'w11')).toMatchObject({ area: true, highway: 'pedestrian', surface: 'paving_stones' });
     expect(data.buildings[0]?.floors).toBe(3);
     expect(data.chunks).toHaveLength(16);
     expect(data.pois.find((poi) => poi.id === 'w20')?.name).not.toBe('Example Outfitters');
     expect(data.pois.find((poi) => poi.id === 'n30')?.name).toBe('MercaRoba');
     expect(data.pois.find((poi) => poi.id === 'n40')?.name).toBe('Torre de Prueba');
-    expect(data.props.map((prop) => prop.kind)).toEqual(['bench', 'tree']);
+    expect(data.props.map((prop) => prop.kind)).toEqual(['bench', 'tree', 'stop', 'traffic_sign']);
+    expect(data.props[3]?.trafficSign).toBe('DE:205');
     expect(serialized).not.toContain('Mercadona');
     expect(serialized).not.toContain('Example Outfitters');
+  });
+
+  it('requests stop, give-way and traffic-sign nodes from Overpass', () => {
+    const query = makeOverpassQuery({ south: 39, west: -7, north: 40, east: -6 });
+    expect(query).toContain('node[highway~"traffic_signals|street_lamp|crossing|stop|give_way"]');
+    expect(query).toContain('node[traffic_sign]');
   });
 
   it('keeps absent terrain as nodata instead of fabricating a height', () => {
