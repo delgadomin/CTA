@@ -1,6 +1,6 @@
 # Progreso del proyecto
 
-## Fase actual: 3 - Terreno y chunks
+## Fase actual: 3 - Terreno y chunks (completada)
 
 ### Hecho
 - Repositorio inicializado desde `hhg-ptm/CTA`.
@@ -43,3 +43,29 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - `npm run data:build:fresh` vuelve a descargar ambas fuentes oficiales.
 - `npm run data:elevation` renueva solo la tesela MDT05 acotada de la región.
 - Abrir `/debug/map.html` con el servidor Vite después de generar el manifest.
+
+## Fase 3 - Terreno y streaming de chunks (completada)
+
+### Plan
+- Añadir `src/world/` para cargar el manifest y gestionar chunks con radio de carga/descarga con histéresis y prioridad por distancia.
+- Añadir un Web Worker para descomprimir CTA2, crear mallas con normales, colores de suelo desde superficies OSM, LOD 3 niveles y skirts anti-grietas.
+- Añadir Rapier heightfields solo en chunks próximos, eventos de carga/descarga y límites por presupuesto de trabajo.
+- Sustituir el cubo de diagnóstico en `src/main.ts` por el terreno, niebla, controles de cámara y panel F4 con chunks/memoria.
+- Registrar licencia/dependencia en `DECISIONS.md` y progreso; validar chunks reales, navegación, lint, typecheck, tests y build.
+
+### Hecho
+- Mallas de terreno con normales, color según superficies OSM, tres niveles de detalle (2/4/8 m) y skirts de 4 m.
+- Web Worker para verificar CTA2, descomprimir, validar tamaños y construir las mallas; SHA-256 y límites de tamaño comprobados antes de enviar datos al worker.
+- Carga con prioridad por distancia, radio de 512 m y descarga a 614 m; colliders heightfield Rapier solo hasta 192 m; eventos de carga/descarga y panel F4.
+- Corregido el número de celdas del heightfield: Rapier recibe `samples - 1` por eje junto a la matriz completa de muestras.
+- Verificador Playwright repetible en `tools/verify-streaming.mjs` y `npm run verify:streaming`.
+
+### Validación de fase 3
+- `eslint`, `tsc -b`, 15 pruebas Vitest y build Vite pasan; build inicial gzip de 875 kB, inferior al límite de 25 MB.
+- Navegación automatizada de 5 minutos en Edge: las 16 teselas descargadas, de 5 a 12 chunks activos, cero errores, máximo frame durante streaming 15,4 ms y cero intervalos mayores de 16 ms.
+- Memoria geométrica estimada durante el recorrido: 6,8–16,3 MiB; al terminar queda en 10,9 MiB con 8 chunks activos. El contador cubre buffers CPU de geometría, no memoria del driver GPU.
+- En el arranque antes de activar el streaming se midieron frames de 27,1, 80,1 y 26,7 ms mientras se inicializaban física y terreno; no ocurrieron con terreno activo.
+
+### Cómo validar el streaming
+- Inicia Vite en `http://127.0.0.1:5173/`.
+- Ejecuta `npm run verify:streaming`; el recorrido automatizado dura 5 minutos y falla ante errores, frames activos >16 ms o teselas no visitadas. Se puede pasar una duración en milisegundos a `node tools/verify-streaming.mjs` para una comprobación breve.

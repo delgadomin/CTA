@@ -3,6 +3,7 @@
 ## Código
 - Código original del proyecto: MIT (ver `LICENSE`).
 - Three.js y `GLTFLoader`, `KTX2Loader`, `MeshoptDecoder`: licencia MIT, https://github.com/mrdoob/three.js/blob/dev/LICENSE.
+- Rapier 3D, paquete `@dimforge/rapier3d-compat` 0.12.0: licencia Apache-2.0, https://github.com/dimforge/rapier.js.
 - Transcodificador Basis incluido desde `three/examples/jsm/libs/basis/`: Apache License 2.0, https://github.com/BinomialLLC/basis_universal/blob/master/LICENSE. Los archivos se sirven localmente desde `public/basis/`.
 
 ## Datos y assets

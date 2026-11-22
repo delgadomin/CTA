@@ -8,21 +8,23 @@
     <title>Cáceres Criminal — prototipo</title>
   </head>
   <body>
-    <main id="game" aria-label="Prototipo 3D de Cáceres Criminal">
-      <canvas id="world" aria-label="Escena 3D de diagnóstico"></canvas>
+    <main id="game" aria-label="Cáceres Criminal">
+      <canvas id="world" aria-label="Terreno 3D de la Ciudad Monumental de Cáceres"></canvas>
       <section class="debug-panel" aria-live="polite">
-        <p class="eyebrow">CÁCERES CRIMINAL <span>·</span> PROTOTIPO TÉCNICO</p>
-        <h1>Un mundo por construir</h1>
-        <p class="status"><span class="status-dot"></span> Motor gráfico inicializado</p>
+        <p class="eyebrow">CÁCERES CRIMINAL <span>·</span> MUNDO GEOGRÁFICO</p>
+        <h1>Ciudad Monumental</h1>
+        <p class="status"><span class="status-dot"></span><span id="world-status">Iniciando motor físico…</span></p>
         <dl>
           <div><dt>FPS</dt><dd id="fps">--</dd></div>
-          <div><dt>Draw calls</dt><dd id="draw-calls">--</dd></div>
-          <div><dt>Triángulos</dt><dd id="triangles">--</dd></div>
+          <div><dt>Pico de frame</dt><dd id="frame-time">-- ms</dd></div>
+          <div><dt>Chunks</dt><dd id="chunks">0</dd></div>
+          <div><dt>Colisionadores</dt><dd id="colliders">0</dd></div>
+          <div><dt>Memoria geométrica</dt><dd id="memory">0 MiB</dd></div>
         </dl>
-        <p class="hint">WASD mueve la cámara <span>·</span> clic captura el ratón <span>·</span> <kbd>Tab</kbd> alterna cámara</p>
-        <p class="hint">Pulsa <kbd>F3</kbd> para ocultar el diagnóstico</p>
+        <p class="hint">WASD mueve la cámara libre <span>·</span> clic captura el ratón</p>
+        <p class="hint">Pulsa <kbd>F4</kbd> para mostrar u ocultar estos contadores</p>
       </section>
-      <p class="phase-tag">FASE 1 <span>/</span> NÚCLEO DEL MOTOR</p>
+      <p class="phase-tag">FASE 3 <span>/</span> TERRENO Y STREAMING</p>
     </main>
     <script type="module" src="./src/main.ts"></script>
   </body>

@@ -134,6 +134,7 @@ export function normalizeOsm(osm, regionDefinition, brandBlocklist, elevation) {
           featureType: 'surface',
           kind: tags.waterway ? 'waterway' : tags.natural === 'water' ? 'water' : tags.leisure ? 'leisure' : tags.landuse ? 'landuse' : 'natural',
           value: tags.waterway ?? tags.natural ?? tags.leisure ?? tags.landuse,
+          surface: tags.surface ?? '',
           points,
           bounds,
         });

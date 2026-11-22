@@ -11,12 +11,14 @@
     "typecheck": "tsc -b --pretty",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "verify:streaming": "node tools/verify-streaming.mjs",
     "data:build": "node tools/data-build.mjs",
     "data:build:fresh": "node tools/data-build.mjs --fresh",
     "data:elevation": "node tools/fetch-elevation.mjs",
     "data:verify": "node tools/verify-world.mjs"
   },
   "dependencies": {
+    "@dimforge/rapier3d-compat": "0.12.0",
     "three": "^0.180.0"
   },
   "devDependencies": {

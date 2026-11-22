@@ -1,0 +1,57 @@
+import { describe, expect, it } from 'vitest';
+import { buildTerrainChunk } from '../src/world/mesh-builder';
+import { classifyGround } from '../src/world/materials';
+import { createPhysicsWorld, TerrainColliders, toRapierColumnMajor } from '../src/world/terrain-physics';
+import type { RawTerrainChunk } from '../src/world/types';
+
+const rawChunk: RawTerrainChunk = {
+  id: '0_0',
+  bounds: { minX: -2, minZ: -2, maxX: 2, maxZ: 2 },
+  terrain: { samples: 5, stepMeters: 1, quantizationMeters: 0.25, heights: Array.from({ length: 25 }, () => 1600) },
+  features: [{
+    featureType: 'surface', kind: 'landuse', value: 'residential', surface: '',
+    points: [[-2, -2], [2, -2], [2, 2], [-2, 2], [-2, -2]],
+  }],
+};
+
+describe('terrain meshes', () => {
+  it('builds three LOD grids with upward normals and closed skirts', () => {
+    const chunk = buildTerrainChunk(rawChunk);
+    expect(chunk.levels.map((level) => level.size)).toEqual([5, 3, 2]);
+    expect(Array.from(chunk.levels[0]?.normals.slice(0, 3) ?? [])).toEqual([0, 1, 0]);
+    expect(Array.from(chunk.levels[0]?.indices.slice(0, 6) ?? [])).toEqual([0, 5, 1, 1, 5, 6]);
+    expect(chunk.levels[0]?.indices).toHaveLength(192);
+    expect(chunk.minimumHeight).toBe(400);
+    expect(chunk.maximumHeight).toBe(400);
+  });
+
+  it('colors terrain from mapped land use without adding road geometry', () => {
+    const chunk = buildTerrainChunk(rawChunk);
+    const centerColorOffset = (2 * 5 + 2) * 3;
+    const centerColor = chunk.levels[0]?.colors.slice(centerColorOffset, centerColorOffset + 3) ?? [];
+    expect(centerColor[0]).toBeCloseTo(0.53, 6);
+    expect(centerColor[1]).toBeCloseTo(0.49, 6);
+    expect(centerColor[2]).toBeCloseTo(0.41, 6);
+    expect(classifyGround('water', 'water', '')).toBe('water');
+    expect(classifyGround('natural', 'bare_rock', '')).toBe('rock');
+    expect(classifyGround('surface', 'paving', 'paving_stones')).toBe('stone');
+  });
+});
+
+describe('Rapier terrain grid layout', () => {
+  it('converts row-major heights into Rapier column-major order', () => {
+    expect(Array.from(toRapierColumnMajor(new Float32Array([1, 2, 3, 4]), 2))).toEqual([1, 3, 2, 4]);
+  });
+
+  it('creates a heightfield collider for a complete sample grid', async () => {
+    const world = await createPhysicsWorld();
+    const colliders = new TerrainColliders(world);
+    try {
+      colliders.add('0_0', rawChunk.bounds, 4, new Float32Array(25).fill(400), 5);
+      expect(colliders.count).toBe(1);
+    } finally {
+      colliders.clear();
+      world.free();
+    }
+  });
+});

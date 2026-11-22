@@ -25,11 +25,15 @@ export class CameraRig {
     input: InputManager,
     moveSpeed = 8,
     mouseSensitivity = 0.002,
+    initialYaw = 0.58,
+    initialPitch = -0.27,
   ) {
     this.camera = camera;
     this.input = input;
     this.moveSpeed = moveSpeed;
     this.mouseSensitivity = mouseSensitivity;
+    this.yaw = initialYaw;
+    this.pitch = MathUtils.clamp(initialPitch, -1.45, 1.45);
     this.camera.rotation.order = 'YXZ';
     this.syncRotation();
   }
