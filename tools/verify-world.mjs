@@ -8,6 +8,18 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const regionName = process.argv.find((argument) => argument.startsWith('--region='))?.split('=')[1] ?? 'cc-monumental';
 const directory = path.join(ROOT, 'public/world', regionName);
 const manifest = JSON.parse(await readFile(path.join(directory, 'manifest.json'), 'utf8'));
+const sourceGeometryMetadata = manifest.sourceGeometry;
+if (!sourceGeometryMetadata || sourceGeometryMetadata.path !== 'source-fidelity.json' || sourceGeometryMetadata.bytes > 32 * 1024 * 1024) {
+  throw new Error('World manifest has missing or unsafe source geometry metadata.');
+}
+const sourceGeometryBytes = await readFile(path.join(directory, sourceGeometryMetadata.path));
+if (sourceGeometryBytes.length !== sourceGeometryMetadata.bytes || createHash('sha256').update(sourceGeometryBytes).digest('hex') !== sourceGeometryMetadata.sha256) {
+  throw new Error('Source geometry overlay size or SHA-256 does not match the manifest.');
+}
+const sourceGeometry = JSON.parse(sourceGeometryBytes.toString('utf8'));
+if (sourceGeometry.region !== regionName || sourceGeometry.roads.length !== sourceGeometryMetadata.roads || sourceGeometry.buildings.length !== sourceGeometryMetadata.buildings) {
+  throw new Error('Source geometry overlay counts do not match the manifest.');
+}
 const blocklist = JSON.parse(await readFile(path.join(ROOT, 'tools/brand-blocklist.json'), 'utf8'));
 const forbidden = blocklist.brands.flatMap((brand) => brand.aliases).map((value) => value.toLocaleLowerCase('es'));
 let totalFeatures = 0;

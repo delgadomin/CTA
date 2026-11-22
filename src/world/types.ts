@@ -40,6 +40,7 @@ export interface WorldManifest {
 export interface ChunkFeature {
   readonly featureType: 'road' | 'pedestrian' | 'building' | 'surface' | 'prop' | 'poi';
   readonly id?: string;
+  readonly name?: string;
   readonly kind?: string;
   readonly value?: string;
   readonly surface?: string;
@@ -106,7 +107,7 @@ export interface TerrainLodData {
 
 export type RoadSurfaceStyle = 'asphalt' | 'stone' | 'concrete' | 'earth' | 'marking';
 
-export type BuildingMaterial = 'casco_facade' | 'ensanche_facade' | 'periferia_facade' | 'tile_roof' | 'modern_roof';
+export type BuildingMaterial = 'casco_facade' | 'ensanche_facade' | 'periferia_facade' | 'tile_roof' | 'modern_roof' | 'monument_stone';
 
 export interface BuildingSurfaceGeometry {
   readonly material: BuildingMaterial;
@@ -143,6 +144,11 @@ export interface LandmarkModelInstance {
   readonly position: readonly [number, number, number];
 }
 
+export interface StorkInstance {
+  readonly buildingId: string;
+  readonly position: readonly [number, number, number];
+}
+
 export interface BuiltBuildingChunk {
   readonly levels: readonly BuildingLodGeometry[];
   readonly colliderPositions: Float32Array;
@@ -150,6 +156,7 @@ export interface BuiltBuildingChunk {
   readonly signSlots: readonly BuildingSignSlot[];
   readonly roofAnchors: readonly BuildingRoofAnchor[];
   readonly landmarkModels: readonly LandmarkModelInstance[];
+  readonly storks: readonly StorkInstance[];
 }
 
 export interface RoadSurfaceGeometry {

@@ -10,7 +10,7 @@ const MAX_OSM_BYTES = 64 * 1024 * 1024;
 
 export function makeOverpassQuery(bounds) {
   const box = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
-  return `[out:json][timeout:120];(way[highway](${box});way[building](${box});way[landuse](${box});way[natural](${box});way[waterway](${box});way[leisure](${box});way[historic](${box});way[shop](${box});way[craft](${box});way[office](${box});way[amenity](${box});way[tourism](${box});node[shop](${box});node[craft](${box});node[office](${box});node[amenity](${box});node[tourism](${box});node[historic](${box});node[memorial](${box});node[natural=tree](${box});node[highway~"traffic_signals|street_lamp|crossing|stop|give_way"](${box});node[traffic_sign](${box}););out body geom;`;
+  return `[out:json][timeout:120];(way[highway](${box});way[building](${box});way[landuse](${box});way[natural](${box});way[waterway](${box});way[leisure](${box});way[historic](${box});way[barrier=city_wall](${box});way[place=square](${box});way[shop](${box});way[craft](${box});way[office](${box});way[amenity](${box});way[tourism](${box});relation[historic](${box});node[shop](${box});node[craft](${box});node[office](${box});node[amenity](${box});node[tourism](${box});node[historic](${box});node[memorial](${box});node[place=square](${box});node[natural=tree](${box});node[highway~"traffic_signals|street_lamp|crossing|stop|give_way"](${box});node[traffic_sign](${box}););out body geom;`;
 }
 
 async function fetchWithRetry(query, fetchImpl = fetch) {

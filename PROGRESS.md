@@ -104,7 +104,7 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - `node tools/verify-streaming.mjs` hace el barrido de cinco minutos; falla si no visita las 16 teselas, rebasa 300 llamadas/600.000 triángulos, supera 16 ms durante streaming o no carga la ruta del inspector.
 - Alcance excluido de la fase 4: vehículos y tráfico de IA.
 
-## Fase actual: 6 - Hitos y fidelidad
+## Fase actual: 6 - Hitos y fidelidad (en curso)
 
 ## Fase 5 - Edificios (completada)
 
@@ -135,6 +135,25 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - Ejecutar `npm run lint`, `npm run typecheck`, `npm test`, `npm run build` y `node tools/verify-streaming.mjs` desde la raíz del repositorio.
 - `/debug/map.html` compara las huellas y zonas con OSM; el QA 3D comprueba streaming, LOD y presupuesto visible.
 
-## Fase 6 - Hitos y fidelidad (pendiente)
+## Fase 6 - Hitos y fidelidad (en curso)
 
-- La fase 5 deja anclas de tejado para próximos nidos de cigüeña y conserva ids de edificios para asociar hitos. Leer la página 11 del PDF antes de planificar la implementación.
+### Hecho hasta ahora
+- Añadido un catálogo de hitos de referencia basado en la lista de la guía. Los objetivos de `cc-monumental` se distinguen de los que requieren una futura región de ciudad.
+- El pipeline audita nombres OSM de vías, edificios no comerciales, superficies y POIs con coincidencia exacta normalizada; el informe enlaza los IDs fuente.
+- La consulta incluye plazas (`place=square`) y relaciones históricas. La normalización conserva sus IDs como `r<number>` y calcula un centro de referencia desde miembros exteriores, sin usarlo como huella.
+- Se confirmó la relación OSM `r5728957` del Palacio de los Golfines de Abajo; no se confunde con el Palacio de los Golfines de Arriba.
+- Los 13 de 13 hitos de `cc-monumental` aparecen en el extracto OSM regenerado. Las otras 6 referencias quedan fuera del alcance de esta región.
+- Añadida una silueta procedural low-poly del Arco de la Estrella anclada al POI OSM y orientada desde la vía más cercana, además de almenado aproximado para torres. Se añadió un material procedural de piedra y un fallback visual de 7 plantas solo para torres sin altura/plantas fuente.
+- Las áreas `place=square` ya se procesan como superficies y POIs: sus huellas OSM se renderizan en el terreno con la clasificación de piedra.
+- Las líneas `barrier=city_wall` se conservan y reciben una silueta de muralla sobre su trazado OSM, con medidas visuales aproximadas documentadas por ausencia de cotas.
+- El informe de hitos ahora indica la geometría fuente disponible (huella, polígono, trazado, vía o punto/centro); evita tratar un POI sin huella como si fuera un edificio modelable.
+- Añadido el catálogo canónico de fase 6 con 19 entradas, una ficha Markdown por hito y `status.json` en pendiente. El pipeline incorpora posiciones, huellas y alturas solo cuando la extracción OSM las aporta; los hitos exteriores siguen sin fuente geométrica en la región actual.
+- Añadido `npm run fidelity`: compara directamente las vías y huellas OSM con los chunks y falla si falta geometría, aparece una forma inesperada o supera 1 m. La comprobación local comparó 3.486 vías/huellas con desviación máxima 0,0000 m.
+- El inspector 2D puede superponer trazados OSM originales y huellas de edificio sobre el mundo; queda pendiente la revisión visual humana.
+- La extracción nueva incluye `barrier=city_wall`; los chunks regenerados conservan sus tramos. Se añadieron cigüeñas low-poly en torres y una selección estable de tejados del casco; al acercarse el jugador baten las alas y despegan, y vuelven a posarse cuando se aleja.
+- El data build regeneró 16 chunks; el verificador confirmó hashes, terreno, ruta y ausencia de nombres comerciales bloqueados.
+
+### Pendiente
+- Completar los modelos específicos de soportales de Plaza Mayor, Concatedral, escalinata de San Francisco Javier y Torre de las Cigüeñas. El punto OSM de esta última no trae una huella, así que necesita revisión de referencia antes de modelar.
+- Ampliar la fuente geográfica para los seis hitos fuera de la región actual.
+- Ejecutar lint, typecheck, pruebas, build y revisión visual; ningún hito puede pasar a aprobado sin comparación humana con fotografías. Este entorno no tiene npm/node_modules; la instalación con pnpm fue bloqueada al crear el enlace de dependencias.

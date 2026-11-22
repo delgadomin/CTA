@@ -1,7 +1,7 @@
 import { projectEtrs89Utm29, projectedRegionBounds } from './projection.mjs';
 
 const PEDESTRIAN_HIGHWAYS = new Set(['footway', 'pedestrian', 'steps', 'ladder', 'path', 'bridleway']);
-const POI_KEYS = ['shop', 'craft', 'office', 'amenity', 'tourism', 'leisure'];
+const POI_KEYS = ['place', 'shop', 'craft', 'office', 'amenity', 'tourism', 'leisure'];
 const AMENITY_TYPES = new Set(['restaurant', 'cafe', 'bar', 'pub', 'nightclub', 'bank', 'fuel', 'pharmacy', 'hospital', 'school', 'university', 'police', 'fire_station', 'place_of_worship', 'toilets', 'bench', 'shelter', 'waste_basket', 'parking']);
 const NONCOMMERCIAL_AMENITIES = new Set(['hospital', 'school', 'university', 'police', 'fire_station', 'place_of_worship', 'toilets', 'bench', 'shelter', 'waste_basket', 'parking']);
 const PROP_TAGS = ['natural', 'amenity', 'highway'];
@@ -43,6 +43,7 @@ function visualBuildingFloors(tags, zone) {
   const explicitHeight = Number.parseFloat(String(tags.height ?? '').replace(',', '.'));
   if (Number.isFinite(explicitHeight) && explicitHeight > 0) return Math.min(40, Math.max(1, explicitHeight / 3));
   const type = tags.building ?? '';
+  if (type === 'tower' || /^torre(?:\s|$)/i.test(tags.name ?? '')) return 7;
   if (['cathedral', 'church', 'chapel', 'tower', 'castle'].includes(type)) return type === 'tower' || type === 'castle' ? 7 : 5;
   if (zone === 'casco') return 2;
   if (zone === 'periferia') {
@@ -76,6 +77,7 @@ function classifyPoi(tags) {
 function isCommercial(tags) {
   if ((tags.historic || tags.memorial) && !tags.shop && !tags.brand && !tags.operator) return false;
   if (tags.amenity && NONCOMMERCIAL_AMENITIES.has(tags.amenity) && !tags.brand && !tags.operator) return false;
+  if (tags.tourism === 'museum' && !tags.brand && !tags.operator) return false;
   return Boolean(tags.brand || tags.operator || tags.shop || tags.craft || tags.office)
     || (tags.amenity && AMENITY_TYPES.has(tags.amenity) && !['hospital', 'school', 'university', 'police', 'fire_station', 'place_of_worship'].includes(tags.amenity))
     || (tags.tourism && !['artwork', 'information'].includes(tags.tourism));
@@ -103,7 +105,8 @@ function appendPoi(element, tags, point, bounds, region, blocklist, brandReport,
   const business = isCommercial(tags);
   const mappedBrand = business ? blocklistedName(tags, blocklist) : undefined;
   const hasSourceName = Boolean(tags.name || tags.brand || tags.operator);
-  const id = `${element.type === 'node' ? 'n' : 'w'}${element.id}`;
+  const prefix = element.type === 'node' ? 'n' : element.type === 'relation' ? 'r' : 'w';
+  const id = `${prefix}${element.id}`;
   const name = business ? mappedBrand?.gameName ?? fakeBusinessName(category, element.id) : tags.name ?? '';
   if (business) brandReport.push({
     id,
@@ -113,6 +116,12 @@ function appendPoi(element, tags, point, bounds, region, blocklist, brandReport,
   });
   const [x, z] = projectPoint(point, region);
   pois.push({ id, category: `${category.key}:${category.value}`, name, featureType: 'poi', fictional: business, position: [x, z], bounds });
+}
+
+function relationCenter(element) {
+  const points = (element.members ?? []).filter((member) => member.type === 'way' && member.role !== 'inner' && Array.isArray(member.geometry)).flatMap((member) => member.geometry);
+  if (points.length === 0) return undefined;
+  return points.reduce((center, point) => ({ lon: center.lon + point.lon / points.length, lat: center.lat + point.lat / points.length }), { lon: 0, lat: 0 });
 }
 
 export function normalizeOsm(osm, regionDefinition, brandBlocklist, elevation, landmarkModelIds = new Set()) {
@@ -165,6 +174,7 @@ export function normalizeOsm(osm, regionDefinition, brandBlocklist, elevation, l
         buildings.push({
           id: `w${element.id}`,
           featureType: 'building',
+          ...(!isCommercial(tags) && tags.name ? { name: tags.name } : {}),
           floors,
           heightMeters,
           visualFloors,
@@ -183,12 +193,24 @@ export function normalizeOsm(osm, regionDefinition, brandBlocklist, elevation, l
           points,
           bounds,
         });
-      } else if (tags.landuse || tags.natural || tags.waterway || tags.leisure) {
+      } else if (tags.barrier === 'city_wall') {
         surfaces.push({
           id: `w${element.id}`,
           featureType: 'surface',
-          kind: tags.waterway ? 'waterway' : tags.natural === 'water' ? 'water' : tags.leisure ? 'leisure' : tags.landuse ? 'landuse' : 'natural',
-          value: tags.waterway ?? tags.natural ?? tags.leisure ?? tags.landuse,
+          name: tags.name ?? '',
+          kind: 'historic_wall',
+          value: 'city_wall',
+          points,
+          bounds,
+        });
+      } else if (tags.place === 'square' || tags.landuse || tags.natural || tags.waterway || tags.leisure) {
+        const isSquare = tags.place === 'square';
+        surfaces.push({
+          id: `w${element.id}`,
+          featureType: 'surface',
+          name: tags.name ?? '',
+          kind: isSquare ? 'square' : tags.waterway ? 'waterway' : tags.natural === 'water' ? 'water' : tags.leisure ? 'leisure' : tags.landuse ? 'landuse' : 'natural',
+          value: isSquare ? 'square' : tags.waterway ?? tags.natural ?? tags.leisure ?? tags.landuse,
           surface: tags.surface ?? '',
           points,
           bounds,
@@ -217,6 +239,10 @@ export function normalizeOsm(osm, regionDefinition, brandBlocklist, elevation, l
         continue;
       }
       appendPoi(element, tags, element, undefined, region, brandBlocklist, brandReport, pois);
+    }
+    if (element.type === 'relation' && classifyPoi(tags)) {
+      const center = relationCenter(element);
+      if (center) appendPoi(element, tags, center, undefined, region, brandBlocklist, brandReport, pois);
     }
   }
 

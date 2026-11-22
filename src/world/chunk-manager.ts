@@ -7,6 +7,7 @@ import { buildChunkBorderGeometry } from './chunk-debug';
 import { BuildingRenderer } from './building-renderer';
 import { sampleHeight } from './road-geometry';
 import { RoadRenderer } from './road-renderer';
+import { createStork, updateStork } from './stork';
 import { TerrainColliders } from './terrain-physics';
 import type { BuiltTerrainChunk, ChunkEntry, TerrainChunkEvents, TerrainLodData, WorldManifest } from './types';
 
@@ -22,6 +23,7 @@ interface ChunkRecord {
   buildingMeshes?: THREE.Mesh[][];
   decorationMeshes?: THREE.Mesh[];
   landmarkObjects?: THREE.Object3D[];
+  storks?: THREE.Group[];
   debugBorder?: THREE.LineSegments;
   memoryBytes: number;
   debugMemoryBytes: number;
@@ -141,6 +143,9 @@ export class ChunkManager {
   update(camera: THREE.Camera, now: number): void {
     if (this.closed || !this.manifest) return;
     this.processCompleted();
+    for (const record of this.records.values()) {
+      for (const stork of record.storks ?? []) updateStork(stork, camera.position, now);
+    }
     if (now - this.lastSchedule < SCHEDULE_INTERVAL_MS) return;
     this.lastSchedule = now;
     const nextQueue: string[] = [];
@@ -288,6 +293,13 @@ export class ChunkManager {
       record.meshes = meshes;
       record.buildingMeshes = buildingMeshes;
       record.decorationMeshes = decorationMeshes;
+      record.storks = (item.result.buildings?.storks ?? []).map((instance) => {
+        const stork = createStork();
+        stork.position.set(instance.position[0], instance.position[1], instance.position[2]);
+        stork.rotation.y = (instance.buildingId.length % 8) * Math.PI / 4;
+        this.scene.add(stork);
+        return stork;
+      });
       const roadBuffers = item.result.roads;
       const roadDataBytes = roadBuffers
         ? roadBuffers.colliderPositions.byteLength + roadBuffers.colliderIndices.byteLength + roadBuffers.props.reduce((sum, prop) => sum + prop.positions.byteLength + prop.headings.byteLength, 0)
@@ -433,6 +445,7 @@ export class ChunkManager {
       }
     }
     if (record.landmarkObjects) for (const object of record.landmarkObjects) this.scene.remove(object);
+    if (record.storks) for (const stork of record.storks) this.scene.remove(stork);
     if (emit && record.state === 'loaded') this.events.emit('chunkUnloaded', { id: record.entry.id });
   }
 }

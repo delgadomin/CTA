@@ -14,6 +14,7 @@ export function classifyGround(kind: string | undefined, value: string | undefin
   if (['paving_stones', 'sett', 'cobblestone', 'stone'].includes(surfaceName)) return 'stone';
   if (['asphalt', 'concrete', 'paved', 'concrete:plates'].includes(surfaceName)) return 'asphalt';
   if (['unpaved', 'gravel', 'fine_gravel', 'ground', 'earth', 'dirt', 'sand'].includes(surfaceName)) return 'soil';
+  if (kind === 'square') return 'stone';
   if (kind === 'water' || kind === 'waterway' || value === 'water') return 'water';
   if (kind === 'natural' && ['bare_rock', 'rock', 'scree', 'shingle'].includes(value ?? '')) return 'rock';
   if (kind === 'natural' && ['sand', 'scrub', 'heath'].includes(value ?? '')) return 'soil';
