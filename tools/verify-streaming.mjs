@@ -8,18 +8,28 @@ const downloadedChunks = new Set();
 
 await page.addInitScript(() => {
   let previousTimestamp;
-  window.__ctaFrameIntervals = [];
+  let streamingActive = false;
+  window.__ctaFrameMetrics = { maximumStreamingFrameMs: 0, slowFrames: [] };
+  const updateStreamingState = () => {
+    streamingActive = document.querySelector('#world-status')?.textContent?.includes('streaming') ?? false;
+  };
+  new MutationObserver(updateStreamingState).observe(document, { childList: true, characterData: true, subtree: true });
   const requestFrame = window.requestAnimationFrame.bind(window);
   window.requestAnimationFrame = (callback) => requestFrame((timestamp) => {
     if (previousTimestamp !== undefined) {
-      window.__ctaFrameIntervals.push({
-        milliseconds: timestamp - previousTimestamp,
-        timestamp,
-        chunks: document.querySelector('#chunks')?.textContent,
-        colliders: document.querySelector('#colliders')?.textContent,
-        memory: document.querySelector('#memory')?.textContent,
-        status: document.querySelector('#world-status')?.textContent,
-      });
+      const milliseconds = timestamp - previousTimestamp;
+      if (streamingActive) window.__ctaFrameMetrics.maximumStreamingFrameMs = Math.max(window.__ctaFrameMetrics.maximumStreamingFrameMs, milliseconds);
+      if (milliseconds > 16) {
+        window.__ctaFrameMetrics.slowFrames.push({
+          milliseconds,
+          timestamp,
+          streaming: streamingActive,
+          chunks: document.querySelector('#chunks')?.textContent,
+          colliders: document.querySelector('#colliders')?.textContent,
+          memory: document.querySelector('#memory')?.textContent,
+          status: document.querySelector('#world-status')?.textContent,
+        });
+      }
     }
     previousTimestamp = timestamp;
     callback(timestamp);
@@ -41,6 +51,7 @@ page.on('request', (request) => {
 try {
   await page.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
   await page.waitForFunction(() => document.querySelector('#world-status')?.textContent?.includes('streaming'), null, { timeout: 30_000 });
+  if (process.argv[3]) await page.screenshot({ path: process.argv[3] });
   const endTime = Date.now() + durationMs;
   let minimumLoaded = Infinity;
   let maximumLoaded = 0;
@@ -88,17 +99,18 @@ try {
     fps: document.querySelector('#fps')?.textContent,
     frame: document.querySelector('#frame-time')?.textContent,
     status: document.querySelector('#world-status')?.textContent,
-    frameIntervals: window.__ctaFrameIntervals,
+    frameMetrics: window.__ctaFrameMetrics,
   }));
-  const slowFrames = final.frameIntervals.filter((interval) => interval.milliseconds > 16);
-  const streamingSlowFrames = slowFrames.filter((interval) => interval.status?.includes('streaming'));
+  const slowFrames = final.frameMetrics.slowFrames;
+  const streamingSlowFrames = slowFrames.filter((interval) => interval.streaming);
+  const startupSlowFrames = slowFrames.filter((interval) => !interval.streaming);
   const result = {
     durationMs,
     samples,
-    maximumFrameMs: Math.max(...final.frameIntervals.map((interval) => interval.milliseconds), 0),
-    startupSlowFrameCount: slowFrames.length - streamingSlowFrames.length,
-    startupSlowFrames: slowFrames.filter((interval) => !interval.status?.includes('streaming')).slice(0, 12),
-    streamingMaximumFrameMs: Math.max(...final.frameIntervals.filter((interval) => interval.status?.includes('streaming')).map((interval) => interval.milliseconds), 0),
+    maximumFrameMs: Math.max(final.frameMetrics.maximumStreamingFrameMs, ...startupSlowFrames.map((interval) => interval.milliseconds), 0),
+    startupSlowFrameCount: startupSlowFrames.length,
+    startupSlowFrames: startupSlowFrames.slice(0, 12),
+    streamingMaximumFrameMs: final.frameMetrics.maximumStreamingFrameMs,
     streamingSlowFrameCount: streamingSlowFrames.length,
     streamingSlowFrames: streamingSlowFrames.slice(0, 12),
     minimumLoaded,
@@ -108,7 +120,7 @@ try {
     memoryRangeMiB: maximumMemory - minimumMemory,
     downloadedChunks: [...downloadedChunks].sort(),
     failures,
-    final: { ...final, frameIntervals: undefined },
+    final: { chunks: final.chunks, colliders: final.colliders, memory: final.memory, fps: final.fps, frame: final.frame, status: final.status },
   };
   console.info('RESULT', JSON.stringify(result));
   const fullRegionUnvisited = durationMs >= 300_000 && downloadedChunks.size < 16;

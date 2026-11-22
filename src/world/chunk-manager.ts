@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { World } from '@dimforge/rapier3d-compat';
 import { EventBus } from '../engine/event-bus';
+import { buildChunkBorderGeometry } from './chunk-debug';
 import { TerrainColliders } from './terrain-physics';
 import type { BuiltTerrainChunk, ChunkEntry, TerrainChunkEvents, TerrainLodData, WorldManifest } from './types';
 
@@ -13,7 +14,9 @@ interface ChunkRecord {
   lod: number;
   result?: BuiltTerrainChunk;
   meshes?: THREE.Mesh[];
+  debugBorder?: THREE.LineSegments;
   memoryBytes: number;
+  debugMemoryBytes: number;
   hasCollider: boolean;
 }
 
@@ -30,6 +33,7 @@ interface CompletedChunk {
 
 const MAX_CHUNK_BYTES = 16 * 1024 * 1024;
 const GEOMETRY_BUDGET_MS = 5;
+const MAX_ATTACHMENTS_PER_FRAME = 1;
 const SCHEDULE_INTERVAL_MS = 100;
 
 function toHex(bytes: ArrayBuffer): string {
@@ -71,6 +75,7 @@ export class ChunkManager {
   private readonly world: World;
   private readonly colliders: TerrainColliders;
   private readonly material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.94, side: THREE.DoubleSide });
+  private readonly debugBorderMaterial = new THREE.LineBasicMaterial({ color: '#f06d4e', depthTest: true, toneMapped: false });
   private readonly records = new Map<string, ChunkRecord>();
   private readonly completed: CompletedChunk[] = [];
   private manifest: WorldManifest | undefined;
@@ -82,6 +87,7 @@ export class ChunkManager {
   private memoryBytes = 0;
   private errorCount = 0;
   private closed = false;
+  private debugBordersVisible = false;
 
   constructor(scene: THREE.Scene, physicsWorld: World, manifestUrl: URL, worldBaseUrl: URL) {
     this.scene = scene;
@@ -121,7 +127,7 @@ export class ChunkManager {
         record = undefined;
       }
       if (!record && distance <= loadRadius) {
-        record = { entry, state: 'queued', distance, lod: this.lodForDistance(distance), memoryBytes: 0, hasCollider: false };
+        record = { entry, state: 'queued', distance, lod: this.lodForDistance(distance), memoryBytes: 0, debugMemoryBytes: 0, hasCollider: false };
         this.records.set(entry.id, record);
       }
       if (!record) continue;
@@ -168,6 +174,15 @@ export class ChunkManager {
     return this.errorCount;
   }
 
+  setDebugBorders(visible: boolean): void {
+    if (this.closed || this.debugBordersVisible === visible) return;
+    this.debugBordersVisible = visible;
+    for (const record of this.records.values()) {
+      if (visible) this.addDebugBorder(record);
+      else this.removeDebugBorder(record);
+    }
+  }
+
   close(): void {
     if (this.closed) return;
     this.closed = true;
@@ -177,6 +192,7 @@ export class ChunkManager {
     this.records.clear();
     this.colliders.clear();
     this.material.dispose();
+    this.debugBorderMaterial.dispose();
     this.events.clear();
     this.world.free();
   }
@@ -188,13 +204,23 @@ export class ChunkManager {
 
   private setLod(record: ChunkRecord, lod: number): void {
     if (record.lod === lod || !record.meshes) return;
+    const current = record.meshes[record.lod];
+    if (current) {
+      current.visible = false;
+      this.scene.remove(current);
+    }
     record.lod = lod;
-    record.meshes.forEach((mesh, index) => { mesh.visible = index === lod; });
+    const next = record.meshes[lod];
+    if (next) {
+      next.visible = true;
+      this.scene.add(next);
+    }
   }
 
   private processCompleted(): void {
     const start = performance.now();
-    while (this.completed.length > 0 && performance.now() - start < GEOMETRY_BUDGET_MS) {
+    let attachments = 0;
+    while (this.completed.length > 0 && attachments < MAX_ATTACHMENTS_PER_FRAME && performance.now() - start < GEOMETRY_BUDGET_MS) {
       const item = this.completed.shift();
       if (!item) return;
       const record = this.records.get(item.id);
@@ -205,16 +231,19 @@ export class ChunkManager {
         const mesh = new THREE.Mesh(geometryForLod(level, item.result, this.manifest?.chunkMeters ?? 256), this.material);
         mesh.position.set(centerX, 0, centerZ);
         mesh.visible = level.level === record.lod;
-        this.scene.add(mesh);
         return mesh;
       });
+      const activeMesh = meshes[record.lod];
+      if (activeMesh) this.scene.add(activeMesh);
       record.result = item.result;
       record.meshes = meshes;
       record.memoryBytes = byteSize(meshes) + item.result.heights.byteLength;
       record.state = 'loaded';
       this.memoryBytes += record.memoryBytes;
+      this.addDebugBorder(record);
       this.events.emit('chunkLoaded', { id: item.id, lod: record.lod, memoryBytes: record.memoryBytes });
       this.syncCollider(record);
+      attachments += 1;
     }
   }
 
@@ -224,6 +253,25 @@ export class ChunkManager {
       this.colliders.add(record.entry.id, record.entry.bounds, this.manifest.chunkMeters, record.result.heights, record.result.samples);
       record.hasCollider = true;
     }
+  }
+
+  private addDebugBorder(record: ChunkRecord): void {
+    if (!this.debugBordersVisible || !record.result || record.debugBorder) return;
+    const geometry = buildChunkBorderGeometry(record.result);
+    const border = new THREE.LineSegments(geometry, this.debugBorderMaterial);
+    this.scene.add(border);
+    record.debugBorder = border;
+    record.debugMemoryBytes = geometry.attributes.position?.array.byteLength ?? 0;
+    this.memoryBytes += record.debugMemoryBytes;
+  }
+
+  private removeDebugBorder(record: ChunkRecord): void {
+    if (!record.debugBorder) return;
+    this.scene.remove(record.debugBorder);
+    record.debugBorder.geometry.dispose();
+    record.debugBorder = undefined;
+    this.memoryBytes = Math.max(0, this.memoryBytes - record.debugMemoryBytes);
+    record.debugMemoryBytes = 0;
   }
 
   private dispatchNext(): void {
@@ -272,6 +320,7 @@ export class ChunkManager {
   };
 
   private unload(record: ChunkRecord, emit = true): void {
+    this.removeDebugBorder(record);
     if (record.hasCollider) this.colliders.remove(record.entry.id);
     if (record.meshes) {
       for (const mesh of record.meshes) {

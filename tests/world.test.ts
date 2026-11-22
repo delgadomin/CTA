@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildTerrainChunk } from '../src/world/mesh-builder';
+import { buildChunkBorderGeometry } from '../src/world/chunk-debug';
 import { classifyGround } from '../src/world/materials';
 import { createPhysicsWorld, TerrainColliders, toRapierColumnMajor } from '../src/world/terrain-physics';
 import type { RawTerrainChunk } from '../src/world/types';
@@ -35,6 +36,20 @@ describe('terrain meshes', () => {
     expect(classifyGround('water', 'water', '')).toBe('water');
     expect(classifyGround('natural', 'bare_rock', '')).toBe('rock');
     expect(classifyGround('surface', 'paving', 'paving_stones')).toBe('stone');
+  });
+});
+
+describe('chunk debug borders', () => {
+  it('draws a lifted perimeter that follows the terrain sample edges', () => {
+    const chunk = buildTerrainChunk(rawChunk);
+    const geometry = buildChunkBorderGeometry(chunk);
+    const positions = geometry.getAttribute('position').array;
+    expect(positions).toHaveLength(96);
+    expect(positions[0]).toBe(-2);
+    expect(positions[1]).toBeCloseTo(400.15, 4);
+    expect(positions[2]).toBe(-2);
+    expect(positions[3]).toBe(-1);
+    geometry.dispose();
   });
 });
 

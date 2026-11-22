@@ -91,6 +91,7 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
   event.preventDefault();
   showDebug = !showDebug;
   document.querySelector<HTMLElement>('.debug-panel')?.classList.toggle('is-hidden', !showDebug);
+  chunks?.setDebugBorders(showDebug);
 });
 
 canvas.addEventListener('click', () => input.requestPointerLock());
@@ -109,6 +110,7 @@ async function initializeWorld(): Promise<void> {
   chunks.events.on('chunkLoaded', ({ id, lod }) => logger.debug('Terrain chunk loaded', { id, lod }));
   chunks.events.on('chunkUnloaded', ({ id }) => logger.debug('Terrain chunk unloaded', { id }));
   await chunks.initialize();
+  chunks.setDebugBorders(showDebug);
   statusLabel.textContent = 'Terreno listo · WASD desplaza · clic captura el ratón';
   logger.info('World streaming initialized', { region: 'cc-monumental', stepHz: 60, lods: 3 });
 }

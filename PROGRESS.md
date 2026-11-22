@@ -50,22 +50,36 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - Añadir `src/world/` para cargar el manifest y gestionar chunks con radio de carga/descarga con histéresis y prioridad por distancia.
 - Añadir un Web Worker para descomprimir CTA2, crear mallas con normales, colores de suelo desde superficies OSM, LOD 3 niveles y skirts anti-grietas.
 - Añadir Rapier heightfields solo en chunks próximos, eventos de carga/descarga y límites por presupuesto de trabajo.
-- Sustituir el cubo de diagnóstico en `src/main.ts` por el terreno, niebla, controles de cámara y panel F4 con chunks/memoria.
+- Sustituir el cubo de diagnóstico en `src/main.ts` por el terreno, niebla, controles de cámara y panel F4 con bordes de chunk y contadores.
 - Registrar licencia/dependencia en `DECISIONS.md` y progreso; validar chunks reales, navegación, lint, typecheck, tests y build.
 
 ### Hecho
 - Mallas de terreno con normales, color según superficies OSM, tres niveles de detalle (2/4/8 m) y skirts de 4 m.
 - Web Worker para verificar CTA2, descomprimir, validar tamaños y construir las mallas; SHA-256 y límites de tamaño comprobados antes de enviar datos al worker.
-- Carga con prioridad por distancia, radio de 512 m y descarga a 614 m; colliders heightfield Rapier solo hasta 192 m; eventos de carga/descarga y panel F4.
+- Carga con prioridad por distancia, radio de 512 m y descarga a 614 m; colliders heightfield Rapier solo hasta 192 m; eventos de carga/descarga y panel F4 que dibuja perímetros elevados siguiendo las muestras del terreno.
 - Corregido el número de celdas del heightfield: Rapier recibe `samples - 1` por eje junto a la matriz completa de muestras.
 - Verificador Playwright repetible en `tools/verify-streaming.mjs` y `npm run verify:streaming`.
 
 ### Validación de fase 3
 - `eslint`, `tsc -b`, 15 pruebas Vitest y build Vite pasan; build inicial gzip de 875 kB, inferior al límite de 25 MB.
-- Navegación automatizada de 5 minutos en Edge: las 16 teselas descargadas, de 5 a 12 chunks activos, cero errores, máximo frame durante streaming 15,4 ms y cero intervalos mayores de 16 ms.
-- Memoria geométrica estimada durante el recorrido: 6,8–16,3 MiB; al terminar queda en 10,9 MiB con 8 chunks activos. El contador cubre buffers CPU de geometría, no memoria del driver GPU.
-- En el arranque antes de activar el streaming se midieron frames de 27,1, 80,1 y 26,7 ms mientras se inicializaban física y terreno; no ocurrieron con terreno activo.
+- Navegación automatizada de 5 minutos en Edge con bordes F4 visibles: las 16 teselas descargadas, de 5 a 12 chunks activos, cero errores, máximo frame durante streaming 14,7 ms y cero intervalos mayores de 16 ms.
+- Memoria geométrica estimada durante el recorrido: 6,9–16,5 MiB; al terminar queda en 11,0 MiB con 8 chunks activos. El contador incluye buffers CPU del overlay F4 y no memoria del driver GPU.
+- En el arranque previo al primer chunk se midieron frames de 80,1 y 26,8 ms mientras se inicializaban física y terreno; no ocurrieron con el terreno activo.
 
 ### Cómo validar el streaming
 - Inicia Vite en `http://127.0.0.1:5173/`.
 - Ejecuta `npm run verify:streaming`; el recorrido automatizado dura 5 minutos y falla ante errores, frames activos >16 ms o teselas no visitadas. Se puede pasar una duración en milisegundos a `node tools/verify-streaming.mjs` para una comprobación breve.
+- Prueba unitaria: la geometría del borde usa muestras de elevación y se eleva 0,15 m para evitar z-fighting.
+- F4 alterna el panel y los bordes; la geometría de borde se eleva 0,15 m siguiendo el MDT05 para evitar z-fighting.
+
+## Fase 4 - Red viaria (pendiente)
+
+### Plan
+- Ampliar la normalización OSM con nodos compartidos, sentidos, carriles, superficie, aceras, rampas, puentes, túneles, escaleras y nodos de cruce/señal; actualizar la consulta y refrescar solo la fuente OSM oficial necesaria.
+- Generar un grafo navegable estable con nodos, segmentos por carril y conexiones de intersección, listo para IA futura; guardar hash y atribución.
+- Añadir geometría fusionada por chunk para calzadas, aceras, bordillos, intersecciones, pasos peatonales y escaleras, ajustada a elevación MDT05 y con materiales repetibles por superficie.
+- Añadir señalización vertical y semáforos instanciados en nodos OSM; crear colisionadores viales simplificados solo cerca del jugador.
+- Integrar los datos y mallas en el worker/streaming y mostrar la ruta Plaza Mayor → Arco de la Estrella → Plaza de San Jorge en el inspector.
+- Validar posición/topología contra OSM, ausencia de parpadeo entre superficies, presupuesto de draw calls, lint, typecheck, tests y build; registrar límites de datos ausentes sin inventarlos.
+
+Alcance excluido en esta fase: vehículos y tráfico de IA.
