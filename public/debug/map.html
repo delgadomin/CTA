@@ -8,16 +8,17 @@
     <style>
       :root { color-scheme: dark; font-family: "Segoe UI", sans-serif; background: #191f1b; color: #f4f1e7; }
       * { box-sizing: border-box; }
-      body { margin: 0; min-width: 320px; }
+      body { display: flex; height: 100vh; margin: 0; min-width: 320px; flex-direction: column; }
       header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 22px; border-bottom: 1px solid #3a433b; }
       h1 { margin: 0; font-size: 18px; font-weight: 600; }
       header p { margin: 4px 0 0; color: #aab5a9; font-size: 12px; }
       a { color: #e5bd7e; font-size: 12px; }
-      #canvas { display: block; width: 100vw; height: calc(100vh - 76px); touch-action: none; }
+      #canvas { display: block; width: 100vw; min-height: 160px; flex: 1; touch-action: none; }
       #status { position: fixed; left: 22px; bottom: 18px; padding: 8px 11px; color: #d6ded5; background: #191f1b; border: 1px solid #3a433b; font-size: 12px; }
       .legend { display: flex; gap: 13px; margin-top: 6px; color: #aab5a9; font-size: 11px; }
       .legend span::before { display: inline-block; width: 8px; height: 8px; margin-right: 5px; content: ""; background: var(--color); }
-      @media (max-width: 560px) { header { align-items: flex-start; flex-direction: column; gap: 8px; } #canvas { height: calc(100vh - 102px); } }
+      .overlay-control { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; color: #dce6df; font-size: 12px; }
+      @media (max-width: 560px) { header { align-items: flex-start; flex-direction: column; gap: 8px; } }
     </style>
   </head>
   <body>
@@ -26,6 +27,7 @@
         <h1>Inspector geográfico · Ciudad Monumental</h1>
         <p>Calles, edificios, terreno y elementos OSM procesados · © OpenStreetMap contributors · terreno derivado MDT05 CNIG · arrastra para desplazar, rueda para acercar</p>
         <div class="legend"><span style="--color:#ceb99a">casco</span><span style="--color:#d8cdb9">ensanche</span><span style="--color:#b9bbb7">periferia</span><span style="--color:#596d57">superficies</span><span style="--color:#578da0">agua</span><span style="--color:#d66a49">calles</span><span style="--color:#c39a58">sendas</span><span style="--color:#8baa73">mobiliario</span><span style="--color:#e5bd7e">puntos</span><span style="--color:#ffcf54">recorrido a pie</span></div>
+        <label class="overlay-control"><input id="source-toggle" type="checkbox" checked /> Superponer OSM original (trazos magenta y huellas cian)</label>
       </div>
       <a id="osm-link" href="https://www.openstreetmap.org/" target="_blank" rel="noreferrer">Comparar con OpenStreetMap ↗</a>
     </header>
@@ -40,6 +42,7 @@
       const view = { scale: 0.55, offsetX: 0, offsetY: 0 };
       let manifest;
       let walkRoute;
+      let sourceGeometry;
       let dragging = false;
       let dragX = 0;
       let dragY = 0;
@@ -116,6 +119,35 @@
         context.restore();
       }
 
+      function drawSourceGeometry() {
+        if (!sourceGeometry || !document.querySelector('#source-toggle').checked) return;
+        context.save();
+        context.setLineDash([5, 3]);
+        context.lineWidth = 1.1;
+        context.strokeStyle = '#f08bc2';
+        for (const road of sourceGeometry.roads) {
+          context.beginPath();
+          road.points.forEach((point, index) => {
+            const [x, y] = screen(point);
+            if (index === 0) context.moveTo(x, y); else context.lineTo(x, y);
+          });
+          context.stroke();
+        }
+        context.strokeStyle = '#59e0df';
+        context.fillStyle = 'rgb(89 224 223 / 10%)';
+        for (const building of sourceGeometry.buildings) {
+          context.beginPath();
+          building.points.forEach((point, index) => {
+            const [x, y] = screen(point);
+            if (index === 0) context.moveTo(x, y); else context.lineTo(x, y);
+          });
+          context.closePath();
+          context.fill();
+          context.stroke();
+        }
+        context.restore();
+      }
+
       function draw() {
         if (!context) return;
         context.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
@@ -128,6 +160,7 @@
         const bottomRight = screen([half, -half]);
         context.strokeRect(topLeft[0], topLeft[1], bottomRight[0] - topLeft[0], bottomRight[1] - topLeft[1]);
         for (const feature of world) drawFeature(feature);
+        drawSourceGeometry();
         drawWalkRoute();
       }
 
@@ -152,6 +185,11 @@
           if (!routeResponse.ok) throw new Error('No se pudo cargar la ruta peatonal de referencia.');
           walkRoute = await routeResponse.json();
         }
+        if (manifest.sourceGeometry?.path) {
+          const sourceResponse = await fetch(`../world/cc-monumental/${manifest.sourceGeometry.path}`);
+          if (!sourceResponse.ok) throw new Error('No se pudo cargar la geometría fuente OSM para la superposición.');
+          sourceGeometry = await sourceResponse.json();
+        }
         const zones = manifest.counts.buildingsInWorldByZone ?? manifest.counts.buildingsByZone;
         const buildingCount = manifest.counts.buildingsInWorld ?? manifest.counts.buildings;
         status.textContent = `${manifest.counts.roads} calles · ${buildingCount} edificios (casco ${zones?.casco ?? 0}, ensanche ${zones?.ensanche ?? 0}, periferia ${zones?.periferia ?? 0}) · ${world.length} elementos · recorrido peatonal ${walkRoute?.lengthMeters ?? '—'} m · EPSG:25829`;
@@ -161,6 +199,7 @@
       }
 
       canvas.addEventListener('wheel', (event) => { event.preventDefault(); view.scale = Math.max(0.18, Math.min(2.4, view.scale * (event.deltaY < 0 ? 1.12 : 0.89))); draw(); }, { passive: false });
+      document.querySelector('#source-toggle').addEventListener('change', draw);
       canvas.addEventListener('pointerdown', (event) => { dragging = true; dragX = event.clientX; dragY = event.clientY; canvas.setPointerCapture(event.pointerId); });
       canvas.addEventListener('pointermove', (event) => { if (!dragging) return; view.offsetX += event.clientX - dragX; view.offsetY += event.clientY - dragY; dragX = event.clientX; dragY = event.clientY; draw(); });
       canvas.addEventListener('pointerup', () => { dragging = false; });

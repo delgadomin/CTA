@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "approvalRule": "Only a human may mark a landmark approved after photo comparison.",
+  "landmarks": {
+    "plaza-mayor": {
+      "status": "pending"
+    },
+    "arco-de-la-estrella": {
+      "status": "pending"
+    },
+    "torre-de-bujaco": {
+      "status": "pending"
+    },
+    "plaza-de-santa-maria": {
+      "status": "pending"
+    },
+    "concatedral-de-santa-maria": {
+      "status": "pending"
+    },
+    "plaza-de-san-jorge": {
+      "status": "pending"
+    },
+    "iglesia-san-francisco-javier": {
+      "status": "pending"
+    },
+    "palacio-golfines-abajo": {
+      "status": "pending"
+    },
+    "casa-de-las-veletas": {
+      "status": "pending"
+    },
+    "torre-de-las-ciguenas": {
+      "status": "pending"
+    },
+    "palacio-de-carvajal": {
+      "status": "pending"
+    },
+    "muralla-de-caceres": {
+      "status": "pending"
+    },
+    "paseo-de-canovas": {
+      "status": "pending"
+    },
+    "avenida-de-espana": {
+      "status": "pending"
+    },
+    "parque-del-principe": {
+      "status": "pending"
+    },
+    "estadio-principe-felipe": {
+      "status": "pending"
+    },
+    "estacion-de-tren": {
+      "status": "pending"
+    },
+    "hospital-de-caceres": {
+      "status": "pending"
+    },
+    "campus-universitario": {
+      "status": "pending"
+    }
+  }
+}

@@ -11,6 +11,7 @@ import { buildRoadNetwork } from './road-network.mjs';
 import { buildWalkRoute } from './walk-route.mjs';
 import { discoverLandmarkModels } from './landmark-assets.mjs';
 import { auditLandmarks, formatLandmarkAudit } from './landmark-audit.mjs';
+import { buildLandmarkDataset, writeLandmarkDataset } from './landmark-catalog.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const regionName = process.argv.find((argument) => argument.startsWith('--region='))?.split('=')[1] ?? 'cc-monumental';
@@ -55,8 +56,13 @@ const brandBlocklist = JSON.parse(await readFile(path.join(ROOT, 'tools/brand-bl
 const landmarkModelIds = await discoverLandmarkModels(path.join(ROOT, 'public'));
 const region = { ...regionDefinition, lon: regionDefinition.origin.lon, lat: regionDefinition.origin.lat };
 const data = normalizeOsm(osm, region, brandBlocklist, elevation, landmarkModelIds);
-const landmarkCatalog = JSON.parse(await readFile(path.join(ROOT, 'tools/config/landmarks.json'), 'utf8'));
-const landmarkAudit = auditLandmarks([...data.roads, ...data.buildings, ...data.surfaces, ...data.pois], landmarkCatalog.landmarks, regionName);
+const landmarkCatalog = JSON.parse(await readFile(path.join(ROOT, 'data/landmarks/targets.json'), 'utf8'));
+const sourceFeatures = [...data.roads, ...data.buildings, ...data.surfaces, ...data.pois];
+const landmarkDataset = buildLandmarkDataset(landmarkCatalog.landmarks, sourceFeatures, osm.elements, resolvedRegion.origin, regionName);
+await writeLandmarkDataset(ROOT, landmarkDataset);
+const landmarkStatuses = JSON.parse(await readFile(path.join(ROOT, 'data/landmarks/status.json'), 'utf8'));
+const landmarkAudit = auditLandmarks(sourceFeatures, landmarkCatalog.landmarks, regionName);
+const pendingLandmarkApprovals = landmarkCatalog.landmarks.filter((landmark) => landmark.scope === regionName && landmarkStatuses.landmarks?.[landmark.id]?.status !== 'approved');
 const worldBuildings = new Map(data.chunks.flatMap((chunk) => chunk.features.filter((feature) => feature.featureType === 'building').map((feature) => [feature.id, feature])));
 const worldBuildingsByZone = Object.fromEntries(['casco', 'ensanche', 'periferia'].map((zone) => [zone, [...worldBuildings.values()].filter((building) => building.zone === zone).length]));
 const roadNetwork = buildRoadNetwork(data.roads);
@@ -68,6 +74,16 @@ if (data.issues.missingTerrainSamples === data.chunks.length * regionDefinition.
 
 const destination = path.join(ROOT, 'public/world', regionName);
 await mkdir(destination, { recursive: true });
+const inWorldFeatureIds = new Set(data.chunks.flatMap((chunk) => chunk.features.map((feature) => feature.id).filter(Boolean)));
+const sourceGeometry = {
+  schemaVersion: 1,
+  region: regionName,
+  crs: 'EPSG:25829 local meters',
+  roads: data.roads.filter((feature) => inWorldFeatureIds.has(feature.id)).map(({ id, featureType, points }) => ({ id, featureType, points })),
+  buildings: data.buildings.filter((feature) => inWorldFeatureIds.has(feature.id)).map(({ id, points }) => ({ id, featureType: 'building', points })),
+};
+const sourceGeometryBytes = Buffer.from(`${JSON.stringify(sourceGeometry)}\n`, 'utf8');
+await writeFile(path.join(destination, 'source-fidelity.json'), sourceGeometryBytes);
 const roadNetworkBytes = Buffer.from(`${JSON.stringify(roadNetwork)}\n`, 'utf8');
 const roadNetworkPath = path.join(destination, 'road-network.json');
 await writeFile(roadNetworkPath, roadNetworkBytes);
@@ -163,6 +179,13 @@ const manifest = {
     segments: roadNetwork.segments.length,
     connections: roadNetwork.connections.length,
   },
+  sourceGeometry: {
+    path: 'source-fidelity.json',
+    bytes: sourceGeometryBytes.length,
+    sha256: createHash('sha256').update(sourceGeometryBytes).digest('hex'),
+    roads: sourceGeometry.roads.length,
+    buildings: sourceGeometry.buildings.length,
+  },
   ...(walkRouteMetadata ? { walkRoute: walkRouteMetadata } : {}),
   chunks: chunkManifest,
 };
@@ -205,11 +228,14 @@ const fidelityLines = [
   `| Árboles y mobiliario | ${data.props.length} |`,
   `| Puntos de interés | ${data.pois.length} |`,
   `| Hitos de referencia presentes / objetivo regional | ${landmarkAudit.filter((item) => item.status === 'found').length} / ${landmarkAudit.filter((item) => item.scope === regionName).length} |`,
+  `| Hitos pendientes de aprobación humana | ${pendingLandmarkApprovals.length} |`,
+  `| Geometrías en superposición OSM | ${sourceGeometry.roads.length} vías · ${sourceGeometry.buildings.length} huellas |`,
   `| Edificios sin altura/planta OSM | ${data.issues.missingBuildingHeights} |`,
   `| Muestras MDT05 ausentes | ${data.issues.missingTerrainSamples} |`,
   `| Comercios pendientes de revisión de marca | ${data.issues.pendingBrands} |`,
   '',
   'Los atributos de altura y plantas ausentes permanecen nulos en los datos fuente. La altura visual usa height=* → building:levels × 3 m → planta visual por zona/tipo; las fachadas conservan el número fuente y el valor inferido por separado.',
+  'El inspector 2D ofrece una superposición cian/magenta de la geometría OSM original frente a los chunks procesados. La herramienta `npm run fidelity` compara cada vértice de las vías y huellas fuente que intersectan el mundo con una tolerancia máxima de 1 m.',
   'Las torres sin altura ni plantas explícitas reciben 7 plantas visuales (21 m) para lectura de silueta; es un fallback artístico, no una medición. El Arco de la Estrella usa la posición OSM del POI y una orientación perpendicular a la vía más cercana; sus dimensiones y el almenado de torres son aproximaciones visuales, no datos de levantamiento.',
   'Los polígonos OSM etiquetados place=square se conservan como superficies y POIs; el terreno los representa con material de piedra usando la huella fuente.',
   'Las líneas OSM barrier=city_wall generan un muro monumental sobre su trazado fuente; la altura, el grosor y las almenas visuales se documentan como aproximaciones porque la línea no aporta cotas.',
@@ -218,6 +244,10 @@ const fidelityLines = [
   `La ruta enlaza Plaza Mayor (snap ${walkRoute?.landmarks[0]?.snapDistanceMeters.toFixed(1) ?? '—'} m), Arco de la Estrella (snap ${walkRoute?.landmarks[1]?.snapDistanceMeters.toFixed(1) ?? '—'} m) y Plaza de San Jorge (snap ${walkRoute?.landmarks[2]?.snapDistanceMeters.toFixed(1) ?? '—'} m) mediante segmentos peatonales y calles locales.`,
   '',
   ...formatLandmarkAudit(landmarkAudit),
+  '### Aprobación humana pendiente',
+  '',
+  pendingLandmarkApprovals.length ? pendingLandmarkApprovals.map((landmark) => `- ${landmark.name} (${landmark.id})`).join('\n') : 'Todos los hitos regionales tienen una aprobación humana registrada.',
+  '',
   '',
   'Los puentes reciben solo un perfil visual de rampa (máximo 1,8 m) porque la extracción no aporta una cota vertical fiable; los túneles se conservan transitables a cota MDT05 hasta que exista geometría de excavación.',
   'Las conexiones de intersección se derivan de nodos compartidos. Esta versión no incluye relaciones OSM de restricción de giro.',

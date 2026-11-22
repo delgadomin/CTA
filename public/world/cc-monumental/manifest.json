@@ -20,9 +20,9 @@
       "attribution": "© OpenStreetMap contributors",
       "license": "ODbL 1.0",
       "url": "https://www.openstreetmap.org/copyright",
-      "retrievedAt": "2026-11-22T20:37:19Z",
-      "bytes": 2307031,
-      "sha256": "0ebb289b1188047e4525fbba893d6a71891d0bd7d13b591b5ee0aafffce9fe6e"
+      "retrievedAt": "2026-11-22T23:10:26Z",
+      "bytes": 2310657,
+      "sha256": "866fd5351d159b8244ac6f72462ca562a2c2d05b0d2f995cc9ca48a214d33327"
     },
     "terrain": {
       "attribution": "Obra derivada de MDT05-cob1 2008-2015 CC-BY 4.0 scne.es",
@@ -58,7 +58,7 @@
       "ensanche": 1904,
       "periferia": 460
     },
-    "surfaces": 142,
+    "surfaces": 147,
     "props": 628,
     "pois": 391
   },
@@ -69,6 +69,13 @@
     "nodes": 2433,
     "segments": 2744,
     "connections": 4144
+  },
+  "sourceGeometry": {
+    "path": "source-fidelity.json",
+    "bytes": 1341596,
+    "sha256": "9b906749919a5e82f51b26bc406c062aeb1f0c720aececca5e5ab2c91a1878f4",
+    "roads": 675,
+    "buildings": 2811
   },
   "walkRoute": {
     "path": "walk-route.json",
@@ -157,9 +164,9 @@
         "maxX": 0,
         "maxZ": 0
       },
-      "bytes": 74740,
-      "sha256": "9c71ef5b77c9cbef5652819b865efec5302d8ab20c7896c7619a24616a8bcbaa",
-      "featureCount": 457,
+      "bytes": 75230,
+      "sha256": "41978328554c3d7fb456b298bfb769dd0504fe65e67fc3823c6741c5b7750c2f",
+      "featureCount": 458,
       "missingTerrainSamples": 0
     },
     {
@@ -171,9 +178,9 @@
         "maxX": 256,
         "maxZ": 0
       },
-      "bytes": 69585,
-      "sha256": "d60c58e9b52a952e472720270f26e6871fd6536a40a7ec2c42b145cf8d829c85",
-      "featureCount": 361,
+      "bytes": 70717,
+      "sha256": "92d22edbdea8f9cf07fb160153cb16e251de0b404c598286715dc33e0c5bfda7",
+      "featureCount": 365,
       "missingTerrainSamples": 0
     },
     {
@@ -213,9 +220,9 @@
         "maxX": 0,
         "maxZ": 256
       },
-      "bytes": 64139,
-      "sha256": "f1cfb132fa006c729ae2059d8a504dedb7966ab3ec2fba431da3bc2e6afff6a2",
-      "featureCount": 410,
+      "bytes": 64685,
+      "sha256": "313bb6f54abe6254764dc6bf3f3d7f59094c35214972d6031d839b8ebada7bb7",
+      "featureCount": 411,
       "missingTerrainSamples": 0
     },
     {
@@ -227,9 +234,9 @@
         "maxX": 256,
         "maxZ": 256
       },
-      "bytes": 82278,
-      "sha256": "f7034ea19843f15fd82cc9a5a00ffb6e7f08b380499f7dcbbf1a68a9e23ecffe",
-      "featureCount": 492,
+      "bytes": 83170,
+      "sha256": "6e12cc591583c470f134a930e6e82099b26da443cc4e47656cd77adf657a7a62",
+      "featureCount": 495,
       "missingTerrainSamples": 0
     },
     {

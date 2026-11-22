@@ -1,7 +1,7 @@
 # Informe de fidelidad - Ciudad Monumental
 
 Región: cc-monumental; CRS: EPSG:25829; rectángulo: 1000 x 1000 m.
-Fuente OSM: fecha base 2026-11-22T20:37:19Z.
+Fuente OSM: fecha base 2026-11-22T23:10:26Z.
 Origen UTM fijado en Plaza Mayor: E 726089.228 m, N 4372723.106 m.
 
 | Medida | Resultado |
@@ -20,15 +20,18 @@ Origen UTM fijado en Plaza Mayor: E 726089.228 m, N 4372723.106 m.
 | Huellas incluidas en chunks del mundo | 2811 |
 | Plantas OSM explícitas | 13 |
 | Sustituciones GLB de hitos seguras | 0 |
-| Superficies y agua | 142 |
+| Superficies y agua | 147 |
 | Árboles y mobiliario | 628 |
 | Puntos de interés | 391 |
 | Hitos de referencia presentes / objetivo regional | 13 / 13 |
+| Hitos pendientes de aprobación humana | 13 |
+| Geometrías en superposición OSM | 675 vías · 2811 huellas |
 | Edificios sin altura/planta OSM | 2834 |
 | Muestras MDT05 ausentes | 0 |
 | Comercios pendientes de revisión de marca | 158 |
 
 Los atributos de altura y plantas ausentes permanecen nulos en los datos fuente. La altura visual usa height=* → building:levels × 3 m → planta visual por zona/tipo; las fachadas conservan el número fuente y el valor inferido por separado.
+El inspector 2D ofrece una superposición cian/magenta de la geometría OSM original frente a los chunks procesados. La herramienta `npm run fidelity` compara cada vértice de las vías y huellas fuente que intersectan el mundo con una tolerancia máxima de 1 m.
 Las torres sin altura ni plantas explícitas reciben 7 plantas visuales (21 m) para lectura de silueta; es un fallback artístico, no una medición. El Arco de la Estrella usa la posición OSM del POI y una orientación perpendicular a la vía más cercana; sus dimensiones y el almenado de torres son aproximaciones visuales, no datos de levantamiento.
 Los polígonos OSM etiquetados place=square se conservan como superficies y POIs; el terreno los representa con material de piedra usando la huella fuente.
 Las líneas OSM barrier=city_wall generan un muro monumental sobre su trazado fuente; la altura, el grosor y las almenas visuales se documentan como aproximaciones porque la línea no aporta cotas.
@@ -61,6 +64,22 @@ La comparación usa coincidencia exacta de nombre tras normalizar mayúsculas, e
 | Estación de tren | fuera de esta región | — | — |
 | Hospital de Cáceres | fuera de esta región | — | — |
 | Campus universitario | fuera de esta región | — | — |
+
+### Aprobación humana pendiente
+
+- Plaza Mayor (plaza-mayor)
+- Arco de la Estrella (arco-de-la-estrella)
+- Torre de Bujaco (torre-de-bujaco)
+- Plaza de Santa María (plaza-de-santa-maria)
+- Concatedral de Santa María (concatedral-de-santa-maria)
+- Plaza de San Jorge (plaza-de-san-jorge)
+- Iglesia de San Francisco Javier (iglesia-san-francisco-javier)
+- Palacio de los Golfines de Abajo (palacio-golfines-abajo)
+- Casa de las Veletas (casa-de-las-veletas)
+- Torre de las Cigüeñas (torre-de-las-ciguenas)
+- Palacio de Carvajal (palacio-de-carvajal)
+- Muralla de Cáceres (muralla-de-caceres)
+- Paseo de Cánovas (paseo-de-canovas)
 
 
 Los puentes reciben solo un perfil visual de rampa (máximo 1,8 m) porque la extracción no aporta una cota vertical fiable; los túneles se conservan transitables a cota MDT05 hasta que exista geometría de excavación.

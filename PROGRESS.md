@@ -147,8 +147,11 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - Las áreas `place=square` ya se procesan como superficies y POIs: sus huellas OSM se renderizan en el terreno con la clasificación de piedra.
 - Las líneas `barrier=city_wall` se conservan y reciben una silueta de muralla sobre su trazado OSM, con medidas visuales aproximadas documentadas por ausencia de cotas.
 - El informe de hitos ahora indica la geometría fuente disponible (huella, polígono, trazado, vía o punto/centro); evita tratar un POI sin huella como si fuera un edificio modelable.
+- Añadido el catálogo canónico de fase 6 con 19 entradas, una ficha Markdown por hito y `status.json` en pendiente. El pipeline incorpora posiciones, huellas y alturas solo cuando la extracción OSM las aporta; los hitos exteriores siguen sin fuente geométrica en la región actual.
+- Añadido `npm run fidelity`: compara directamente las vías y huellas OSM con los chunks y falla si falta geometría, aparece una forma inesperada o supera 1 m. La comprobación local comparó 3.486 vías/huellas con desviación máxima 0,0000 m.
+- El inspector 2D puede superponer trazados OSM originales y huellas de edificio sobre el mundo; queda pendiente la revisión visual humana.
 - El data build regeneró 16 chunks; el verificador confirmó hashes, terreno, ruta y ausencia de nombres comerciales bloqueados.
 
 ### Pendiente
-- Añadir siluetas propias para los demás hitos que tengan geometría fuente suficiente; no hay modelos GLB de hitos actualmente.
-- Ejecutar lint, typecheck, pruebas, build y QA visual antes de marcar la fase como completada. Este entorno no tiene npm/node_modules; la instalación con pnpm fue bloqueada al crear el enlace de dependencias.
+- Modelar en detalle los siete conjuntos de la guía (soportales de Plaza Mayor, Concatedral, escalinata de San Francisco Javier, torre de las Cigüeñas y torres/muralla), añadir cigüeñas ambientales y ampliar la fuente geográfica para los seis hitos fuera de la región actual.
+- Ejecutar lint, typecheck, pruebas, build y revisión visual; ningún hito puede pasar a aprobado sin comparación humana con fotografías. Este entorno no tiene npm/node_modules; la instalación con pnpm fue bloqueada al crear el enlace de dependencias.
