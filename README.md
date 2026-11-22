@@ -15,7 +15,7 @@ npm ci
 npm run dev
 ```
 
-La fase 0 muestra una escena temporal con un cubo giratorio. Pulsa F3 para mostrar u ocultar los contadores de diagnóstico. La escena se retirará al comenzar el núcleo del motor.
+La escena actual es temporal y sirve para revisar el motor. WASD o el stick izquierdo mueven la cámara libre, el clic captura el ratón para mirar, el stick derecho mira, Tab o el botón A alternan la cámara orbital y F3 muestra u oculta los contadores de diagnóstico.
 
 ## Comprobaciones
 
