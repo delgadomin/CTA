@@ -150,8 +150,10 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - Añadido el catálogo canónico de fase 6 con 19 entradas, una ficha Markdown por hito y `status.json` en pendiente. El pipeline incorpora posiciones, huellas y alturas solo cuando la extracción OSM las aporta; los hitos exteriores siguen sin fuente geométrica en la región actual.
 - Añadido `npm run fidelity`: compara directamente las vías y huellas OSM con los chunks y falla si falta geometría, aparece una forma inesperada o supera 1 m. La comprobación local comparó 3.486 vías/huellas con desviación máxima 0,0000 m.
 - El inspector 2D puede superponer trazados OSM originales y huellas de edificio sobre el mundo; queda pendiente la revisión visual humana.
+- La extracción nueva incluye `barrier=city_wall`; los chunks regenerados conservan sus tramos. Se añadieron cigüeñas low-poly en torres y una selección estable de tejados del casco; al acercarse el jugador baten las alas y despegan, y vuelven a posarse cuando se aleja.
 - El data build regeneró 16 chunks; el verificador confirmó hashes, terreno, ruta y ausencia de nombres comerciales bloqueados.
 
 ### Pendiente
-- Modelar en detalle los siete conjuntos de la guía (soportales de Plaza Mayor, Concatedral, escalinata de San Francisco Javier, torre de las Cigüeñas y torres/muralla), añadir cigüeñas ambientales y ampliar la fuente geográfica para los seis hitos fuera de la región actual.
+- Completar los modelos específicos de soportales de Plaza Mayor, Concatedral, escalinata de San Francisco Javier y Torre de las Cigüeñas. El punto OSM de esta última no trae una huella, así que necesita revisión de referencia antes de modelar.
+- Ampliar la fuente geográfica para los seis hitos fuera de la región actual.
 - Ejecutar lint, typecheck, pruebas, build y revisión visual; ningún hito puede pasar a aprobado sin comparación humana con fotografías. Este entorno no tiene npm/node_modules; la instalación con pnpm fue bloqueada al crear el enlace de dependencias.

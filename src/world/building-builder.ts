@@ -343,10 +343,11 @@ function buildLod(features: readonly ChunkFeature[], terrain: BuiltTerrainChunk,
   return { level: lod, surfaces, triangleCount: surfaces.reduce((sum, surface) => sum + surface.indices.length / 3, 0) };
 }
 
-function buildExtras(features: readonly ChunkFeature[], terrain: BuiltTerrainChunk, bounds: ProjectedBounds): { signs: BuildingSignSlot[]; anchors: BuildingRoofAnchor[]; models: LandmarkModelInstance[] } {
+function buildExtras(features: readonly ChunkFeature[], terrain: BuiltTerrainChunk, bounds: ProjectedBounds): { signs: BuildingSignSlot[]; anchors: BuildingRoofAnchor[]; models: LandmarkModelInstance[]; storks: { buildingId: string; position: RoadPoint3 }[] } {
   const signs: BuildingSignSlot[] = [];
   const anchors: BuildingRoofAnchor[] = [];
   const models: LandmarkModelInstance[] = [];
+  const storks: { buildingId: string; position: RoadPoint3 }[] = [];
   const roads = features.filter((feature) => feature.featureType === 'road' || feature.featureType === 'pedestrian');
   for (const feature of features) {
     if (feature.featureType !== 'building' || !feature.points || feature.points.length < 3) continue;
@@ -361,12 +362,18 @@ function buildExtras(features: readonly ChunkFeature[], terrain: BuiltTerrainChu
     if (owner && feature.zone === 'casco' && item.wallHeight >= 5) {
       anchors.push({ buildingId: feature.id ?? '', position: [center[0], localHeight(terrain, center) + item.wallHeight + item.roofHeight, center[1]], roofShape: item.shape });
     }
+    const landmarkTower = isTowerLandmark(feature);
+    const roofId = feature.id ?? '';
+    const roofHash = [...roofId].reduce((hash, char) => (hash * 31 + char.charCodeAt(0)) >>> 0, 7);
+    if (owner && feature.zone === 'casco' && item.wallHeight >= 5 && (landmarkTower || roofHash % 11 === 0)) {
+      storks.push({ buildingId: roofId, position: [center[0], localHeight(terrain, center) + item.wallHeight + item.roofHeight + 0.85, center[1]] });
+    }
     if (owner) {
       const slot = signSlot(item, terrain, roads);
       if (slot) signs.push(slot);
     }
   }
-  return { signs, anchors, models };
+  return { signs, anchors, models, storks };
 }
 
 export function buildBuildingChunk(features: readonly ChunkFeature[], terrain: BuiltTerrainChunk, bounds: ProjectedBounds): BuiltBuildingChunk {
@@ -380,6 +387,6 @@ export function buildBuildingChunk(features: readonly ChunkFeature[], terrain: B
     addWalls(colliderWriter, item, terrain, bounds, false, true);
   }
   const collider = colliderWriter.buildCollider();
-  return { levels, colliderPositions: collider.positions, colliderIndices: collider.indices, signSlots: extras.signs, roofAnchors: extras.anchors, landmarkModels: extras.models };
+  return { levels, colliderPositions: collider.positions, colliderIndices: collider.indices, signSlots: extras.signs, roofAnchors: extras.anchors, landmarkModels: extras.models, storks: extras.storks };
 }
 

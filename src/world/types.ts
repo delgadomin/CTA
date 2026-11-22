@@ -144,6 +144,11 @@ export interface LandmarkModelInstance {
   readonly position: readonly [number, number, number];
 }
 
+export interface StorkInstance {
+  readonly buildingId: string;
+  readonly position: readonly [number, number, number];
+}
+
 export interface BuiltBuildingChunk {
   readonly levels: readonly BuildingLodGeometry[];
   readonly colliderPositions: Float32Array;
@@ -151,6 +156,7 @@ export interface BuiltBuildingChunk {
   readonly signSlots: readonly BuildingSignSlot[];
   readonly roofAnchors: readonly BuildingRoofAnchor[];
   readonly landmarkModels: readonly LandmarkModelInstance[];
+  readonly storks: readonly StorkInstance[];
 }
 
 export interface RoadSurfaceGeometry {
