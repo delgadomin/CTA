@@ -1,5 +1,6 @@
 import { buildTerrainChunk } from './mesh-builder';
 import { buildRoadChunk } from './road-builder';
+import { buildBuildingChunk } from './building-builder';
 import type { BuiltTerrainChunk, RawTerrainChunk } from './types';
 
 interface BuildRequest {
@@ -32,7 +33,11 @@ async function decodeChunk(request: BuildRequest): Promise<BuiltTerrainChunk> {
   const raw = JSON.parse(new TextDecoder().decode(payload)) as RawTerrainChunk;
   if (raw.id !== request.id) throw new Error(`Chunk identity mismatch: ${request.id}`);
   const terrain = buildTerrainChunk(raw);
-  return { ...terrain, roads: buildRoadChunk(raw.features, terrain, raw.bounds) };
+  return {
+    ...terrain,
+    roads: buildRoadChunk(raw.features, terrain, raw.bounds),
+    buildings: buildBuildingChunk(raw.features, terrain, raw.bounds),
+  };
 }
 
 function transferables(result: BuiltTerrainChunk): Transferable[] {
@@ -41,14 +46,21 @@ function transferables(result: BuiltTerrainChunk): Transferable[] {
     ...result.levels.flatMap((level) => [level.positions.buffer, level.normals.buffer, level.colors.buffer, level.indices.buffer]),
   ];
   const roads = result.roads;
-  if (!roads) return terrainBuffers;
+  const buildings = result.buildings;
+  const buildingBuffers: Transferable[] = buildings
+    ? [
+      ...buildings.levels.flatMap((level) => level.surfaces.flatMap((surface) => [surface.positions.buffer, surface.normals.buffer, surface.colors.buffer, surface.uvs.buffer, surface.indices.buffer])),
+      buildings.colliderPositions.buffer, buildings.colliderIndices.buffer,
+    ]
+    : [];
+  if (!roads) return [...terrainBuffers, ...buildingBuffers];
   const roadBuffers: Transferable[] = [
     ...roads.surfaces.flatMap((surface) => [surface.positions.buffer, surface.normals.buffer, surface.colors.buffer, surface.uvs.buffer, surface.indices.buffer]),
     roads.markings.positions.buffer, roads.markings.normals.buffer, roads.markings.colors.buffer, roads.markings.uvs.buffer, roads.markings.indices.buffer,
     roads.colliderPositions.buffer, roads.colliderIndices.buffer,
     ...roads.props.flatMap((prop) => [prop.positions.buffer, prop.headings.buffer]),
   ];
-  return [...terrainBuffers, ...roadBuffers];
+  return [...terrainBuffers, ...roadBuffers, ...buildingBuffers];
 }
 
 scope.onmessage = (event): void => {

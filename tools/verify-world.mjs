@@ -12,6 +12,7 @@ const blocklist = JSON.parse(await readFile(path.join(ROOT, 'tools/brand-blockli
 const forbidden = blocklist.brands.flatMap((brand) => brand.aliases).map((value) => value.toLocaleLowerCase('es'));
 let totalFeatures = 0;
 let totalMissingHeights = 0;
+const buildingsById = new Map();
 
 for (const chunk of manifest.chunks) {
   if (!/^(-?\d+)_(-?\d+)\.bin$/.test(chunk.path) || chunk.bytes > 16 * 1024 * 1024) throw new Error(`Unsafe chunk metadata: ${chunk.id}`);
@@ -24,6 +25,26 @@ for (const chunk of manifest.chunks) {
   const payload = JSON.parse(payloadBytes.toString('utf8'));
   if (payload.id !== chunk.id || payload.features.length !== chunk.featureCount) throw new Error(`Chunk metadata mismatch: ${chunk.path}`);
   if (payload.terrain.heights.includes(-32768)) throw new Error(`No-data terrain sample found: ${chunk.path}`);
+  for (const feature of payload.features) {
+    if (feature.featureType !== 'building') continue;
+    if (!/^w\d+$/.test(feature.id ?? '') || !Array.isArray(feature.points) || feature.points.length < 4) throw new Error(`Building lacks a stable OSM id or closed footprint in ${chunk.path}.`);
+    const sourceMargin = 200;
+    if (feature.points.some((point) => !Array.isArray(point) || point.length !== 2 || point.some((value) => !Number.isFinite(value) || Math.abs(value) > manifest.extentMeters / 2 + sourceMargin))) {
+      throw new Error(`Building ${feature.id} has an invalid projected footprint.`);
+    }
+    if (!['casco', 'ensanche', 'periferia'].includes(feature.zone)
+      || !Number.isFinite(feature.visualFloors) || feature.visualFloors < 1 || feature.visualFloors > 40
+      || !Number.isFinite(feature.visualHeightMeters) || feature.visualHeightMeters < 2.8 || feature.visualHeightMeters > 80
+      || !['flat', 'gabled', 'hipped', 'unknown'].includes(feature.roofShape)) {
+      throw new Error(`Building ${feature.id} has invalid visual height, zone, or roof metadata.`);
+    }
+    if (feature.landmarkModelPath && !/^landmarks\/w\d+\.glb$/.test(feature.landmarkModelPath)) throw new Error(`Building ${feature.id} references an unsafe landmark model path.`);
+    const prior = buildingsById.get(feature.id);
+    if (prior && (prior.zone !== feature.zone || prior.visualHeightMeters !== feature.visualHeightMeters || JSON.stringify(prior.points) !== JSON.stringify(feature.points))) {
+      throw new Error(`Building ${feature.id} changes identity or visual metadata across chunks.`);
+    }
+    buildingsById.set(feature.id, feature);
+  }
   const data = JSON.stringify(payload).toLocaleLowerCase('es');
   const leakedAlias = forbidden.find((alias) => data.includes(alias));
   if (leakedAlias) throw new Error(`Blocklisted real business name leaked into ${chunk.path}.`);
@@ -70,4 +91,9 @@ if (manifest.roadNetwork) {
 }
 
 if (totalMissingHeights > 0) throw new Error(`World has ${totalMissingHeights} missing terrain samples.`);
-console.info(`Verified ${manifest.chunks.length} chunks, ${totalFeatures} feature records, road network, walking route and all hashes/terrain samples; no blocklisted names.`);
+if (manifest.counts?.buildingsInWorld !== buildingsById.size) throw new Error('Unique in-world building count does not match the world manifest.');
+const buildingZoneCounts = Object.fromEntries(['casco', 'ensanche', 'periferia'].map((zone) => [zone, [...buildingsById.values()].filter((building) => building.zone === zone).length]));
+for (const zone of Object.keys(buildingZoneCounts)) {
+  if (manifest.counts?.buildingsInWorldByZone?.[zone] !== buildingZoneCounts[zone]) throw new Error(`Building count mismatch for zone ${zone}.`);
+}
+console.info(`Verified ${manifest.chunks.length} chunks, ${totalFeatures} feature records, ${buildingsById.size} zoned buildings, road network, walking route and all hashes/terrain samples; no blocklisted names.`);

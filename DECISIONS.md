@@ -41,3 +41,13 @@
 - Los mapas repetibles de asfalto, piedra, hormigón y tierra se generan desde Canvas en tiempo de ejecución; no se descargan texturas externas. El desgaste de vértice usa una semilla espacial estable para evitar costuras entre los segmentos de cada vía.
 - La ruta peatonal de referencia se calcula con los hitos OSM Plaza Mayor (`w62237623`), Arco de la Estrella (`n419385562`) y Plaza de San Jorge (`w35883265`). El inspector presenta las conexiones y distancias de ajuste para comparar con el mapa fuente.
 - Las conexiones topológicas cubren giros por nodos compartidos; la descarga actual no consulta relaciones OSM `type=restriction`, de modo que las restricciones de giro señalizadas no están aún modeladas.
+
+# Fase 5 - edificios
+
+- Solo 13 de las 2.847 huellas fuente tienen `building:levels` explícito y ninguna aporta `height=*`; los valores visuales usan `height=*` → `building:levels × 3 m` → default registrado por zona/tipo. Se conserva la distinción entre dato fuente y valor representado.
+- La zona de fachada se infiere por tipo monumental/etiqueta historic y por distancia a Plaza Mayor: casco hasta 220 m, ensanche hasta 500 m y periferia fuera. Es una heurística visual; los 36 edificios fuera del límite de chunks quedan en el inventario de fuente, no en el mundo jugable.
+- Los techos sin `roof:shape` usan huella alargada → gabled y cercana a cuadrada → hipped; `roof:height` y `roof:colour` prevalecen cuando están presentes. Los mapas modulares de casco/ensanche/periferia, teja y cubierta moderna se generan desde Canvas, sin descargar assets externos.
+- Se construyen tres LOD por chunk/material, y los colliders de edificios son mallas perimetrales simplificadas que solo se activan cerca del jugador. Los rótulos todavía no se dibujan: el chunk expone un slot de fachada comercial para la fase 7.
+- Las ventanas guardan una semilla estable por id y exponen `BuildingRenderer.setNight()` para su integración con el sistema de hora de fase 15. No hay ciclo día/noche en esta fase.
+- `public/landmarks/<id>.glb` es una entrada local opcional; no se descargaron modelos. El data build acepta solo ids de way OSM, GLB 2.0 de máximo 50 MiB, estructura y malla acotadas, sin URIs externos, con texturas PNG/JPEG embebidas limitadas; al cargar se usa la caché local del AssetManager.
+- QA automatizado de fase 5: 16 chunks, 75 FPS, 85 draw calls, 303.477 triángulos, 15,6 ms máximo de streaming, cero frames >16 ms y 23,9–70,8 MiB de buffers de geometría estimados.

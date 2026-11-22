@@ -47,6 +47,17 @@
   "counts": {
     "roads": 689,
     "buildings": 2847,
+    "buildingsInWorld": 2811,
+    "buildingsByZone": {
+      "casco": 448,
+      "ensanche": 1904,
+      "periferia": 495
+    },
+    "buildingsInWorldByZone": {
+      "casco": 447,
+      "ensanche": 1904,
+      "periferia": 460
+    },
     "surfaces": 132,
     "props": 628,
     "pois": 377
@@ -76,8 +87,8 @@
         "maxX": -256,
         "maxZ": -256
       },
-      "bytes": 36855,
-      "sha256": "1229b275bb136e74c99ac853f54517ce491f94bad801cfebdfe4a06b33393fd3",
+      "bytes": 37592,
+      "sha256": "c5b6482356dfb17b1a658d7a3126767198fea3f2f2bdc8e032ba6faba1bbe9e9",
       "featureCount": 252,
       "missingTerrainSamples": 0
     },
@@ -90,8 +101,8 @@
         "maxX": 0,
         "maxZ": -256
       },
-      "bytes": 39482,
-      "sha256": "df71bef5e12e8e32b58eb3d0185e6e8bc0fc163fcc02b2b57a4942b135f45c0f",
+      "bytes": 40876,
+      "sha256": "b1caa55ca5f9a1e4c226393faccaef76be9ef243cc1c05cb3d0df5f64a0b805b",
       "featureCount": 247,
       "missingTerrainSamples": 0
     },
@@ -104,8 +115,8 @@
         "maxX": 256,
         "maxZ": -256
       },
-      "bytes": 57602,
-      "sha256": "8333e3b76acfc57267283108617aa3c407e777978777ce2642a135c24f4bc94e",
+      "bytes": 58510,
+      "sha256": "26acd33cc4331c5b3bad2fda48b3b8fdc0653cd021bb0e950e4d4695d4ca1ac3",
       "featureCount": 312,
       "missingTerrainSamples": 0
     },
@@ -118,8 +129,8 @@
         "maxX": 512,
         "maxZ": -256
       },
-      "bytes": 25648,
-      "sha256": "f8cb1f8fef2f0cb0f5cfa42efaa1e673d693833ab999b91654685e4e9d2f3507",
+      "bytes": 25878,
+      "sha256": "8486ce4a74b4344fc326b44b1be92d4ceac1271f8859764dbd80089f20a45c30",
       "featureCount": 42,
       "missingTerrainSamples": 0
     },
@@ -132,8 +143,8 @@
         "maxX": -256,
         "maxZ": 0
       },
-      "bytes": 47182,
-      "sha256": "6166f834efb96e10203915baf655399969b5c5a5db893ead6ae58f0613d5d459",
+      "bytes": 48026,
+      "sha256": "b75fe513134cb54c17ed7e78e1334220a6f65cab326e0e4778aa0040b56cec86",
       "featureCount": 306,
       "missingTerrainSamples": 0
     },
@@ -146,8 +157,8 @@
         "maxX": 0,
         "maxZ": 0
       },
-      "bytes": 69981,
-      "sha256": "21b3a6a72c2d9306d5cf28c410d809c642cf61e6d75347d7660ecca5397f5208",
+      "bytes": 71662,
+      "sha256": "6bae2ccbf22619b03d053cc88f622838c9b7e66f836696f610281981536b4b5e",
       "featureCount": 449,
       "missingTerrainSamples": 0
     },
@@ -160,8 +171,8 @@
         "maxX": 256,
         "maxZ": 0
       },
-      "bytes": 67432,
-      "sha256": "f3f58974a9378dda22effa27edaccf18834703310c5ff041579ca1c093b51163",
+      "bytes": 68922,
+      "sha256": "15760ddc5914f86058f7916bcd8854675c15f1f3909c094f6de06adbb5383280",
       "featureCount": 359,
       "missingTerrainSamples": 0
     },
@@ -174,8 +185,8 @@
         "maxX": 512,
         "maxZ": 0
       },
-      "bytes": 44158,
-      "sha256": "4a32a9621ba387f8c81e288f495a091bfefb233579320988515ed9dca049e80e",
+      "bytes": 45136,
+      "sha256": "7dff9ae60095476d5b8f9daac5c1b74e321755731d5ca9e1f8ca59adb0d97d8c",
       "featureCount": 240,
       "missingTerrainSamples": 0
     },
@@ -188,8 +199,8 @@
         "maxX": -256,
         "maxZ": 256
       },
-      "bytes": 61288,
-      "sha256": "321fd75281436aff144ebde3930a6253881f421e6a6616a406d06724f5c4e6c2",
+      "bytes": 62639,
+      "sha256": "b1d9a3d6ae432b245da67a8cda431faa8aef5e7c0961546d835140329ca1f6af",
       "featureCount": 430,
       "missingTerrainSamples": 0
     },
@@ -202,8 +213,8 @@
         "maxX": 0,
         "maxZ": 256
       },
-      "bytes": 61566,
-      "sha256": "8411fc5861f2fc60cd87f56be66f3cf052b17a6c3710948c45041dfd2284def0",
+      "bytes": 63042,
+      "sha256": "922bc30d6d65530eeba931947597b62b9e31890590494830e5196aebd1613b6c",
       "featureCount": 406,
       "missingTerrainSamples": 0
     },
@@ -216,8 +227,8 @@
         "maxX": 256,
         "maxZ": 256
       },
-      "bytes": 80207,
-      "sha256": "70ae3e8cde8853dd074e4d9b573f65f7e19e66b26d55d15fd2624a02d6449d3f",
+      "bytes": 81805,
+      "sha256": "c1f93a34b971592eebe09c4c567b146de7dbcddfbb04ca64c22800be4f83d441",
       "featureCount": 489,
       "missingTerrainSamples": 0
     },
@@ -230,8 +241,8 @@
         "maxX": 512,
         "maxZ": 256
       },
-      "bytes": 50394,
-      "sha256": "9f841697e125dabcc1cb599f4c6f3b0fbe3a4c01e0ac415b637a5254b71eb917",
+      "bytes": 51237,
+      "sha256": "d938877961c1e1820958efa6795a2e4a196e31a395e401aaabb3506ceece7314",
       "featureCount": 281,
       "missingTerrainSamples": 0
     },
@@ -244,8 +255,8 @@
         "maxX": -256,
         "maxZ": 512
       },
-      "bytes": 56238,
-      "sha256": "9838255b800e8619739ba88493d26e2fb32aecab5f11f750808326e8a207a8b0",
+      "bytes": 57508,
+      "sha256": "700ef22a562c189947320e4dcd3d0cfcf6a5d848521caeec3e387e94d8d4fd4a",
       "featureCount": 413,
       "missingTerrainSamples": 0
     },
@@ -258,8 +269,8 @@
         "maxX": 0,
         "maxZ": 512
       },
-      "bytes": 51116,
-      "sha256": "c9be6b7815e8c77f7585b8374cba4c42765497bb2475d3bdee09e000e4ec7f1d",
+      "bytes": 52400,
+      "sha256": "17132666215a44b7d2ee68d517b5cb6a8df6e05159b942e2a0e9b52654b82310",
       "featureCount": 331,
       "missingTerrainSamples": 0
     },
@@ -272,8 +283,8 @@
         "maxX": 256,
         "maxZ": 512
       },
-      "bytes": 55679,
-      "sha256": "a1924825cbf00a4d5ac0ca9e70ed08e3fb3af1463dddf2f1bc0576fdb2319457",
+      "bytes": 56919,
+      "sha256": "13d2e9f0c3eb33c1e01f2141b5ce0106b54206dbcc1c49c066750fd14a384b67",
       "featureCount": 351,
       "missingTerrainSamples": 0
     },
@@ -286,8 +297,8 @@
         "maxX": 512,
         "maxZ": 512
       },
-      "bytes": 46105,
-      "sha256": "9adee7d7b98354884958f3d0a57a57e74f8839ec588445df1efe7577c7ef6a08",
+      "bytes": 46819,
+      "sha256": "d65533096a920ced794e91c8a99cc0ec6f7ce8f64512aabd574badb5d944f4e6",
       "featureCount": 248,
       "missingTerrainSamples": 0
     }

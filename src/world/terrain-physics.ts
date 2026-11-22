@@ -45,6 +45,14 @@ export class TerrainColliders {
     this.addCollider(id, this.world.createCollider(descriptor));
   }
 
+  addBuildings(id: string, centerX: number, centerZ: number, positions: Float32Array, indices: Uint32Array): void {
+    if (positions.length < 9 || indices.length < 3) return;
+    const descriptor = RAPIER.ColliderDesc.trimesh(positions, indices)
+      .setTranslation(centerX, 0, centerZ)
+      .setFriction(0.7);
+    this.addCollider(id, this.world.createCollider(descriptor));
+  }
+
   private addCollider(id: string, collider: ReturnType<World['createCollider']>): void {
     const current = this.colliders.get(id) ?? [];
     current.push(collider);

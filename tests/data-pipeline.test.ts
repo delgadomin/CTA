@@ -83,6 +83,7 @@ describe('OSM normalization and brand scrubber', () => {
     expect(data.roads[0]).toMatchObject({ nodeIds: [101, 102], lanes: 2, oneway: 1, surface: 'asphalt', sidewalk: 'both', widthMeters: 5.5, bridge: true });
     expect(data.roads.find((road) => road.id === 'w11')).toMatchObject({ area: true, highway: 'pedestrian', surface: 'paving_stones' });
     expect(data.buildings[0]?.floors).toBe(3);
+    expect(data.buildings[0]).toMatchObject({ id: 'w20', heightMeters: null, visualFloors: 3, visualHeightMeters: 9, zone: 'casco', commercial: true, roofMaterial: 'tile' });
     expect(data.chunks).toHaveLength(16);
     expect(data.pois.find((poi) => poi.id === 'w20')?.name).not.toBe('Example Outfitters');
     expect(data.pois.find((poi) => poi.id === 'n30')?.name).toBe('MercaRoba');

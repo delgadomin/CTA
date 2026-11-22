@@ -104,6 +104,37 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - `node tools/verify-streaming.mjs` hace el barrido de cinco minutos; falla si no visita las 16 teselas, rebasa 300 llamadas/600.000 triángulos, supera 16 ms durante streaming o no carga la ruta del inspector.
 - Alcance excluido de la fase 4: vehículos y tráfico de IA.
 
-## Fase actual: 5 - Edificios
+## Fase actual: 6 - Hitos y fidelidad
 
-Pendiente de implementación. Antes de empezar, se extraerá del PDF la especificación y los criterios de aceptación de esta fase y se presentará el plan de archivos/pasos.
+## Fase 5 - Edificios (completada)
+
+### Plan
+- Conservar id OSM/Catastro, huella, altura/planta, `roof:shape`, tipo y zona; extraer geometría comercial para reservar una cara de rótulo y puntos de tejado para hitos de fase 6.
+- Implementar extrusión de huellas con jerarquía `height=*` → `building:levels * 3 m` → default por zona/tipo, y cubiertas planas/a dos/a cuatro aguas por etiqueta y heurística de huella.
+- Crear atlas procedural modular de fachada por zona, sembrado por id de edificio, con zócalo, plantas, balcones/ventanas/cornisa, ventanas emisivas deterministas y geometría low-poly de escudos/portadas sin textos.
+- Generar tres LOD (fachada, caja texturizada, silueta) fusionados por chunk/material, colisiones simplificadas por huella y sustitución automática cuando exista `public/landmarks/<id>.glb`.
+- Integrar los edificios en worker y streaming, ampliar el inspector 2D y verificar la silueta monumental, la distinción casco/ensanche/periferia, draw calls, triángulos, tests, lint, typecheck y build.
+
+### Hecho hasta ahora
+- Extraída la especificación del PDF (página 10): el alcance excluye modelos de hitos y rótulos finales, que corresponden a las fases 6 y 7.
+- Las 2.847 huellas fuente conservan id OSM, etiquetas de altura/plantas, tipo, cubierta, material y etiqueta comercial; 2.811 caen en el recorte de chunks. Los 36 edificios exteriores permanecen fuera del mundo jugable. Los defaults visuales no sustituyen los valores OSM faltantes.
+- Zonas heurísticas casco/ensanche/periferia por tipos monumentales y distancia al origen: 447 / 1.904 / 460 edificios dentro del mundo.
+- Tres LOD de edificios fusionados por chunk/material; extrusión de huella, fachadas modulares por zona, zócalos, ventanas, balcones, cornisa, cubiertas planas/a dos/a cuatro aguas y colisión perimetral simplificada.
+- Semilla estable por id para variación de fachada y emisividad de ventanas; reserva de cara comercial hacia la calle y anclas de tejado del casco para fase 6.
+- Reemplazo opcional por `public/landmarks/<id>.glb`; el constructor limita tamaño, estructura, extensiones, número de vértices/texturas y URIs a recursos embebidos PNG/JPEG.
+- Inspector 2D colorea las tres zonas; los chunks y el informe de fidelidad guardan la clasificación y los valores visuales inferidos.
+
+### Validación de fase 5
+- `eslint .`, `tsc -b --pretty`, 32 pruebas Vitest, `vite build` y `node tools/verify-world.mjs` pasan. Bundle inicial gzip: 944,2 kB; debajo de 25 MB.
+- Verificación automatizada de 5 minutos: 16/16 chunks; 5–16 activos; 75 FPS; máximo 85 draw calls y 303.477 triángulos; pico de frame durante streaming 15,6 ms y cero intervalos >16 ms.
+- Memoria geométrica estimada: 23,9–70,8 MiB; termina en 32,4 MiB con 8 chunks. El arranque previo al primer chunk tuvo frames de 26,6, 93,4, 26,7 y 40 ms durante inicialización de física, fuera del streaming.
+- No hay GLB de hitos en el repositorio, así que el reemplazo se valida con fixtures acotados; modelos manuales y rótulos visibles quedan fuera de esta fase.
+
+### Cómo validar la fase 5
+- `node tools/data-build.mjs` regenera los chunks desde las cachés OSM/MDT05 locales; `node tools/verify-world.mjs` valida integridad, conteos de zona y referencias.
+- Ejecutar `npm run lint`, `npm run typecheck`, `npm test`, `npm run build` y `node tools/verify-streaming.mjs` desde la raíz del repositorio.
+- `/debug/map.html` compara las huellas y zonas con OSM; el QA 3D comprueba streaming, LOD y presupuesto visible.
+
+## Fase 6 - Hitos y fidelidad (pendiente)
+
+- La fase 5 deja anclas de tejado para próximos nidos de cigüeña y conserva ids de edificios para asociar hitos. Leer la página 11 del PDF antes de planificar la implementación.

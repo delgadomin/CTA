@@ -59,7 +59,7 @@ function updateDebug(timestamp: number): void {
   drawCallsLabel.textContent = String(renderer.info.render.calls);
   trianglesLabel.textContent = renderer.info.render.triangles.toLocaleString('es-ES');
   memoryLabel.textContent = `≈ ${chunks.memoryMiB.toFixed(1)} MiB`;
-  statusLabel.textContent = chunks.loadedCount > 0 ? 'Calles y terreno MDT05 en streaming' : 'Preparando la red vial oficial…';
+  statusLabel.textContent = chunks.loadedCount > 0 ? 'Edificios, calles y terreno MDT05 en streaming' : 'Preparando la ciudad desde datos oficiales…';
   lastStatsUpdate = timestamp;
 }
 

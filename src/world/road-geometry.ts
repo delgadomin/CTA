@@ -290,7 +290,7 @@ function removeCollinearPoints(points: readonly RoadPoint[]): RoadPoint[] {
   return result;
 }
 
-function triangulatePolygon(points: readonly RoadPoint[]): readonly (readonly [number, number, number])[] {
+export function triangulatePolygon(points: readonly RoadPoint[]): readonly (readonly [number, number, number])[] {
   if (points.length < 3) return [];
   const area = points.reduce((sum, point, index) => {
     const next = points[(index + 1) % points.length];

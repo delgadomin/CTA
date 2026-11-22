@@ -25,7 +25,7 @@
       <div>
         <h1>Inspector geográfico · Ciudad Monumental</h1>
         <p>Calles, edificios, terreno y elementos OSM procesados · © OpenStreetMap contributors · terreno derivado MDT05 CNIG · arrastra para desplazar, rueda para acercar</p>
-        <div class="legend"><span style="--color:#596d57">superficies</span><span style="--color:#578da0">agua</span><span style="--color:#cbb998">edificios</span><span style="--color:#d66a49">calles</span><span style="--color:#c39a58">sendas</span><span style="--color:#8baa73">mobiliario</span><span style="--color:#e5bd7e">puntos</span><span style="--color:#ffcf54">recorrido a pie</span></div>
+        <div class="legend"><span style="--color:#ceb99a">casco</span><span style="--color:#d8cdb9">ensanche</span><span style="--color:#b9bbb7">periferia</span><span style="--color:#596d57">superficies</span><span style="--color:#578da0">agua</span><span style="--color:#d66a49">calles</span><span style="--color:#c39a58">sendas</span><span style="--color:#8baa73">mobiliario</span><span style="--color:#e5bd7e">puntos</span><span style="--color:#ffcf54">recorrido a pie</span></div>
       </div>
       <a id="osm-link" href="https://www.openstreetmap.org/" target="_blank" rel="noreferrer">Comparar con OpenStreetMap ↗</a>
     </header>
@@ -35,7 +35,7 @@
       const canvas = document.querySelector('#canvas');
       const context = canvas.getContext('2d');
       const status = document.querySelector('#status');
-      const colors = { road: '#d66a49', pedestrian: '#c39a58', building: '#cbb998', water: '#578da0', surface: '#596d57', prop: '#8baa73', poi: '#e5bd7e' };
+      const colors = { road: '#d66a49', pedestrian: '#c39a58', casco: '#ceb99a', ensanche: '#d8cdb9', periferia: '#b9bbb7', building: '#cbb998', water: '#578da0', surface: '#596d57', prop: '#8baa73', poi: '#e5bd7e' };
       const world = [];
       const view = { scale: 0.55, offsetX: 0, offsetY: 0 };
       let manifest;
@@ -59,8 +59,9 @@
       function drawFeature(feature) {
         if (feature.points?.length) {
           const type = feature.featureType === 'road' ? 'road' : feature.featureType === 'pedestrian' ? 'pedestrian' : feature.featureType === 'building' ? 'building' : feature.featureType === 'surface' && ['water', 'waterway'].includes(feature.kind) ? 'water' : 'surface';
-          context.strokeStyle = colors[type];
-          context.fillStyle = type === 'building' ? colors.building : type === 'water' ? colors.water : type === 'surface' ? colors.surface : 'transparent';
+          const color = type === 'building' ? colors[feature.zone] ?? colors.building : colors[type];
+          context.strokeStyle = color;
+          context.fillStyle = type === 'building' ? color : type === 'water' ? colors.water : type === 'surface' ? colors.surface : 'transparent';
           context.lineWidth = type === 'road' ? 2.2 : type === 'pedestrian' ? 1.5 : 0.7;
           context.beginPath();
           feature.points.forEach((point, index) => {
@@ -151,7 +152,9 @@
           if (!routeResponse.ok) throw new Error('No se pudo cargar la ruta peatonal de referencia.');
           walkRoute = await routeResponse.json();
         }
-        status.textContent = `${manifest.counts.roads} calles · ${manifest.counts.buildings} edificios · ${world.length} elementos · recorrido peatonal ${walkRoute?.lengthMeters ?? '—'} m · EPSG:25829`;
+        const zones = manifest.counts.buildingsInWorldByZone ?? manifest.counts.buildingsByZone;
+        const buildingCount = manifest.counts.buildingsInWorld ?? manifest.counts.buildings;
+        status.textContent = `${manifest.counts.roads} calles · ${buildingCount} edificios (casco ${zones?.casco ?? 0}, ensanche ${zones?.ensanche ?? 0}, periferia ${zones?.periferia ?? 0}) · ${world.length} elementos · recorrido peatonal ${walkRoute?.lengthMeters ?? '—'} m · EPSG:25829`;
         resize();
       } catch (error) {
         status.textContent = error instanceof Error ? error.message : 'No se pudieron cargar los datos.';

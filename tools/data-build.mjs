@@ -9,6 +9,7 @@ import { getOsmData } from './fetch-osm.mjs';
 import { normalizeOsm, resolveRegion } from './normalize-data.mjs';
 import { buildRoadNetwork } from './road-network.mjs';
 import { buildWalkRoute } from './walk-route.mjs';
+import { discoverLandmarkModels } from './landmark-assets.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const regionName = process.argv.find((argument) => argument.startsWith('--region='))?.split('=')[1] ?? 'cc-monumental';
@@ -50,8 +51,11 @@ const osmSha256 = createHash('sha256').update(osmRaw).digest('hex');
 const resolvedRegion = resolveRegion(regionDefinition);
 const elevation = await loadAsciiElevation(elevationPath, resolvedRegion.origin, regionDefinition.extentMeters, regionDefinition.chunkMeters);
 const brandBlocklist = JSON.parse(await readFile(path.join(ROOT, 'tools/brand-blocklist.json'), 'utf8'));
+const landmarkModelIds = await discoverLandmarkModels(path.join(ROOT, 'public'));
 const region = { ...regionDefinition, lon: regionDefinition.origin.lon, lat: regionDefinition.origin.lat };
-const data = normalizeOsm(osm, region, brandBlocklist, elevation);
+const data = normalizeOsm(osm, region, brandBlocklist, elevation, landmarkModelIds);
+const worldBuildings = new Map(data.chunks.flatMap((chunk) => chunk.features.filter((feature) => feature.featureType === 'building').map((feature) => [feature.id, feature])));
+const worldBuildingsByZone = Object.fromEntries(['casco', 'ensanche', 'periferia'].map((zone) => [zone, [...worldBuildings.values()].filter((building) => building.zone === zone).length]));
 const roadNetwork = buildRoadNetwork(data.roads);
 const walkRoute = regionName === 'cc-monumental' ? buildWalkRoute(osm, roadNetwork, regionDefinition.origin) : undefined;
 const elevationMetadata = JSON.parse(await readFile(path.join(ROOT, 'data/raw/elevation', `${regionName}.meta.json`), 'utf8'));
@@ -138,7 +142,16 @@ const manifest = {
       grid: elevationMetadata.grid,
     },
   },
-  counts: { roads: data.roads.length, buildings: data.buildings.length, surfaces: data.surfaces.length, props: data.props.length, pois: data.pois.length },
+  counts: {
+    roads: data.roads.length,
+    buildings: data.buildings.length,
+    buildingsInWorld: worldBuildings.size,
+    buildingsByZone: data.buildingZoneCounts,
+    buildingsInWorldByZone: worldBuildingsByZone,
+    surfaces: data.surfaces.length,
+    props: data.props.length,
+    pois: data.pois.length,
+  },
   roadNetwork: {
     path: 'road-network.json',
     bytes: roadNetworkBytes.length,
@@ -181,6 +194,10 @@ const fidelityLines = [
   `| Vías con superficie OSM explícita | ${data.roads.filter((road) => road.surface !== 'unknown').length} |`,
   `| Vías con dirección OSM explícita | ${data.roads.filter((road) => road.oneway !== 0).length} |`,
   `| Huellas de edificios | ${data.buildings.length} |`,
+  `| Edificios por zona (casco / ensanche / periferia) | ${data.buildingZoneCounts.casco} / ${data.buildingZoneCounts.ensanche} / ${data.buildingZoneCounts.periferia} |`,
+  `| Huellas incluidas en chunks del mundo | ${worldBuildings.size} |`,
+  `| Plantas OSM explícitas | ${data.buildings.filter((building) => building.floors !== null).length} |`,
+  `| Sustituciones GLB de hitos seguras | ${data.buildings.filter((building) => building.landmarkModelPath).length} |`,
   `| Superficies y agua | ${data.surfaces.length} |`,
   `| Árboles y mobiliario | ${data.props.length} |`,
   `| Puntos de interés | ${data.pois.length} |`,
@@ -188,7 +205,9 @@ const fidelityLines = [
   `| Muestras MDT05 ausentes | ${data.issues.missingTerrainSamples} |`,
   `| Comercios pendientes de revisión de marca | ${data.issues.pendingBrands} |`,
   '',
-  'Los atributos de altura ausentes permanecen nulos en los datos fuente. Para la visualización, el ancho usa width=* → lanes × 3,1 m → default por tipo de vía; las aceras también se infieren solo cuando no hay etiqueta OSM explícita.',
+  'Los atributos de altura y plantas ausentes permanecen nulos en los datos fuente. La altura visual usa height=* → building:levels × 3 m → planta visual por zona/tipo; las fachadas conservan el número fuente y el valor inferido por separado.',
+  'La zona se clasifica desde el centro de Plaza Mayor: casco hasta 220 m (o etiqueta historic/tipo monumental), ensanche hasta 500 m y periferia más allá. Es una heurística cartográfica registrada, no una frontera administrativa.',
+  'El ancho de vía usa width=* → lanes × 3,1 m → default por tipo de vía; las aceras también se infieren solo cuando no hay etiqueta OSM explícita.',
   `La ruta enlaza Plaza Mayor (snap ${walkRoute?.landmarks[0]?.snapDistanceMeters.toFixed(1) ?? '—'} m), Arco de la Estrella (snap ${walkRoute?.landmarks[1]?.snapDistanceMeters.toFixed(1) ?? '—'} m) y Plaza de San Jorge (snap ${walkRoute?.landmarks[2]?.snapDistanceMeters.toFixed(1) ?? '—'} m) mediante segmentos peatonales y calles locales.`,
   'Los puentes reciben solo un perfil visual de rampa (máximo 1,8 m) porque la extracción no aporta una cota vertical fiable; los túneles se conservan transitables a cota MDT05 hasta que exista geometría de excavación.',
   'Las conexiones de intersección se derivan de nodos compartidos. Esta versión no incluye relaciones OSM de restricción de giro.',

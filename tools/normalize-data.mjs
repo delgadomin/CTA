@@ -6,6 +6,7 @@ const AMENITY_TYPES = new Set(['restaurant', 'cafe', 'bar', 'pub', 'nightclub', 
 const NONCOMMERCIAL_AMENITIES = new Set(['hospital', 'school', 'university', 'police', 'fire_station', 'place_of_worship', 'toilets', 'bench', 'shelter', 'waste_basket', 'parking']);
 const PROP_TAGS = ['natural', 'amenity', 'highway'];
 const NODATA = -32768;
+const HISTORIC_BUILDING_TYPES = new Set(['cathedral', 'chapel', 'church', 'castle', 'manor', 'monastery', 'palace', 'tower', 'ruins']);
 
 export function resolveRegion(region) {
   const bounds = projectedRegionBounds(region.origin, region.extentMeters);
@@ -34,6 +35,33 @@ function featureBounds(points) {
     maxX: Math.max(bounds.maxX, point[0]),
     maxZ: Math.max(bounds.maxZ, point[1]),
   }), { minX: Infinity, minZ: Infinity, maxX: -Infinity, maxZ: -Infinity });
+}
+
+function visualBuildingFloors(tags, zone) {
+  const explicitLevels = Number.parseFloat(tags['building:levels'] ?? '');
+  if (Number.isFinite(explicitLevels) && explicitLevels > 0) return Math.min(40, Math.max(1, explicitLevels));
+  const explicitHeight = Number.parseFloat(String(tags.height ?? '').replace(',', '.'));
+  if (Number.isFinite(explicitHeight) && explicitHeight > 0) return Math.min(40, Math.max(1, explicitHeight / 3));
+  const type = tags.building ?? '';
+  if (['cathedral', 'church', 'chapel', 'tower', 'castle'].includes(type)) return type === 'tower' || type === 'castle' ? 7 : 5;
+  if (zone === 'casco') return 2;
+  if (zone === 'periferia') {
+    if (['apartments', 'residential'].includes(type)) return 5;
+    if (['industrial', 'warehouse', 'garages', 'farm'].includes(type)) return 1;
+    return 2;
+  }
+  if (['apartments', 'residential'].includes(type)) return 4;
+  if (['industrial', 'warehouse', 'garages'].includes(type)) return 2;
+  return 3;
+}
+
+function buildingZone(tags, points) {
+  if (tags.historic || HISTORIC_BUILDING_TYPES.has(tags.building ?? '')) return 'casco';
+  const center = points.reduce((sum, point) => [sum[0] + point[0] / points.length, sum[1] + point[1] / points.length], [0, 0]);
+  const distance = Math.hypot(center[0], center[1]);
+  if (distance <= 220) return 'casco';
+  if (distance <= 500) return 'ensanche';
+  return 'periferia';
 }
 
 function classifyPoi(tags) {
@@ -87,7 +115,7 @@ function appendPoi(element, tags, point, bounds, region, blocklist, brandReport,
   pois.push({ id, category: `${category.key}:${category.value}`, name, featureType: 'poi', fictional: business, position: [x, z], bounds });
 }
 
-export function normalizeOsm(osm, regionDefinition, brandBlocklist, elevation) {
+export function normalizeOsm(osm, regionDefinition, brandBlocklist, elevation, landmarkModelIds = new Set()) {
   const region = resolveRegion(regionDefinition);
   const roads = [];
   const buildings = [];
@@ -130,13 +158,28 @@ export function normalizeOsm(osm, regionDefinition, brandBlocklist, elevation) {
         };
         roads.push(record);
       } else if (tags.building && tags.building !== 'no') {
+        const zone = buildingZone(tags, points);
+        const floors = Number.parseFloat(tags['building:levels'] ?? '') || null;
+        const heightMeters = Number.parseFloat(String(tags.height ?? '').replace(',', '.')) || null;
+        const visualFloors = visualBuildingFloors(tags, zone);
         buildings.push({
           id: `w${element.id}`,
           featureType: 'building',
-          floors: Number.parseFloat(tags['building:levels'] ?? '') || null,
-          heightMeters: Number.parseFloat(tags.height ?? '') || null,
+          floors,
+          heightMeters,
+          visualFloors,
+          visualHeightMeters: heightMeters ?? visualFloors * 3,
+          roofHeightMeters: Number.parseFloat(String(tags['roof:height'] ?? '').replace(',', '.')) || null,
           roofShape: tags['roof:shape'] ?? 'unknown',
+          roofMaterial: zone === 'casco' ? 'tile' : 'modern',
+          roofColour: tags['roof:colour'] ?? '',
+          facadeColour: tags['building:colour'] ?? '',
           buildingType: tags.building,
+          historic: tags.historic ?? '',
+          zone,
+          commercial: Boolean(isCommercial(tags)),
+          commercialCategory: isCommercial(tags) ? `${classifyPoi(tags)?.key ?? 'business'}:${classifyPoi(tags)?.value ?? tags.building}` : '',
+          landmarkModelPath: landmarkModelIds.has(`w${element.id}`) ? `landmarks/w${element.id}.glb` : '',
           points,
           bounds,
         });
@@ -178,6 +221,7 @@ export function normalizeOsm(osm, regionDefinition, brandBlocklist, elevation) {
   }
 
   const features = [...roads, ...buildings, ...surfaces, ...props, ...pois];
+  const buildingZoneCounts = Object.fromEntries(['casco', 'ensanche', 'periferia'].map((zone) => [zone, buildings.filter((building) => building.zone === zone).length]));
   region.gridSamples = regionDefinition.heightGrid.samples;
   const chunks = chunkFeatures(features, regionDefinition.chunkMeters, elevation, region);
   const issues = {
@@ -185,7 +229,7 @@ export function normalizeOsm(osm, regionDefinition, brandBlocklist, elevation) {
     pendingBrands: brandReport.filter((brand) => brand.status === 'pending-review').length,
     missingTerrainSamples: chunks.reduce((sum, chunk) => sum + chunk.missingTerrainSamples, 0),
   };
-  return { region, roads, buildings, surfaces, props, pois, chunks, brandReport, issues };
+  return { region, roads, buildings, buildingZoneCounts, surfaces, props, pois, chunks, brandReport, issues };
 }
 
 function chunkFeatures(features, chunkMeters, elevation, region) {

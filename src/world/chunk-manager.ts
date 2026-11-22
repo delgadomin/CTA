@@ -1,7 +1,10 @@
 import * as THREE from 'three';
 import type { World } from '@dimforge/rapier3d-compat';
 import { EventBus } from '../engine/event-bus';
+import { AssetManager } from '../engine/asset-manager';
+import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { buildChunkBorderGeometry } from './chunk-debug';
+import { BuildingRenderer } from './building-renderer';
 import { sampleHeight } from './road-geometry';
 import { RoadRenderer } from './road-renderer';
 import { TerrainColliders } from './terrain-physics';
@@ -16,7 +19,9 @@ interface ChunkRecord {
   lod: number;
   result?: BuiltTerrainChunk;
   meshes?: THREE.Mesh[];
+  buildingMeshes?: THREE.Mesh[][];
   decorationMeshes?: THREE.Mesh[];
+  landmarkObjects?: THREE.Object3D[];
   debugBorder?: THREE.LineSegments;
   memoryBytes: number;
   debugMemoryBytes: number;
@@ -72,6 +77,17 @@ function byteSize(meshes: readonly THREE.Mesh[]): number {
   return total;
 }
 
+function objectByteSize(object: THREE.Object3D): number {
+  let bytes = 0;
+  object.traverse((node) => {
+    if (!(node instanceof THREE.Mesh)) return;
+    const geometry = node.geometry;
+    for (const name of Object.keys(geometry.attributes)) bytes += geometry.getAttribute(name).array.byteLength;
+    if (geometry.index) bytes += geometry.index.array.byteLength;
+  });
+  return bytes;
+}
+
 export class ChunkManager {
   readonly events = new EventBus<TerrainChunkEvents>();
   readonly worker: Worker;
@@ -80,10 +96,12 @@ export class ChunkManager {
   private readonly colliders: TerrainColliders;
   private readonly material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.94, side: THREE.DoubleSide });
   private readonly roadRenderer = new RoadRenderer();
+  private readonly buildingRenderer = new BuildingRenderer();
   private readonly debugBorderMaterial = new THREE.LineBasicMaterial({ color: '#f06d4e', depthTest: true, toneMapped: false });
   private readonly records = new Map<string, ChunkRecord>();
   private readonly completed: CompletedChunk[] = [];
   private manifest: WorldManifest | undefined;
+  private assets: AssetManager | undefined;
   private manifestUrl: URL;
   private worldBaseUrl: URL;
   private readonly loadQueue: string[] = [];
@@ -112,8 +130,12 @@ export class ChunkManager {
     this.manifest = manifest;
   }
 
-  prepareRenderer(renderer: THREE.WebGLRenderer, camera: THREE.Camera): Promise<void> {
-    return this.roadRenderer.prepare(renderer, this.scene, camera, this.material);
+  async prepareRenderer(renderer: THREE.WebGLRenderer, camera: THREE.Camera): Promise<void> {
+    this.assets = new AssetManager(renderer);
+    await Promise.all([
+      this.roadRenderer.prepare(renderer, this.scene, camera, this.material),
+      this.buildingRenderer.prepare(renderer, this.scene, camera, this.material),
+    ]);
   }
 
   update(camera: THREE.Camera, now: number): void {
@@ -211,6 +233,8 @@ export class ChunkManager {
     this.colliders.clear();
     this.material.dispose();
     this.roadRenderer.dispose();
+    this.buildingRenderer.dispose();
+    this.assets?.dispose();
     this.debugBorderMaterial.dispose();
     this.events.clear();
     this.world.free();
@@ -222,18 +246,20 @@ export class ChunkManager {
   }
 
   private setLod(record: ChunkRecord, lod: number): void {
-    if (record.lod === lod || !record.meshes) return;
-    const current = record.meshes[record.lod];
+    if (record.lod === lod) return;
+    const current = record.meshes?.[record.lod];
     if (current) {
       current.visible = false;
       this.scene.remove(current);
     }
+    for (const mesh of record.buildingMeshes?.[record.lod] ?? []) { mesh.visible = false; this.scene.remove(mesh); }
     record.lod = lod;
-    const next = record.meshes[lod];
+    const next = record.meshes?.[lod];
     if (next) {
       next.visible = true;
       this.scene.add(next);
     }
+    for (const mesh of record.buildingMeshes?.[lod] ?? []) { mesh.visible = true; this.scene.add(mesh); }
   }
 
   private processCompleted(): void {
@@ -256,19 +282,26 @@ export class ChunkManager {
       if (activeMesh) this.scene.add(activeMesh);
       const decorationMeshes = this.roadRenderer.createMeshes(item.result.roads, centerX, centerZ);
       for (const mesh of decorationMeshes) this.scene.add(mesh);
+      const buildingMeshes = this.buildingRenderer.createMeshes(item.result.buildings, centerX, centerZ);
+      for (const mesh of buildingMeshes[record.lod] ?? []) { mesh.visible = true; this.scene.add(mesh); }
       record.result = item.result;
       record.meshes = meshes;
+      record.buildingMeshes = buildingMeshes;
       record.decorationMeshes = decorationMeshes;
       const roadBuffers = item.result.roads;
       const roadDataBytes = roadBuffers
         ? roadBuffers.colliderPositions.byteLength + roadBuffers.colliderIndices.byteLength + roadBuffers.props.reduce((sum, prop) => sum + prop.positions.byteLength + prop.headings.byteLength, 0)
         : 0;
-      record.memoryBytes = byteSize([...meshes, ...decorationMeshes]) + item.result.heights.byteLength + roadDataBytes;
+      const buildingDataBytes = item.result.buildings
+        ? item.result.buildings.colliderPositions.byteLength + item.result.buildings.colliderIndices.byteLength
+        : 0;
+      record.memoryBytes = byteSize([...meshes, ...decorationMeshes, ...buildingMeshes.flat()]) + item.result.heights.byteLength + roadDataBytes + buildingDataBytes;
       record.state = 'loaded';
       this.memoryBytes += record.memoryBytes;
       this.addDebugBorder(record);
       this.events.emit('chunkLoaded', { id: item.id, lod: record.lod, memoryBytes: record.memoryBytes });
       this.syncCollider(record);
+      this.loadLandmarkModels(record, item.result);
       attachments += 1;
     }
   }
@@ -285,7 +318,33 @@ export class ChunkManager {
     const centerZ = (record.entry.bounds.minZ + record.entry.bounds.maxZ) / 2;
     const roads = record.result.roads;
     if (roads) this.colliders.addRoads(record.entry.id, centerX, centerZ, roads.colliderPositions, roads.colliderIndices);
+    const buildings = record.result.buildings;
+    if (buildings) this.colliders.addBuildings(record.entry.id, centerX, centerZ, buildings.colliderPositions, buildings.colliderIndices);
     record.hasCollider = true;
+  }
+
+  private loadLandmarkModels(record: ChunkRecord, result: BuiltTerrainChunk): void {
+    const models = result.buildings?.landmarkModels ?? [];
+    if (!this.assets || models.length === 0) return;
+    for (const instance of models) {
+      if (!/^landmarks\/w\d+\.glb$/.test(instance.path)) continue;
+      const url = new URL(instance.path, this.worldBaseUrl);
+      void this.assets.loadModel(url.href, 10).then((gltf: GLTF) => {
+        if (this.closed || this.records.get(record.entry.id) !== record || record.state !== 'loaded') return;
+        const object = gltf.scene.clone(true);
+        object.position.set(instance.position[0], instance.position[1], instance.position[2]);
+        object.traverse((node) => { if (node instanceof THREE.Mesh) { node.castShadow = true; node.receiveShadow = true; } });
+        this.scene.add(object);
+        record.landmarkObjects ??= [];
+        record.landmarkObjects.push(object);
+        const bytes = objectByteSize(object);
+        record.memoryBytes += bytes;
+        this.memoryBytes += bytes;
+      }).catch((error: unknown) => {
+        this.errorCount += 1;
+        console.error(`Could not load landmark model ${instance.path}.`, error);
+      });
+    }
   }
 
   private addDebugBorder(record: ChunkRecord): void {
@@ -368,6 +427,12 @@ export class ChunkManager {
         mesh.geometry.dispose();
       }
     }
+    if (record.buildingMeshes) {
+      for (const level of record.buildingMeshes) {
+        for (const mesh of level) { this.scene.remove(mesh); mesh.geometry.dispose(); }
+      }
+    }
+    if (record.landmarkObjects) for (const object of record.landmarkObjects) this.scene.remove(object);
     if (emit && record.state === 'loaded') this.events.emit('chunkUnloaded', { id: record.entry.id });
   }
 }

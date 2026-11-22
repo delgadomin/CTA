@@ -11,3 +11,4 @@
 - IGN/CNIG PNOA MDT05 primera cobertura: fuente CC BY 4.0 scne.es. La malla descargada mediante WCS se recorta y remuestrea en EPSG:25829; atribución del derivado: «Obra derivada de MDT05-cob1 2008-2015 CC-BY 4.0 scne.es», https://centrodedescargas.cnig.es/CentroDescargas/modelo-digital-terreno-mdt05-primera-cobertura.
 - No se han incorporado modelos, texturas, fuentes ni audio externos.
 - Las texturas repetibles de calzada se generan proceduralmente desde Canvas y los modelos simples instanciados de señalización son geometría original del proyecto; no proceden de assets externos.
+- Los atlas de fachadas por zona, cubiertas de teja/modernas y ventanas emisivas se generan proceduralmente desde Canvas; las mallas de edificios se extruyen desde huellas OSM. No se descargan texturas ni modelos de terceros. El cargador opcional de hitos solo admite GLB locales con nombre OSM estable, tamaño limitado y recursos embebidos.

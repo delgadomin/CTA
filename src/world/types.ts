@@ -59,6 +59,23 @@ export interface ChunkFeature {
   readonly incline?: string;
   readonly junction?: string;
   readonly area?: boolean;
+  readonly floors?: number | null;
+  readonly heightMeters?: number | null;
+  readonly visualFloors?: number;
+  readonly visualHeightMeters?: number;
+  readonly roofHeightMeters?: number | null;
+  readonly roofShape?: string;
+  readonly roofMaterial?: 'tile' | 'modern';
+  readonly roofColour?: string;
+  readonly facadeColour?: string;
+  readonly buildingType?: string;
+  readonly historic?: string;
+  readonly zone?: 'casco' | 'ensanche' | 'periferia';
+  readonly commercial?: boolean;
+  readonly commercialCategory?: string;
+  readonly category?: string;
+  readonly fictional?: boolean;
+  readonly landmarkModelPath?: string;
   readonly directionDegrees?: number | null;
   readonly trafficSign?: string;
   readonly points?: readonly (readonly [number, number])[];
@@ -88,6 +105,52 @@ export interface TerrainLodData {
 }
 
 export type RoadSurfaceStyle = 'asphalt' | 'stone' | 'concrete' | 'earth' | 'marking';
+
+export type BuildingMaterial = 'casco_facade' | 'ensanche_facade' | 'periferia_facade' | 'tile_roof' | 'modern_roof';
+
+export interface BuildingSurfaceGeometry {
+  readonly material: BuildingMaterial;
+  readonly positions: Float32Array;
+  readonly normals: Float32Array;
+  readonly colors: Float32Array;
+  readonly uvs: Float32Array;
+  readonly indices: Uint32Array;
+}
+
+export interface BuildingLodGeometry {
+  readonly level: number;
+  readonly surfaces: readonly BuildingSurfaceGeometry[];
+  readonly triangleCount: number;
+}
+
+export interface BuildingSignSlot {
+  readonly buildingId: string;
+  readonly category: string;
+  readonly position: readonly [number, number, number];
+  readonly heading: number;
+  readonly width: number;
+}
+
+export interface BuildingRoofAnchor {
+  readonly buildingId: string;
+  readonly position: readonly [number, number, number];
+  readonly roofShape: string;
+}
+
+export interface LandmarkModelInstance {
+  readonly buildingId: string;
+  readonly path: string;
+  readonly position: readonly [number, number, number];
+}
+
+export interface BuiltBuildingChunk {
+  readonly levels: readonly BuildingLodGeometry[];
+  readonly colliderPositions: Float32Array;
+  readonly colliderIndices: Uint32Array;
+  readonly signSlots: readonly BuildingSignSlot[];
+  readonly roofAnchors: readonly BuildingRoofAnchor[];
+  readonly landmarkModels: readonly LandmarkModelInstance[];
+}
 
 export interface RoadSurfaceGeometry {
   readonly style: RoadSurfaceStyle;
@@ -123,6 +186,7 @@ export interface BuiltTerrainChunk {
   readonly maximumHeight: number;
   readonly levels: readonly TerrainLodData[];
   roads?: BuiltRoadChunk;
+  buildings?: BuiltBuildingChunk;
 }
 
 export interface TerrainChunkEvents {
