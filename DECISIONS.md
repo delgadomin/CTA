@@ -51,3 +51,18 @@
 - Las ventanas guardan una semilla estable por id y exponen `BuildingRenderer.setNight()` para su integración con el sistema de hora de fase 15. No hay ciclo día/noche en esta fase.
 - `public/landmarks/<id>.glb` es una entrada local opcional; no se descargaron modelos. El data build acepta solo ids de way OSM, GLB 2.0 de máximo 50 MiB, estructura y malla acotadas, sin URIs externos, con texturas PNG/JPEG embebidas limitadas; al cargar se usa la caché local del AssetManager.
 - QA automatizado de fase 5: 16 chunks, 75 FPS, 85 draw calls, 303.477 triángulos, 15,6 ms máximo de streaming, cero frames >16 ms y 23,9–70,8 MiB de buffers de geometría estimados.
+
+# Fase 6 - hitos y fidelidad
+
+- El inventario usa los nombres orientativos de la guía del proyecto y separa los objetivos de `cc-monumental` de los que requieren una futura región de ciudad. Los nombres se comparan exactamente después de normalizar mayúsculas, espacios y tildes; no se aplican coincidencias difusas.
+- Un objetivo no encontrado se informa como ausente del extracto OSM de la región, no como inexistente. Los objetivos de ciudad se muestran fuera de alcance mientras se procesa `cc-monumental`.
+- La consulta OSM incluye `place=square` en nodos y vías para que plazas como Plaza Mayor puedan formar parte del inventario. Los nombres de monumentos y plazas son datos geográficos permitidos; las reglas de sustitución comercial siguen aplicándose a negocios.
+- Los museos etiquetados `tourism=museum` se tratan como hitos públicos cuando OSM no declara `brand` ni `operator`; una marca u operador explícito conserva el saneamiento comercial.
+- Las relaciones OSM históricas se conservan como POIs con prefijo `r` y centro calculado desde la geometría de sus miembros exteriores. Esa posición sirve para inventario y referencia; no sustituye ni crea huellas de edificio.
+- La auditoría consulta nombres de vías, edificios no comerciales, superficies y POIs. Para fachadas, solo se conservan nombres de edificios no comerciales; los nombres de locales continúan sometidos al brand scrubber. Los alias del catálogo se añaden solo cuando el nombre alternativo está confirmado en el extracto OSM.
+- No se derivan posiciones, huellas, dimensiones ni modelos de hitos a partir del nombre solamente. Los modelos detallados siguen necesitando geometría OSM o un GLB local validado y atribuido.
+- Para la silueta visual, el Arco de la Estrella se centra en el POI OSM y se orienta perpendicular a la vía más cercana dentro de 24 m. El vano (8,6 m de ancho; 8,9 m de altura aproximada), profundidad y dovelas son parámetros artísticos, no medidas fuente; si no hay vía cercana, se omite.
+- Las vías/polígonos OSM con `place=square` se conservan como superficies nombradas además de POIs, y colorean el terreno como piedra. La huella proviene de OSM; el material es una clasificación visual.
+- Las vías OSM `barrier=city_wall` se conservan como geometría de muro monumental. La altura de 3,8 m, el grosor de 1,1 m y las almenas son fallbacks visuales porque el tramo fuente consultado no declara cotas; el trazado procede únicamente de la línea OSM.
+- El informe de hitos distingue huellas, polígonos, trazados, vías, puntos y centros de relación. Un POI puntual sin huella cercana identificable (como la Torre de las Cigüeñas en este extracto) no se extruye como edificio para evitar ubicar una masa inventada.
+- Las torres sin `height=*` ni `building:levels` reciben un fallback visual de 7 plantas (21 m); el dato fuente permanece ausente. Se añaden almenas low-poly a partir de los bordes de la huella, también como detalle aproximado. No se añade esta geometría cuando el edificio usa un GLB local validado.

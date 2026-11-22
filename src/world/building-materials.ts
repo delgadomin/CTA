@@ -124,6 +124,30 @@ function drawRoof(tile: boolean): HTMLCanvasElement {
   return canvas;
 }
 
+function drawMonumentStone(): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Could not create procedural stone texture.');
+  canvas.width = 256;
+  canvas.height = 256;
+  context.fillStyle = '#b9aa8d';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  for (let row = 0; row < 8; row += 1) {
+    const offset = row % 2 === 0 ? 0 : 16;
+    for (let column = -1; column < 8; column += 1) {
+      const x = column * 32 + offset;
+      const y = row * 32;
+      const tone = (row * 11 + column * 7 + 84) % 5;
+      context.fillStyle = ['#c9b99b', '#b9aa8d', '#c1b398', '#ad9d82', '#d0c2a6'][tone] ?? '#b9aa8d';
+      context.fillRect(x + 1, y + 1, 30, 30);
+      context.strokeStyle = '#8f8069';
+      context.lineWidth = 2;
+      context.strokeRect(x + 1, y + 1, 30, 30);
+    }
+  }
+  return canvas;
+}
+
 export function createBuildingMaterials(): Map<BuildingMaterial, THREE.MeshStandardMaterial> {
   const casco = drawFacade('casco', false);
   const ensanche = drawFacade('ensanche', false);
@@ -146,11 +170,18 @@ export function createBuildingMaterials(): Map<BuildingMaterial, THREE.MeshStand
     roughness: tile ? 0.91 : 0.76,
     side: THREE.DoubleSide,
   });
+  const monumentStone = new THREE.MeshStandardMaterial({
+    map: canvasTexture(drawMonumentStone(), true),
+    vertexColors: true,
+    roughness: 0.96,
+    side: THREE.DoubleSide,
+  });
   return new Map([
     ['casco_facade', facade(casco, cascoGlow)],
     ['ensanche_facade', facade(ensanche, ensancheGlow)],
     ['periferia_facade', facade(periferia, periferiaGlow)],
     ['tile_roof', roof(true)],
     ['modern_roof', roof(false)],
+    ['monument_stone', monumentStone],
   ]);
 }

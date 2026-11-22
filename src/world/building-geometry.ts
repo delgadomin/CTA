@@ -12,7 +12,7 @@ interface MaterialBuffer {
   readonly indices: number[];
 }
 
-const MATERIAL_ORDER: readonly BuildingMaterial[] = ['casco_facade', 'ensanche_facade', 'periferia_facade', 'tile_roof', 'modern_roof'];
+const MATERIAL_ORDER: readonly BuildingMaterial[] = ['casco_facade', 'ensanche_facade', 'periferia_facade', 'tile_roof', 'modern_roof', 'monument_stone'];
 
 export class BuildingGeometryWriter {
   private readonly originX: number;

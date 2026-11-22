@@ -1,5 +1,6 @@
 import { BuildingGeometryWriter, type BuildingColor, type BuildingUv } from './building-geometry';
 import { clipToBounds, sampleHeight, type RoadPoint, type RoadPoint3 } from './road-geometry';
+import { addLandmarkGeometry, isTowerLandmark } from './landmark-geometry';
 import type { BuiltBuildingChunk, BuiltTerrainChunk, BuildingLodGeometry, BuildingMaterial, BuildingRoofAnchor, BuildingSignSlot, ChunkFeature, LandmarkModelInstance, ProjectedBounds } from './types';
 
 const WALL_TINT: Readonly<Record<NonNullable<ChunkFeature['zone']>, BuildingColor>> = {
@@ -63,6 +64,7 @@ export function roofShapeFor(feature: ChunkFeature, points: readonly RoadPoint[]
   if (tagged === 'flat') return 'flat';
   if (tagged === 'gabled' || tagged === 'saltbox' || tagged === 'gambrel') return 'gabled';
   if (tagged === 'hipped' || tagged === 'pyramidal') return 'hipped';
+  if (isTowerLandmark(feature)) return 'flat';
   const [width, depth] = areaSize(points);
   return Math.max(width, depth) / Math.max(0.1, Math.min(width, depth)) > 1.35 ? 'gabled' : 'hipped';
 }
@@ -108,7 +110,7 @@ function footprint(feature: ChunkFeature, points: readonly RoadPoint[], shapePoi
     roofHeight,
     shape,
     wallMaterial: buildingMaterial(feature),
-    roofMaterial: feature.roofMaterial === 'tile' ? 'tile_roof' : 'modern_roof',
+    roofMaterial: isTowerLandmark(feature) ? 'monument_stone' : feature.roofMaterial === 'tile' ? 'tile_roof' : 'modern_roof',
     tint: colorTint(feature),
   };
 }
@@ -336,6 +338,7 @@ function buildLod(features: readonly ChunkFeature[], terrain: BuiltTerrainChunk,
       addRoof(writer, item, terrain, lod === 0);
     }
   }
+  addLandmarkGeometry(writer, features, terrain, bounds, lod);
   const surfaces = writer.build();
   return { level: lod, surfaces, triangleCount: surfaces.reduce((sum, surface) => sum + surface.indices.length / 3, 0) };
 }
