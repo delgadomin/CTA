@@ -260,3 +260,31 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - `npm run audit:npcs` regenera el informe del grafo.
 - Abrir la web desplegada: los agentes aparecen a 45–290 m del jugador, siempre detrás de la cámara; el panel F4 muestra `Agentes`.
 
+## Fase 11 - delitos y policía (completada)
+
+### Plan
+- Modelar nivel de búsqueda, calor, decaimiento y detención en un módulo puro y probarlo por separado.
+- Perseguir al jugador con patrullas instanciadas sobre el grafo viario real, sin inventar calles ni añadir assets.
+- Conectar robo de vehículo ambiental, atropello y conducción temeraria con el nivel de búsqueda.
+- Mostrar estrellas y avisos con claves i18n, y devolver al jugador a Plaza Mayor tras la detención.
+
+### Hecho hasta ahora
+- `src/world/crime-system.ts`: calor 0–5, estrellas redondeadas, enfriamiento más rápido si la policía está lejos (>260 m), *cooldowns* por tipo de delito y detención tras 2 s a menos de 7 m y 2,5 m/s.
+- `src/world/police-system.ts`: hasta cinco patrullas agrupadas en un `InstancedMesh`, spawn detrás de la cámara, re-ruteo A* cada 1,5 s hacia el nodo más cercano al jugador, prioridad en intersecciones y retirada al caer el nivel a cero.
+- `src/world/npc-system.ts`: `alarm()` (peatones huyen y evitan la amenaza en los cruces), `claimVehicle()` (robo de un coche ambiental) y `checkVehicleImpact()` (atropello).
+- `src/world/npc-models.ts`: coche policial procedural con barra de luces; colores azul/blanco ficticios, sin marcas reales.
+- `src/main.ts`: la tecla `E` roba coches ambientales o sale del vehículo; atropellar a >6 m/s y circular a >16 m/s durante 2,5 s suman calor; al ser detenido se reinicia la búsqueda y se reaparece en Plaza Mayor.
+- `src/i18n.ts`: primer *seam* de internacionalización; los textos nuevos del HUD y los avisos se resuelven mediante claves.
+- `tests/crime.test.ts`: 4 pruebas de calor, *cooldown*, decaimiento, arresto, persecución y robo; `lint`, `typecheck`, `test` y `build` pasan.
+
+### Pendiente
+- Fase 12: combate ligero estilizado (sin armas de terceros ni assets con copyright).
+- Denuncia ciudadana automática y phases de señales de tráfico: el extracto OSM sigue sin semáforos en el grafo.
+- Persecución con radio de búsqueda, pérdida de visión y registro de delitos en guardado (fase 13).
+- Prueba de resistencia de la persecución con cinco patrullas y 150 peatones durante 10 minutos.
+
+### Cómo probarlo
+- Pulsa `E` junto a un coche ambiental para requisarlo: suben 2 estrellas y aparecen patrullas detrás de ti.
+- Atropella un peatón o conduce rápido para aumentar el nivel; el panel F4 muestra `Búsqueda`.
+- Detente cerca de una patrulla durante 2 s: aparece `DETENIDO` y vuelves a Plaza Mayor con el nivel a cero.
+

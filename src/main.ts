@@ -4,9 +4,12 @@ import { FixedStepLoop } from './engine/game-loop';
 import { InputManager } from './engine/input-manager';
 import { Logger } from './engine/logger';
 import { QUALITY_PRESETS } from './engine/quality';
+import { t } from './i18n';
 import { ChunkManager } from './world/chunk-manager';
 import { Character } from './world/character';
+import { CrimeSystem } from './world/crime-system';
 import { NpcSystem } from './world/npc-system';
+import { PoliceSystem } from './world/police-system';
 import { RoadGraph } from './world/road-graph';
 import type { RoadNetwork } from './world/types';
 import { Vehicle } from './world/vehicle';
@@ -29,7 +32,11 @@ const drawCallsLabel = requiredElement<HTMLElement>('#draw-calls');
 const trianglesLabel = requiredElement<HTMLElement>('#triangles');
 const memoryLabel = requiredElement<HTMLElement>('#memory');
 const agentsLabel = requiredElement<HTMLElement>('#agents');
+const wantedLabel = requiredElement<HTMLElement>('#wanted');
+const noticeLabel = requiredElement<HTMLElement>('#notice');
 const statusLabel = requiredElement<HTMLElement>('#world-status');
+requiredElement<HTMLElement>('#wanted-label').textContent = t('hud.wanted');
+requiredElement<HTMLElement>('#controls-hint').textContent = t('controls.hint');
 const quality = QUALITY_PRESETS.high;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: quality.antialias, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality.pixelRatio));
@@ -74,6 +81,8 @@ scene.add(sun);
 let world: World | undefined;
 let chunks: ChunkManager | undefined;
 let npcs: NpcSystem | undefined;
+let police: PoliceSystem | undefined;
+const crime = new CrimeSystem();
 const vehicles: Vehicle[] = [];
 let activeVehicle: Vehicle | null = null;
 let inVehicle = false;
@@ -84,6 +93,30 @@ let frameWindowStart = performance.now();
 let previousFrameTimestamp = frameWindowStart;
 let maximumFrameMs = 0;
 let lastStatsUpdate = frameWindowStart;
+let noticeUntil = 0;
+let bustCooldownUntil = 0;
+let recklessSeconds = 0;
+let focusInitialized = false;
+const previousFocus = new THREE.Vector3();
+
+function showNotice(message: string, timestamp: number, durationMs = 3000): void {
+  noticeLabel.textContent = message;
+  noticeLabel.hidden = false;
+  noticeUntil = timestamp + durationMs;
+}
+
+function handleBust(timestamp: number): void {
+  bustCooldownUntil = timestamp + 4000;
+  crime.reset();
+  inVehicle = false;
+  activeVehicle = null;
+  character.group.visible = true;
+  character.position.set(0, chunks?.groundHeightAt(0, 0) ?? 0, 0);
+  cameraRig.mode = 'thirdPerson';
+  focusInitialized = false;
+  showNotice(t('notice.busted'), timestamp, 3500);
+  logger.info('Player busted', { stars: crime.stars });
+}
 
 function updateDebug(timestamp: number): void {
   if (!chunks || timestamp - lastStatsUpdate < 250) return;
@@ -94,7 +127,13 @@ function updateDebug(timestamp: number): void {
   memoryLabel.textContent = `≈ ${chunks.memoryMiB.toFixed(1)} MiB`;
   const agents = npcs?.counts;
   agentsLabel.textContent = agents ? `${agents.pedestrians} peatones · ${agents.vehicles} coches` : 'cargando red viaria…';
+  const stars = crime.stars;
+  wantedLabel.textContent = stars > 0 ? `${'★'.repeat(stars)}${'☆'.repeat(5 - stars)}` : '—';
   statusLabel.textContent = chunks.loadedCount > 0 ? 'Edificios, calles y terreno MDT05 en streaming' : 'Preparando la ciudad desde datos oficiales…';
+  if (noticeUntil > 0 && timestamp >= noticeUntil) {
+    noticeLabel.hidden = true;
+    noticeUntil = 0;
+  }
   lastStatsUpdate = timestamp;
 }
 
@@ -161,10 +200,33 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
     const groundHeight = chunks?.groundHeightAt(camera.position.x, camera.position.z);
     if (groundHeight !== undefined) camera.position.y = groundHeight + 1.7;
   }
-  if (npcs && chunks) {
-    const focus = inVehicle && activeVehicle ? activeVehicle.position : character.position;
-    npcs.update(frameSeconds, focus, camera, chunks);
+  const focus = inVehicle && activeVehicle ? activeVehicle.position : character.position;
+  let playerSpeed = 0;
+  if (focusInitialized) playerSpeed = Math.min(focus.distanceTo(previousFocus) / Math.max(frameSeconds, 1 / 120), 25);
+  previousFocus.copy(focus);
+  focusInitialized = true;
+  if (inVehicle && activeVehicle) playerSpeed = activeVehicle.speed;
+
+  if (npcs && chunks) npcs.update(frameSeconds, focus, camera, chunks);
+  if (police && chunks) {
+    police.update(frameSeconds, crime.stars, focus, camera, chunks);
+    crime.update(frameSeconds, police.nearestDistance(focus), playerSpeed);
+    if (crime.busted && timestamp > bustCooldownUntil) handleBust(timestamp);
   }
+
+  if (npcs && inVehicle && activeVehicle && activeVehicle.speed > 6 && npcs.checkVehicleImpact(activeVehicle.position)) {
+    if (crime.report('pedestrianImpact', activeVehicle.position.x, activeVehicle.position.z)) {
+      npcs.alarm(activeVehicle.position.x, activeVehicle.position.z);
+      showNotice(t('notice.pedestrianImpact'), timestamp);
+    }
+  }
+  if (inVehicle && activeVehicle && activeVehicle.speed > 16) {
+    recklessSeconds += frameSeconds;
+    if (recklessSeconds > 2.5 && crime.report('recklessDriving', focus.x, focus.z)) recklessSeconds = 0;
+  } else {
+    recklessSeconds = 0;
+  }
+
   chunks?.update(camera, timestamp);
   renderer.render(scene, camera);
   frameCount += 1;
@@ -206,18 +268,34 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
       character.group.visible = true;
       cameraRig.mode = 'thirdPerson';
     } else {
-      // find nearest vehicle
+      // Prefer a vehicle the player already owns, then requisition an ambient one.
       let nearest: Vehicle | null = null;
       let best = 3;
       for (const v of vehicles) {
         const d = v.position.distanceTo(character.position);
         if (d < best) { best = d; nearest = v; }
       }
+      if (!nearest && npcs && world) {
+        const claimed = npcs.claimVehicle(character.position, 4.5);
+        if (claimed) {
+          const stolen = new Vehicle(world, claimed.x, claimed.y, claimed.z);
+          vehicles.push(stolen);
+          scene.add(stolen.group);
+          world.updateSceneQueries();
+          nearest = stolen;
+          if (crime.report('vehicleTheft', claimed.x, claimed.z)) {
+            npcs.alarm(claimed.x, claimed.z);
+            showNotice(t('notice.vehicleTheft'), performance.now());
+          }
+        }
+      }
       if (nearest) {
         inVehicle = true;
         activeVehicle = nearest;
         character.position.copy(nearest.position);
         character.group.visible = false;
+      } else {
+        showNotice(t('notice.noVehicle'), performance.now(), 1600);
       }
     }
   }
@@ -229,6 +307,7 @@ window.addEventListener('pagehide', () => {
   loop.stop();
   input.dispose();
   npcs?.dispose();
+  police?.dispose();
   chunks?.close();
   renderer.dispose();
 });
@@ -275,6 +354,8 @@ async function initializeNpcs(worldBaseUrl: URL): Promise<void> {
     vehicles: Math.round(60 * quality.populationDensity),
   });
   scene.add(npcs.group);
+  police = new PoliceSystem(graph);
+  scene.add(police.group);
   logger.info('Traffic and pedestrians initialized', {
     nodes: graph.nodeCount,
     segments: graph.segments.length,

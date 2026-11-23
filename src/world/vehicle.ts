@@ -125,6 +125,11 @@ export class Vehicle {
 
   get position(): THREE.Vector3 { return this.group.position; }
 
+  get speed(): number {
+    const velocity = this.chassisBody.linvel();
+    return Math.hypot(velocity.x, velocity.y, velocity.z);
+  }
+
   dispose(): void {
     this.world.removeRigidBody(this.chassisBody);
   }

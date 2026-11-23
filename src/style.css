@@ -43,3 +43,5 @@ dd { margin: 0; font-family: 'Cascadia Mono', 'Consolas', monospace; font-size: 
 kbd { padding: 3px 6px; color: #f4f1e7; background: #343b36; border-radius: 3px; font: inherit; }
 .phase-tag { position: absolute; right: 29px; bottom: 24px; margin: 0; color: #f4f1e7; font-size: 9px; text-shadow: 0 1px 6px rgb(0 0 0 / 30%); }
 .phase-tag span { padding: 0 5px; color: #d3ac78; }
+.notice { position: absolute; top: 8%; left: 50%; z-index: 2; max-width: min(520px, 90vw); margin: 0; padding: 12px 18px; transform: translateX(-50%); color: #fff5df; background: rgb(23 26 25 / 90%); border-left: 3px solid #d3ac78; border-radius: 3px; font: 11px 'Cascadia Mono', 'Consolas', monospace; text-align: center; }
+#wanted { color: #e6c382; letter-spacing: 0.12em; }

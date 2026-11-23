@@ -14,6 +14,13 @@ export interface NpcCounts {
   readonly vehicles: number;
 }
 
+export interface ClaimedVehicle {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+  readonly heading: number;
+}
+
 const MAX_ROUTE = 24;
 const SPAWN_MIN_METERS = 45;
 const DESPAWN_METERS = 330;
@@ -50,6 +57,9 @@ export class NpcSystem {
   private readonly claimTime: Float32Array;
   private readonly intersectionOwner: Int32Array;
   private readonly colorIndex: Uint8Array;
+  private readonly fleeTime: Float32Array;
+  private readonly fleeX: Float32Array;
+  private readonly fleeZ: Float32Array;
   private readonly freePedestrians: number[] = [];
   private readonly freeVehicles: number[] = [];
   private readonly pedestrianColors: THREE.Color[] = [];
@@ -92,6 +102,9 @@ export class NpcSystem {
     this.claimTime = new Float32Array(graph.nodeCount);
     this.intersectionOwner = new Int32Array(graph.nodeCount);
     this.colorIndex = new Uint8Array(capacity);
+    this.fleeTime = new Float32Array(capacity);
+    this.fleeX = new Float32Array(capacity);
+    this.fleeZ = new Float32Array(capacity);
     for (let slot = this.pedestrianCapacity - 1; slot >= 0; slot -= 1) this.freePedestrians.push(slot);
     for (let slot = capacity - 1; slot >= this.pedestrianCapacity; slot -= 1) this.freeVehicles.push(slot);
     for (let i = 0; i < 8; i += 1) this.pedestrianColors.push(new THREE.Color().setHSL(i / 8, 0.45, 0.42 + (i % 2) * 0.12));
@@ -104,6 +117,60 @@ export class NpcSystem {
 
   get diagnostics(): { readonly reroutes: number; readonly despawns: number } {
     return { reroutes: this.totalReroutes, despawns: this.totalDespawns };
+  }
+
+  /** Pedestrians within the radius run away and avoid the threat at junctions. */
+  alarm(x: number, z: number, radius = 65): number {
+    const squared = radius * radius;
+    let alarmed = 0;
+    for (let slot = 0; slot < this.pedestrianCapacity; slot += 1) {
+      if (this.active[slot] !== 1 || this.kind[slot] !== 0) continue;
+      const dx = (this.x[slot] ?? 0) - x;
+      const dz = (this.z[slot] ?? 0) - z;
+      if (dx * dx + dz * dz > squared) continue;
+      this.fleeTime[slot] = 6;
+      this.fleeX[slot] = x;
+      this.fleeZ[slot] = z;
+      alarmed += 1;
+    }
+    return alarmed;
+  }
+
+  /** Removes the closest ambient car so the player can drive it away. */
+  claimVehicle(position: THREE.Vector3, maxDistance = 4): ClaimedVehicle | undefined {
+    let chosen = -1;
+    let bestSquared = maxDistance * maxDistance;
+    const capacity = this.pedestrianCapacity + this.vehicleCapacity;
+    for (let slot = this.pedestrianCapacity; slot < capacity; slot += 1) {
+      if (this.active[slot] !== 1) continue;
+      const dx = (this.x[slot] ?? 0) - position.x;
+      const dz = (this.z[slot] ?? 0) - position.z;
+      const squared = dx * dx + dz * dz;
+      if (squared >= bestSquared) continue;
+      bestSquared = squared;
+      chosen = slot;
+    }
+    if (chosen < 0) return undefined;
+    const claimed: ClaimedVehicle = {
+      x: this.x[chosen] ?? 0,
+      y: this.y[chosen] ?? 0,
+      z: this.z[chosen] ?? 0,
+      heading: this.heading[chosen] ?? 0,
+    };
+    this.release(chosen);
+    return claimed;
+  }
+
+  /** True when a pedestrian is inside the impact radius of the player's car. */
+  checkVehicleImpact(position: THREE.Vector3, radius = 2.4): boolean {
+    const squared = radius * radius;
+    for (let slot = 0; slot < this.pedestrianCapacity; slot += 1) {
+      if (this.active[slot] !== 1 || this.kind[slot] !== 0) continue;
+      const dx = (this.x[slot] ?? 0) - position.x;
+      const dz = (this.z[slot] ?? 0) - position.z;
+      if (dx * dx + dz * dz <= squared) return true;
+    }
+    return false;
   }
 
   update(deltaSeconds: number, player: THREE.Vector3, camera: Camera, world: NpcWorld): void {
@@ -178,6 +245,7 @@ export class NpcSystem {
       this.stuckTime[slot] = 0;
       this.checkedMid[slot] = 0;
       this.reroutes[slot] = 0;
+      this.fleeTime[slot] = 0;
       this.colorIndex[slot] = Math.floor(this.random() * (kind === 0 ? this.pedestrianColors.length : this.vehicleColors.length));
       if (kind === 0) this.activePedestrians += 1;
       else this.activeVehicles += 1;
@@ -197,6 +265,10 @@ export class NpcSystem {
     const mode: AgentMode = this.kind[slot] === 0 ? 'pedestrian' : 'vehicle';
     let desired = mode === 'pedestrian' ? 1.5 : Math.min(info.speed, 14);
     desired *= this.kind[slot] === 0 ? 0.85 + (this.scale[slot] ?? 1) * 0.2 : 0.75 + (this.scale[slot] ?? 1) * 0.25;
+    if (this.kind[slot] === 0 && (this.fleeTime[slot] ?? 0) > 0) {
+      this.fleeTime[slot] = Math.max(0, (this.fleeTime[slot] ?? 0) - dt);
+      desired = Math.max(desired, 3.6);
+    }
 
     if (this.blockedAhead(slot, player)) desired = 0;
     if ((this.progress[slot] ?? 0) > 0.94) {
@@ -250,7 +322,13 @@ export class NpcSystem {
       }
     }
     this.y[slot] = height;
-    if (nextSpeed > 0.05) this.heading[slot] = Math.atan2(bx - ax, bz - az);
+    if (this.kind[slot] === 0 && (this.fleeTime[slot] ?? 0) > 0) {
+      const awayX = (this.x[slot] ?? 0) - (this.fleeX[slot] ?? 0);
+      const awayZ = (this.z[slot] ?? 0) - (this.fleeZ[slot] ?? 0);
+      if (Math.hypot(awayX, awayZ) > 0.2) this.heading[slot] = Math.atan2(awayX, awayZ);
+    } else if (nextSpeed > 0.05) {
+      this.heading[slot] = Math.atan2(bx - ax, bz - az);
+    }
   }
 
   private blockedAhead(slot: number, player: THREE.Vector3): boolean {
@@ -313,6 +391,20 @@ export class NpcSystem {
     const index = this.routeIndex[slot] ?? 0;
     const target = index < (this.routeLength[slot] ?? 0) ? this.route[slot * MAX_ROUTE + index] ?? -1 : -1;
     const edges = this.graph.outgoingEdges(node, mode);
+    if (mode === 'pedestrian' && (this.fleeTime[slot] ?? 0) > 0) {
+      let bestEdge = -1;
+      let bestDistance = -Infinity;
+      for (const edge of edges) {
+        const destination = this.graph.edgeDestination(edge);
+        const dx = (this.graph.nodeX[destination] ?? 0) - (this.fleeX[slot] ?? 0);
+        const dz = (this.graph.nodeZ[destination] ?? 0) - (this.fleeZ[slot] ?? 0);
+        const distance = dx * dx + dz * dz;
+        if (distance <= bestDistance) continue;
+        bestDistance = distance;
+        bestEdge = edge;
+      }
+      if (bestEdge >= 0) return bestEdge;
+    }
     for (const edge of edges) {
       if (this.graph.edgeDestination(edge) === target) {
         this.routeIndex[slot] = index + 1;

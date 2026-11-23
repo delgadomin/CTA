@@ -24,7 +24,7 @@ function pedestrianGeometry(): THREE.BufferGeometry {
   return mergeGeometries(parts, false) ?? new THREE.BoxGeometry(0.5, 1.7, 0.3);
 }
 
-function vehicleGeometry(): THREE.BufferGeometry {
+function vehicleGeometry(police = false): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
   const body = new THREE.BoxGeometry(1.86, 0.52, 4.1);
   body.translate(0, 0.62, 0);
@@ -32,6 +32,12 @@ function vehicleGeometry(): THREE.BufferGeometry {
   const cabin = new THREE.BoxGeometry(1.52, 0.5, 1.9);
   cabin.translate(0, 1.09, -0.2);
   parts.push(cabin);
+  if (police) {
+    // A light bar is enough to read as a patrol car without any external asset.
+    const bar = new THREE.BoxGeometry(0.94, 0.14, 0.28);
+    bar.translate(0, 1.41, -0.2);
+    parts.push(bar);
+  }
   const wheel = new THREE.CylinderGeometry(0.34, 0.34, 0.22, 10);
   wheel.rotateZ(Math.PI / 2);
   for (const x of [-0.94, 0.94]) {
@@ -63,6 +69,16 @@ export function createPedestrianMesh(capacity: number): THREE.InstancedMesh {
 export function createVehicleMesh(capacity: number): THREE.InstancedMesh {
   const mesh = new THREE.InstancedMesh(vehicleGeometry(), material(), capacity);
   mesh.name = 'traffic';
+  mesh.count = 0;
+  mesh.frustumCulled = false;
+  mesh.castShadow = true;
+  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  return mesh;
+}
+
+export function createPoliceMesh(capacity: number): THREE.InstancedMesh {
+  const mesh = new THREE.InstancedMesh(vehicleGeometry(true), material(), capacity);
+  mesh.name = 'police';
   mesh.count = 0;
   mesh.frustumCulled = false;
   mesh.castShadow = true;
