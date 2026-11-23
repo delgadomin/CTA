@@ -16,6 +16,58 @@ function seeded(seed: number): number {
   return ((value ^ (value >>> 16)) >>> 0) / 0x1_0000_0000;
 }
 
+/** Flecks need a sequence; seeded() alone only returns one deterministic value. */
+function seededSequence(seed: number): () => number {
+  let step = 0;
+  return () => {
+    step += 1;
+    return seeded(seed + step * 7919);
+  };
+}
+
+function drawArchedWindow(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, style: FacadeStyle): void {
+  const stone = style === 'casco' ? '#9f8a6e' : '#77766e';
+  context.fillStyle = '#766858';
+  context.fillRect(x - 7, y + 3, width + 14, height + 9);
+  context.fillStyle = stone;
+  context.beginPath();
+  context.moveTo(x - 4, y + height + 5);
+  context.lineTo(x - 4, y + 15);
+  context.quadraticCurveTo(x + width / 2, y - 9, x + width + 4, y + 15);
+  context.lineTo(x + width + 4, y + height + 5);
+  context.closePath();
+  context.fill();
+
+  const glass = context.createLinearGradient(x, y, x + width, y + height);
+  glass.addColorStop(0, style === 'casco' ? '#9eb0a9' : '#9aa9a7');
+  glass.addColorStop(1, style === 'casco' ? '#566d6d' : '#52696b');
+  context.fillStyle = glass;
+  context.beginPath();
+  context.moveTo(x, y + height + 1);
+  context.lineTo(x, y + 14);
+  context.quadraticCurveTo(x + width / 2, y - 6, x + width, y + 14);
+  context.lineTo(x + width, y + height + 1);
+  context.closePath();
+  context.fill();
+  context.fillStyle = 'rgb(230 232 220 / 32%)';
+  context.fillRect(x + 5, y + 17, Math.max(2, width * 0.12), height - 20);
+  context.fillStyle = stone;
+  context.fillRect(x + width * 0.48, y + 12, 3, height - 9);
+  context.fillRect(x, y + height * 0.58, width, 3);
+  if (style === 'casco') {
+    context.fillStyle = '#765c46';
+    context.fillRect(x - 12, y + 15, 7, height - 10);
+    context.fillRect(x + width + 5, y + 15, 7, height - 10);
+    context.fillStyle = '#554638';
+    for (let slat = 0; slat < 5; slat += 1) {
+      context.fillRect(x - 12, y + 20 + slat * 9, 7, 2);
+      context.fillRect(x + width + 5, y + 20 + slat * 9, 7, 2);
+    }
+  }
+  context.fillStyle = '#e0d3bd';
+  context.fillRect(x - 8, y + height + 5, width + 16, 6);
+}
+
 function canvasTexture(canvas: HTMLCanvasElement, repeat: boolean): THREE.CanvasTexture {
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -42,45 +94,70 @@ function drawFacade(style: FacadeStyle, emissive: boolean): HTMLCanvasElement {
     for (let column = 0; column < columns; column += 1) {
       const x = column * tile;
       const y = row * tile;
-      const random = seeded(row * 31 + column * 137 + style.length * 17);
+      const tileSeed = row * 31 + column * 137 + style.length * 17;
+      const random = seeded(tileSeed);
+      const nextFleck = seededSequence(tileSeed + 1);
       const upper = row === 1 || row === 2;
       const palette = PALETTES[style];
       context.fillStyle = palette[column % palette.length] ?? '#c9b99f';
       context.fillRect(x, y, tile, tile);
+      for (let fleck = 0; fleck < 26; fleck += 1) {
+        const shade = nextFleck() > 0.52 ? 'rgb(255 250 235 / 16%)' : 'rgb(86 68 51 / 9%)';
+        context.fillStyle = shade;
+        const size = 1 + nextFleck() * 3;
+        context.fillRect(x + nextFleck() * tile, y + nextFleck() * tile, size, size);
+      }
       context.fillStyle = style === 'casco' ? '#b19d7e' : '#8f8d84';
       context.fillRect(x, y + tile - 10, tile, 10);
+      context.fillStyle = style === 'casco' ? '#e4d4b7' : '#ede7dc';
+      context.fillRect(x + 3, y + 4, 5, tile - 8);
+      context.fillRect(x + tile - 8, y + 4, 5, tile - 8);
       context.fillStyle = style === 'casco' ? '#5a4739' : '#44494a';
       const windowX = x + 34 + Math.round(random * 10);
       const windowY = y + (upper ? 25 : 31);
       const windowWidth = style === 'casco' ? 34 : 42;
-      const windowHeight = upper ? 54 : 50;
-      context.fillRect(windowX - 4, windowY - 4, windowWidth + 8, windowHeight + 8);
-      context.fillStyle = emissive
-        ? (random > 0.58 ? '#ffe4a0' : '#040302')
-        : style === 'casco' ? '#91a4a1' : '#839799';
-      context.fillRect(windowX, windowY, windowWidth, windowHeight);
+      const windowHeight = upper ? 58 : 53;
+      if (!emissive) drawArchedWindow(context, windowX, windowY, windowWidth, windowHeight, style);
+      else {
+        context.fillStyle = '#241e18';
+        context.fillRect(windowX - 4, windowY + 8, windowWidth + 8, windowHeight);
+        context.fillStyle = random > 0.58 ? '#ffe4a0' : '#040302';
+        context.fillRect(windowX, windowY + 12, windowWidth, windowHeight - 9);
+      }
       if (!emissive) {
-        context.fillStyle = style === 'casco' ? '#665646' : '#4a5050';
-        context.fillRect(windowX + windowWidth / 2 - 2, windowY, 4, windowHeight);
-        context.fillRect(windowX, windowY + windowHeight * 0.55, windowWidth, 3);
         if (row === 2) {
-          context.strokeStyle = style === 'casco' ? '#3c3027' : '#5a5651';
-          context.lineWidth = 3;
+          context.fillStyle = '#8c7b66';
+          context.fillRect(windowX - 12, windowY + windowHeight + 9, windowWidth + 24, 5);
+          context.strokeStyle = '#393633';
+          context.lineWidth = 2;
           context.beginPath();
-          context.moveTo(windowX - 9, windowY + windowHeight + 7);
-          context.lineTo(windowX + windowWidth + 9, windowY + windowHeight + 7);
-          context.moveTo(windowX - 5, windowY + windowHeight + 2);
-          context.lineTo(windowX - 5, windowY + windowHeight + 15);
-          context.moveTo(windowX + windowWidth + 5, windowY + windowHeight + 2);
-          context.lineTo(windowX + windowWidth + 5, windowY + windowHeight + 15);
+          context.moveTo(windowX - 10, windowY + windowHeight + 2);
+          context.lineTo(windowX + windowWidth + 10, windowY + windowHeight + 2);
+          context.moveTo(windowX - 10, windowY + windowHeight + 2);
+          context.lineTo(windowX - 10, windowY + windowHeight + 10);
+          context.moveTo(windowX + windowWidth + 10, windowY + windowHeight + 2);
+          context.lineTo(windowX + windowWidth + 10, windowY + windowHeight + 10);
           context.stroke();
         }
         if (row === 3) {
-          context.fillStyle = '#4c5554';
-          context.fillRect(x + 16, y + 25, 18, 88);
-          context.fillRect(x + 94, y + 32, 18, 81);
+          context.fillStyle = '#574637';
+          context.beginPath();
+          context.moveTo(x + 17, y + 116);
+          context.lineTo(x + 17, y + 47);
+          context.quadraticCurveTo(x + 25, y + 23, x + 34, y + 47);
+          context.lineTo(x + 34, y + 116);
+          context.closePath();
+          context.fill();
+          context.fillStyle = '#91816b';
+          context.fillRect(x + 91, y + 31, 19, 82);
           context.fillStyle = '#85928d';
-          context.fillRect(x + 39, y + 43, 49, 54);
+          context.fillRect(x + 94, y + 38, 13, 68);
+          context.fillStyle = '#4b3c30';
+          context.fillRect(x + 98, y + 39, 2, 66);
+          context.fillStyle = '#d4c19e';
+          context.beginPath();
+          context.arc(x + 29, y + 80, 2, 0, Math.PI * 2);
+          context.fill();
         }
         context.fillStyle = style === 'casco' ? '#e1d2b6' : '#eee8dc';
         context.fillRect(x, y + 5, tile, 5);
