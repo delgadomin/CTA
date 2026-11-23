@@ -108,17 +108,20 @@ export class Character {
       this.walkPhase *= 0.85;
     }
 
-    this.vy -= 18 * deltaSeconds;
-    this.group.position.y += this.vy * deltaSeconds;
     if (chunks) {
       const ground = chunks.groundHeightAt(this.group.position.x, this.group.position.z);
-      if (ground !== undefined && this.group.position.y <= ground + 0.05) {
-        this.group.position.y = ground;
-        this.vy = 0;
-        this.onGround = true;
-      } else if (ground !== undefined && this.group.position.y > ground + 0.05) {
-        this.onGround = false;
+      if (ground !== undefined) {
+        this.vy -= 18 * deltaSeconds;
+        this.group.position.y += this.vy * deltaSeconds;
+        if (this.group.position.y <= ground + 0.05) {
+          this.group.position.y = ground;
+          this.vy = 0;
+          this.onGround = true;
+        } else {
+          this.onGround = false;
+        }
       }
+      // If no ground sample is available, freeze vertical movement to avoid falling through gaps.
     }
 
     const swing = moving ? Math.sin(this.walkPhase) * 0.45 : 0;

@@ -90,9 +90,13 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
     activeVehicle.update(frameSeconds, driveInput);
     cameraRig.mode = 'thirdPerson';
     cameraRig.update(frameSeconds, activeVehicle.position);
+    const vh = chunks?.groundHeightAt(camera.position.x, camera.position.z);
+    if (vh !== undefined && camera.position.y < vh + 0.5) camera.position.y = vh + 0.5;
   } else if (cameraRig.mode === 'thirdPerson') {
     character.update(frameSeconds, input, chunks, cameraRig.getYaw(), spacePressed);
     cameraRig.update(frameSeconds, character.position);
+    const ch = chunks?.groundHeightAt(camera.position.x, camera.position.z);
+    if (ch !== undefined && camera.position.y < ch + 0.5) camera.position.y = ch + 0.5;
   } else {
     cameraRig.update(frameSeconds);
     character.position.copy(camera.position);
@@ -177,6 +181,7 @@ async function initializeWorld(): Promise<void> {
   const worldBaseUrl = new URL(import.meta.env.BASE_URL, window.location.href);
   const manifestUrl = new URL('world/cc-monumental/manifest.json', worldBaseUrl);
   chunks = new ChunkManager(scene, world, manifestUrl, worldBaseUrl);
+  cameraRig.occlusion = (origin, dir, maxDist) => chunks?.cameraOcclusion(origin, dir, maxDist) ?? maxDist;
   chunks.events.on('chunkLoaded', ({ id, lod }) => logger.debug('Terrain chunk loaded', { id, lod }));
   chunks.events.on('chunkUnloaded', ({ id }) => logger.debug('Terrain chunk unloaded', { id }));
   await chunks.initialize();

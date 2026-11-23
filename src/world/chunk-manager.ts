@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import * as RAPIER from '@dimforge/rapier3d-compat';
 import type { World } from '@dimforge/rapier3d-compat';
 import { EventBus } from '../engine/event-bus';
 import { AssetManager } from '../engine/asset-manager';
@@ -278,6 +279,15 @@ export class ChunkManager {
       }
     }
     return false;
+  }
+
+  cameraOcclusion(origin: THREE.Vector3, dir: THREE.Vector3, maxDist: number): number {
+    const ray = new RAPIER.Ray(
+      { x: origin.x, y: origin.y, z: origin.z },
+      { x: dir.x, y: dir.y, z: dir.z },
+    );
+    const hit = this.world.castRay(ray, maxDist, true);
+    return hit ? hit.toi : maxDist;
   }
 
   groundHeightAt(x: number, z: number): number | undefined {

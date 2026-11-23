@@ -5,6 +5,7 @@ export type CameraMode = 'free' | 'thirdPerson';
 
 export class CameraRig {
   mode: CameraMode = 'free';
+  occlusion: ((origin: Vector3, dir: Vector3, maxDist: number) => number) | undefined;
   private yaw = 0.58;
   private pitch = -0.27;
   private readonly direction = new Vector3();
@@ -59,7 +60,21 @@ export class CameraRig {
       this.target.copy(focus);
       this.orbitEuler.set(this.pitch, this.yaw, 0, 'YXZ');
       this.orbitOffset.set(0, 2.6, 7.5).applyEuler(this.orbitEuler);
-      this.camera.position.copy(this.target).add(this.orbitOffset);
+      const desired = this.target.clone().add(this.orbitOffset);
+      if (this.occlusion) {
+        const dir = desired.clone().sub(this.target);
+        const maxDist = dir.length();
+        if (maxDist > 0.01) {
+          dir.normalize();
+          const toi = this.occlusion(this.target, dir, maxDist);
+          if (toi < maxDist - 0.2) {
+            this.camera.position.copy(this.target).addScaledVector(dir, Math.max(0.5, toi - 0.3));
+            this.camera.lookAt(this.target);
+            return;
+          }
+        }
+      }
+      this.camera.position.copy(desired);
       this.camera.lookAt(this.target);
       return;
     }
