@@ -139,7 +139,8 @@
 ## Ajustes visuales y de movimiento (noviembre de 2026)
 
 - La colisión peatonal consulta la altura de las caras triangulares renderizadas de calzada, bordillo y acera, además de la altura MDT05. Se usa un índice espacial por chunk para mantener acotada la consulta; el desnivel visual del pavimento deja de hacer que el jugador se hunda bajo la calle.
-- Las fachadas conservan la huella OSM también en LOD lejano y las cubiertas mantienen la forma inferida, en vez de sustituir toda planta por la caja de su bounding box.
+- Las fachadas conservan la huella OSM también en LOD lejano y las cubiertas mantienen la forma inferida, en vez de sustituir toda planta por la caja de su bounding box. El LOD lejano puede tener un par de triángulos más que el intermedio (que usa cubierta plana); ambos siguen estando muy por debajo del LOD detallado, así que la prueba compara contra ese nivel en vez de exigir orden estricto entre los dos simplificados.
+- `paneGeometry()` genera también el atributo `uv`: sin él, `mergeGeometries()` descartaba todas las piezas del coche instanciado y caía en la cápsula de reserva. Los peatones usan colores por vértice (piel, ropa, calzado) y no se tiñen por instancia; solo los vehículos conservan `instanceColor`.
 - Los vehículos y peatones siguen siendo mallas procedurales originales de bajo poligonaje, ahora con cristales separados, detalles de rueda/carrocería y siluetas humanas con prendas diferenciadas. No se incorporan assets ni contenido de GTA/Rockstar.
 - El asfalto usa un valor más oscuro que piedra, hormigón y acera para separar visualmente la calzada de los espacios peatonales sin inventar marcas viales.
 

@@ -356,9 +356,10 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - Abre `/?debug=1` y observa `Agentes por LOD`: los tres números suman el total de `Agentes`.
 - Al caminar, el nivel cercano cambia mientras los agentes lejanos siguen visibles y conservan sus colisionadores.
 
-## Corrección visual y colisión sobre calzadas (en curso)
+## Corrección visual y colisión sobre calzadas (completada)
 
 - El jugador ahora sigue la altura triangulada de calzadas, bordillos y aceras además del MDT05. Se añadió un índice por celdas espaciales y movimiento con pasos cortos para reducir hundimientos y atravesamientos.
 - Las calles asfaltadas contrastan más con aceras y piedra. Los peatones conservan colores naturales de piel y ropa; coches y patrullas tienen cristales separados, detalles de rueda y carrocería.
 - El LOD lejano de edificios conserva la huella de calle original y la forma de cubierta, en lugar de usar rectángulos alineados al mapa.
-- Pendiente: comprobar visualmente en ejecución local y revisar CI. La web pública sigue mostrando `main`; este trabajo está en el PR de mejoras y no aparece hasta que se integre y Pages termine su despliegue.
+- Integrado desde el PR #8 y corregido: `paneGeometry()` y `cabinGeometry()` generan `uv` para que `mergeGeometries()` no descarte el coche instanciado, y las pruebas de LOD de edificios y de colores de agentes reflejan el comportamiento real.
+- Validado con `lint`, `typecheck`, `test` (43/43) y `build`; sin advertencias de geometría. Pendiente únicamente la comprobación visual en ejecución local.

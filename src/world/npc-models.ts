@@ -58,6 +58,11 @@ function pedestrianGeometry(): THREE.BufferGeometry {
 function paneGeometry(points: readonly (readonly [number, number, number])[]): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(points.flatMap((point) => point), 3));
+  // Keep the attribute set identical to the other parts or mergeGeometries()
+  // silently falls back to a single capsule and loses all vehicle detail.
+  const uvs: number[] = [];
+  for (let index = 0; index < points.length; index += 1) uvs.push(index === 1 || index === 2 ? 1 : 0, index >= 2 ? 1 : 0);
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex([0, 1, 2, 0, 2, 3]);
   geometry.computeVertexNormals();
   return geometry;
@@ -73,6 +78,10 @@ function cabinGeometry(): THREE.BufferGeometry {
   const indices = [0, 1, 4, 1, 5, 4, 1, 2, 5, 2, 6, 5, 2, 3, 6, 3, 7, 6, 3, 0, 7, 0, 4, 7, 4, 5, 6, 4, 6, 7, 0, 3, 2, 0, 2, 1];
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+  // Primitives carry uv; without it mergeGeometries() rejects the whole cabin.
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute([
+    0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1,
+  ], 2));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   return geometry;
