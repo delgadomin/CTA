@@ -26,6 +26,9 @@ const MAX_ROUTE = 24;
 const SPAWN_MIN_METERS = 45;
 const DESPAWN_METERS = 330;
 const INTERSECTION_YIELD_SECONDS = 2.5;
+// Distant agents keep their footprint and collider but advance less often.
+const LOD_NEAR_METERS = 90;
+const LOD_MID_METERS = 210;
 
 /**
  * Ambient pedestrians and traffic driven by the OSM-derived road graph.
@@ -48,6 +51,7 @@ export class NpcSystem {
   private readonly z: Float32Array;
   private readonly heading: Float32Array;
   private readonly speed: Float32Array;
+  private readonly accumulatedUpdateSeconds: Float32Array;
   private readonly scale: Float32Array;
   private readonly edge: Int32Array;
   private readonly progress: Float32Array;
@@ -77,6 +81,8 @@ export class NpcSystem {
   private activeVehicles = 0;
   private totalReroutes = 0;
   private totalDespawns = 0;
+  private updateFrame = 0;
+  private readonly lodPopulation: [number, number, number] = [0, 0, 0];
 
   constructor(graph: RoadGraph, counts: NpcCounts, colliders?: AgentColliderSink) {
     this.graph = graph;
@@ -95,6 +101,7 @@ export class NpcSystem {
     this.z = new Float32Array(capacity);
     this.heading = new Float32Array(capacity);
     this.speed = new Float32Array(capacity);
+    this.accumulatedUpdateSeconds = new Float32Array(capacity);
     this.scale = new Float32Array(capacity);
     this.edge = new Int32Array(capacity);
     this.progress = new Float32Array(capacity);
@@ -118,6 +125,11 @@ export class NpcSystem {
 
   get counts(): NpcCounts {
     return { pedestrians: this.activePedestrians, vehicles: this.activeVehicles };
+  }
+
+  /** Ambient-agent counts for the near, middle and far simulation tiers. */
+  get lodCounts(): readonly [number, number, number] {
+    return this.lodPopulation;
   }
 
   get diagnostics(): { readonly reroutes: number; readonly despawns: number } {
@@ -201,11 +213,30 @@ export class NpcSystem {
   update(deltaSeconds: number, player: THREE.Vector3, camera: Camera, world: NpcWorld): void {
     const dt = Math.min(Math.max(deltaSeconds, 0), 0.05);
     this.elapsed += dt;
+    this.updateFrame += 1;
+    this.lodPopulation[0] = 0;
+    this.lodPopulation[1] = 0;
+    this.lodPopulation[2] = 0;
     this.cameraDirection.set(0, 0, -1).applyQuaternion(camera.quaternion);
     this.maintainPopulation(dt, player, world);
     for (let slot = 0; slot < this.active.length; slot += 1) {
       if (this.active[slot] !== 1) continue;
-      this.advance(slot, dt, player, world);
+      const dx = (this.x[slot] ?? 0) - player.x;
+      const dz = (this.z[slot] ?? 0) - player.z;
+      const squared = dx * dx + dz * dz;
+      const lod: 0 | 1 | 2 = squared < LOD_NEAR_METERS * LOD_NEAR_METERS ? 0
+        : squared < LOD_MID_METERS * LOD_MID_METERS ? 1 : 2;
+      this.lodPopulation[lod] = (this.lodPopulation[lod] ?? 0) + 1;
+      // Stagger updates across frames so far agents cost a quarter of the work.
+      const cadence = lod === 0 ? 1 : lod === 1 ? 2 : 4;
+      this.accumulatedUpdateSeconds[slot] = (this.accumulatedUpdateSeconds[slot] ?? 0) + dt;
+      if (this.updateFrame % cadence === slot % cadence) {
+        // A single advance must not skip a short segment, so discard spare time.
+        const updateSeconds = Math.min(this.accumulatedUpdateSeconds[slot] ?? dt, 0.05);
+        this.accumulatedUpdateSeconds[slot] = 0;
+        this.advance(slot, updateSeconds, player, world);
+      }
+      // Redraw every frame: a pooled instance must not show the previous agent.
       if (this.active[slot] === 1) this.render(slot);
     }
     this.pedestrianMesh.count = this.activePedestrians;
@@ -227,13 +258,15 @@ export class NpcSystem {
 
   private maintainPopulation(dt: number, player: THREE.Vector3, world: NpcWorld): void {
     this.spawnCooldown -= dt;
-    for (let slot = 0; slot < this.active.length; slot += 1) {
-      if (this.active[slot] !== 1) continue;
-      const distance = Math.hypot((this.x[slot] ?? 0) - player.x, (this.z[slot] ?? 0) - player.z);
-      if (distance > DESPAWN_METERS) this.release(slot);
-    }
     if (this.spawnCooldown > 0) return;
     this.spawnCooldown = 0.25;
+    const despawnSquared = DESPAWN_METERS * DESPAWN_METERS;
+    for (let slot = 0; slot < this.active.length; slot += 1) {
+      if (this.active[slot] !== 1) continue;
+      const dx = (this.x[slot] ?? 0) - player.x;
+      const dz = (this.z[slot] ?? 0) - player.z;
+      if (dx * dx + dz * dz > despawnSquared) this.release(slot);
+    }
     for (let attempt = 0; attempt < 3; attempt += 1) {
       if (this.activePedestrians < this.pedestrianCapacity) this.spawn(0, player, world);
       if (this.activeVehicles < this.vehicleCapacity) this.spawn(1, player, world);
@@ -268,6 +301,7 @@ export class NpcSystem {
       this.z[slot] = z;
       this.scale[slot] = kind === 0 ? 0.92 + this.random() * 0.16 : 0.94 + this.random() * 0.12;
       this.speed[slot] = 0;
+      this.accumulatedUpdateSeconds[slot] = 0;
       this.edge[slot] = first;
       this.progress[slot] = 0;
       this.routeLength[slot] = 0;
@@ -474,6 +508,7 @@ export class NpcSystem {
   private release(slot: number): void {
     if (this.active[slot] !== 1) return;
     this.active[slot] = 0;
+    this.accumulatedUpdateSeconds[slot] = 0;
     const colliderId = this.colliderIds[slot] ?? -1;
     if (colliderId >= 0) this.colliders?.remove(colliderId);
     this.colliderIds[slot] = -1;

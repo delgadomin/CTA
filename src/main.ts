@@ -177,8 +177,7 @@ function debugSnapshot(): DebugSnapshot {
     triangles: renderer.info.render.triangles,
     worldMemoryMiB: chunks?.memoryMiB ?? 0,
     heapMemoryMiB: browserMemory ? browserMemory.usedJSHeapSize / (1024 * 1024) : null,
-    // Agent LOD scheduling is not implemented yet; the live population is in `agents`.
-    agentsByLod: [0, 0, 0],
+    agentsByLod: npcs?.lodCounts ?? [0, 0, 0],
     fps: Number(fpsLabel.textContent ?? 0),
     peakFrameMs: maximumFrameMs,
     systemTimesMs: {
@@ -270,7 +269,7 @@ function updateDebug(timestamp: number): void {
   systemTimesLabel.textContent = `física ${physicsQueryMs.toFixed(2)} · jugador ${actorUpdateMs.toFixed(2)} · streaming ${streamingUpdateMs.toFixed(2)} · render ${renderUpdateMs.toFixed(2)} ms`;
   const agents = npcs?.counts;
   agentsLabel.textContent = agents ? `${agents.pedestrians} peatones · ${agents.vehicles} coches` : 'cargando red viaria…';
-  agentsLodLabel.textContent = '0 / 0 / 0 (sin LOD)';
+  agentsLodLabel.textContent = (npcs?.lodCounts ?? [0, 0, 0]).join(' / ');
   const stars = crime.stars;
   wantedLabel.textContent = stars > 0 ? `${'★'.repeat(stars)}${'☆'.repeat(5 - stars)}` : '—';
   statusLabel.textContent = chunks.loadedCount > 0 ? 'Edificios, calles y terreno MDT05 en streaming' : 'Preparando la ciudad desde datos oficiales…';

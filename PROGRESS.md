@@ -329,11 +329,30 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 
 ### Pendiente
 - Ejecutar el tour completo una vez publicada la región urbana ampliada: el despliegue actual solo sirve `cc-monumental` y varias paradas caen fuera de su manifiesto.
-- Implementar el planificador de LOD de agentes para sustituir el marcador `0 / 0 / 0` del HUD de depuración.
 - Conectar comandos de consola `time`, `weather`, `god` y `wanted` cuando existan esos sistemas (el nivel de búsqueda ya existe en el HUD, pero no se expone aún como comando).
 
 ### Cómo probarlo
 - Abre `/?debug=1` y pulsa ` para abrir la consola; escribe `help`, `tp Plaza Mayor`, `spawn vehicle` o `noclip`.
 - Prueba F5/F6/F7 para ver colisionadores, calzadas y límites de LOD; F8 alterna sombras.
 - Ejecuta `npm run audit` con el servidor de desarrollo disponible para generar el informe de las diez paradas.
+
+## LOD de simulación de agentes (completado)
+
+### Plan
+- Recuperar la idea del commit `251c794` del fork, posterior al cierre del PR #4, y adaptarla al `NpcSystem` actual con colisionadores cinemáticos.
+- Reducir el coste de los agentes lejanos sin cambiar su aspecto ni hacerlos atravesables.
+- Exponer los recuentos por nivel en el HUD de depuración y comprobar que la población no se pierde.
+
+### Hecho hasta ahora
+- `src/world/npc-system.ts`: niveles near/mid/far a 90 y 210 m con cadencias de 1/2/4 frames; el tiempo se acumula por agente, se reparte entre frames y cada paso se limita a 0,05 s. Los agentes siguen dibujándose y moviendo su colisionador; los lejanos avanzan más despacio.
+- `lodCounts` sustituye el `0 / 0 / 0` fijo en `main.ts` (HUD y `window.__CTA_DEBUG__.metrics()`).
+- El despawn usa distancia al cuadrado y se evalúa cada 0,25 s junto al spawn.
+- `tests/npc.test.ts`: nueva prueba de que la suma de los tres niveles iguala la población activa y que el nivel cercano está poblado.
+
+### Pendiente
+- Medir el ahorro real de CPU con 150 peatones y 60 coches en la prueba de resistencia de 10 minutos.
+
+### Cómo probarlo
+- Abre `/?debug=1` y observa `Agentes por LOD`: los tres números suman el total de `Agentes`.
+- Al caminar, el nivel cercano cambia mientras los agentes lejanos siguen visibles y conservan sus colisionadores.
 

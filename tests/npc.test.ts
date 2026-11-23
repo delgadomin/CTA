@@ -125,4 +125,24 @@ describe('road graph for ambient agents', () => {
       expect(tracked.size).toBe(0);
     }
   });
+
+  it('reports ambient agents grouped by distance tiers without losing population', () => {
+    const graph = new RoadGraph(network);
+    const system = new NpcSystem(graph, { pedestrians: 8, vehicles: 3 });
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(0, 101, 0);
+    camera.updateMatrixWorld();
+    const player = new THREE.Vector3(0, 100, 0);
+    const world = { groundHeightAt: () => 100, collidesWithBuilding: () => false };
+    try {
+      for (let frame = 0; frame < 240; frame += 1) system.update(1 / 60, player, camera, world);
+      const tiers = system.lodCounts;
+      expect(tiers).toHaveLength(3);
+      const counts = system.counts;
+      expect(tiers[0] + tiers[1] + tiers[2]).toBe(counts.pedestrians + counts.vehicles);
+      expect(tiers[0]).toBeGreaterThan(0);
+    } finally {
+      system.dispose();
+    }
+  });
 });
