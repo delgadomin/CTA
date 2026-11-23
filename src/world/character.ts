@@ -6,6 +6,7 @@ const BODY_COLOR = 0x3a6b6f;
 const SKIN_COLOR = 0xd9b08c;
 const PANTS_COLOR = 0x2b2f36;
 const SHOE_COLOR = 0x1a1a1a;
+const HAIR_COLOR = 0x2a1f1a;
 
 export class Character {
   readonly group: THREE.Group;
@@ -21,21 +22,32 @@ export class Character {
   constructor() {
     this.group = new THREE.Group();
 
-    const material = (color: number) => new THREE.MeshStandardMaterial({ color, roughness: 0.7, metalness: 0.05 });
+    const material = (color: number, roughness = 0.6, metalness = 0.05) =>
+      new THREE.MeshStandardMaterial({ color, roughness, metalness });
 
-    const torsoGeo = new THREE.BoxGeometry(0.55, 0.75, 0.3);
+    // Torso (rounded cylinder).
+    const torsoGeo = new THREE.CylinderGeometry(0.28, 0.3, 0.75, 16);
     this.body = new THREE.Mesh(torsoGeo, material(BODY_COLOR));
     this.body.position.y = 1.15;
     this.body.castShadow = true;
     this.group.add(this.body);
 
-    const headGeo = new THREE.BoxGeometry(0.32, 0.32, 0.3);
-    const head = new THREE.Mesh(headGeo, material(SKIN_COLOR));
+    // Head (sphere).
+    const headGeo = new THREE.SphereGeometry(0.18, 24, 16);
+    const head = new THREE.Mesh(headGeo, material(SKIN_COLOR, 0.5));
     head.position.y = 1.68;
     head.castShadow = true;
     this.group.add(head);
 
-    const armGeo = new THREE.BoxGeometry(0.16, 0.6, 0.16);
+    // Hair (small sphere cap).
+    const hairGeo = new THREE.SphereGeometry(0.19, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+    const hair = new THREE.Mesh(hairGeo, material(HAIR_COLOR, 0.7));
+    hair.position.y = 1.72;
+    hair.castShadow = true;
+    this.group.add(hair);
+
+    // Arms (cylinders).
+    const armGeo = new THREE.CylinderGeometry(0.07, 0.08, 0.6, 12);
     this.leftArm = new THREE.Group();
     const la = new THREE.Mesh(armGeo, material(BODY_COLOR));
     la.position.y = -0.3;
@@ -50,13 +62,24 @@ export class Character {
     this.rightArm.position.set(0.38, 1.4, 0);
     this.group.add(this.rightArm);
 
-    const legGeo = new THREE.BoxGeometry(0.2, 0.7, 0.2);
-    const footGeo = new THREE.BoxGeometry(0.22, 0.12, 0.3);
+    // Hands (small spheres).
+    const handGeo = new THREE.SphereGeometry(0.09, 12, 8);
+    const lh = new THREE.Mesh(handGeo, material(SKIN_COLOR, 0.5));
+    lh.position.set(0, -0.62, 0);
+    this.leftArm.add(lh);
+    const rh = new THREE.Mesh(handGeo, material(SKIN_COLOR, 0.5));
+    rh.position.set(0, -0.62, 0);
+    this.rightArm.add(rh);
+
+    // Legs (cylinders).
+    const legGeo = new THREE.CylinderGeometry(0.09, 0.1, 0.7, 12);
+    const footGeo = new THREE.SphereGeometry(0.1, 12, 8);
+    footGeo.scale(1.1, 0.5, 1.4);
     this.leftLeg = new THREE.Group();
     const ll = new THREE.Mesh(legGeo, material(PANTS_COLOR));
     ll.position.y = -0.35;
     this.leftLeg.add(ll);
-    const lf = new THREE.Mesh(footGeo, material(SHOE_COLOR));
+    const lf = new THREE.Mesh(footGeo, material(SHOE_COLOR, 0.4, 0.1));
     lf.position.set(0, -0.72, 0.05);
     this.leftLeg.add(lf);
     this.leftLeg.position.set(-0.14, 0.75, 0);
@@ -66,7 +89,7 @@ export class Character {
     const rl = new THREE.Mesh(legGeo, material(PANTS_COLOR));
     rl.position.y = -0.35;
     this.rightLeg.add(rl);
-    const rf = new THREE.Mesh(footGeo, material(SHOE_COLOR));
+    const rf = new THREE.Mesh(footGeo, material(SHOE_COLOR, 0.4, 0.1));
     rf.position.set(0, -0.72, 0.05);
     this.rightLeg.add(rf);
     this.rightLeg.position.set(0.14, 0.75, 0);
@@ -108,20 +131,17 @@ export class Character {
       this.walkPhase *= 0.85;
     }
 
+    this.vy -= 18 * deltaSeconds;
+    this.group.position.y += this.vy * deltaSeconds;
     if (chunks) {
       const ground = chunks.groundHeightAt(this.group.position.x, this.group.position.z);
-      if (ground !== undefined) {
-        this.vy -= 18 * deltaSeconds;
-        this.group.position.y += this.vy * deltaSeconds;
-        if (this.group.position.y <= ground + 0.05) {
-          this.group.position.y = ground;
-          this.vy = 0;
-          this.onGround = true;
-        } else {
-          this.onGround = false;
-        }
+      if (ground !== undefined && this.group.position.y <= ground + 0.05) {
+        this.group.position.y = ground;
+        this.vy = 0;
+        this.onGround = true;
+      } else if (ground !== undefined && this.group.position.y > ground + 0.05) {
+        this.onGround = false;
       }
-      // If no ground sample is available, freeze vertical movement to avoid falling through gaps.
     }
 
     const swing = moving ? Math.sin(this.walkPhase) * 0.45 : 0;

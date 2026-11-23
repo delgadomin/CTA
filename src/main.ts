@@ -26,12 +26,14 @@ const drawCallsLabel = requiredElement<HTMLElement>('#draw-calls');
 const trianglesLabel = requiredElement<HTMLElement>('#triangles');
 const memoryLabel = requiredElement<HTMLElement>('#memory');
 const statusLabel = requiredElement<HTMLElement>('#world-status');
-const quality = QUALITY_PRESETS.medium;
+const quality = QUALITY_PRESETS.high;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: quality.antialias, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality.pixelRatio));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.setClearColor('#a9c2c4');
 
 const scene = new THREE.Scene();
