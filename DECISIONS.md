@@ -1,12 +1,5 @@
 # Decisiones técnicas
 
-## 2026-11-23 - Banco de pruebas de auditoría
-- El modo de diagnóstico solo aparece con `?debug=1`; F3 alterna el panel y F4-F8 controlan overlays/sombras por separado para no alterar la interfaz normal.
-- F6 muestra la malla de calzadas disponible. No se presenta como grafo peatonal: el proyecto aún no tiene un overlay para ese grafo.
-- Los comandos `time`, `weather`, `god` y `wanted` informan que faltan sus sistemas; el contador de agentes por LOD indica cero porque la fase 10 sigue pausada.
-- La ruta de auditoría usa puntos de `data/landmarks/landmarks.json` y centros geométricos proyectados de las vías OSM 23121493 y 24524709; las capturas generadas se excluyen del control de versiones.
-- El informe estático no inventa mediciones de rendimiento; `reports/audit-summary.md` se crea al ejecutar `npm run audit`.
-
 ## 2026-11-22 - Base de fase 0
 - Usar Vite, TypeScript estricto y Three.js para el esqueleto WebGL 2 solicitado.
 - Mantener la UI de depuración en DOM/CSS, separada del canvas 3D.
@@ -118,3 +111,25 @@
 - Las torres sin `height=*` ni `building:levels` reciben un fallback visual de 7 plantas (21 m); el dato fuente permanece ausente. Se añaden almenas low-poly a partir de los bordes de la huella, también como detalle aproximado. No se añade esta geometría cuando el edificio usa un GLB local validado.
 - Las cigüeñas ambientales se colocan únicamente en tejados con huella de edificio y altura visual conocida: todas las torres clasificadas y una selección estable por ID de edificios del casco. El modelo low-poly despega al entrar el jugador en 28 m y vuelve a posarse cuando se aleja; no se inventa una huella para la Torre de las Cigüeñas, cuyo OSM actual es solo un punto.
 - Los soportales del Ayuntamiento se anclan al lado de su huella OSM más cercano al centro de la superficie OSM de Plaza Mayor. Sus arcos low-poly usan pilares de 2,55 m, separación basada en 3,1 m, 0,3 m de profundidad y radios visuales; no son cotas fuente y permanecen pendientes de comparación fotográfica. La portada apuntada low-poly de la Concatedral se ubica en el lado de la huella OSM más cercano a Plaza Mayor; ancho, altura y posición precisa son aproximaciones visuales. La torre occidental documentada se añade en el extremo oeste de la huella, con tres cuerpos (5,6/5,4/5,0 m de base, 3,5/3,5/4,2 m de alto) y cuatro flameros low-poly; su posición y proporciones requieren comparación fotográfica. Para San Francisco Javier se sitúan dos torres cuadradas en el lado de su huella más cercano a Plaza San Jorge, con cuerpos de 7,5 m, chapiteles piramidales de 1,5 m y ancho de 1,55 m; son valores visuales y no se infiere una huella independiente. La escalinata de San Jorge se obtiene de las vías `highway=steps` ya renderizadas, no de una segunda geometría aproximada.
+- Corrección de agentes: los `InstancedMesh` llevan un atributo `color` blanco y `vertexColors: true` para que `instanceColor` se multiplique de forma fiable en todas las versiones de Three.js; además se marca `instanceColor.needsUpdate` en cada actualización con agentes visibles. No cambia el número de draw calls.
+- Las colisiones de agentes usan cuerpos cinemáticos de Rapier en un adaptador (`agent-colliders.ts`) para no acoplar los sistemas de tráfico a la física. El jugador a pie, que es scriptado, se resuelve por empuje circular; el coche del jugador sí usa contactos Rapier.
+- Se descubrió que `DynamicRayCastVehicleController.updateVehicle()` solo modifica velocidades: `Vehicle.update()` llama a `world.step()` para integrar y resolver contactos. Sin ese paso los coches ambientales y las patrullas eran puramente visuales para la física.
+- La acera deja de compartir el material `stone` de la calzada del casco antiguo: se añade el estilo `sidewalk` (losa clara), se oscurece el asfalto y se mantiene `concrete` para el bordillo. Es una decisión visual sin añadir datos geográficos ni assets externos.
+
+# Integración del PR #4 - herramientas de auditoría (post Fase 11)
+
+- El PR #4 nace de un commit anterior a las fases 10/11 y tocaba HUD, estilos y documentación. El conflicto se resuelve conservando `main` como base y superponiendo solo las herramientas nuevas; así no se pierden los agentes, el sistema policial ni las correcciones de colisiones y aceras.
+- `?debug=1` activa un modo de depuración independiente: F3 panel, F4 bordes de chunk, F5 colisionadores, F6 calzadas, F7 límites de LOD, F8 sombras, F9 aviso y ` consola. Sin el parámetro, F4 sigue alternando a la vez panel y bordes como en versiones anteriores.
+- Los overlays se generan en `debug-overlays.ts` a partir de geometría ya existente (heightfield, colisionadores de vía y edificio, huella de LOD). No introducen dibujos ni sistemas nuevos cuando el modo de depuración está apagado.
+- El código del PR referenciaba `minHeight`/`maxHeight` en `BuiltTerrainChunk`; el tipo real expone `minimumHeight`/`maximumHeight`. Se corrigió esa incompatibilidad al integrar, en lugar de ampliar el tipo con alias.
+- El catálogo de hitos se publica copiando `data/landmarks/landmarks.json` a `public/data/landmarks/landmarks.json` (231 KB) para que Vite lo sirva también en GitHub Pages. No se modifica `public/world`: sus hashes están registrados en el manifiesto.
+- `tests/e2e/debug-audit.spec.ts` pertenece a Playwright (`npm run audit`) y se excluye de Vitest en `vite.config.ts`. El navegador del tour es Chromium estándar, no `msedge`, para que la auditoría pueda ejecutarse en CI.
+- `agentsByLod` cuenta agentes ambientales cercanos, intermedios y lejanos; no incluye patrullas. La población total de peatones y coches se muestra aparte en `agents`.
+- No se añaden dependencias: Playwright ya figuraba en `devDependencies` y los overlays usan Three.js.
+
+# LOD de simulación de agentes (post integración del PR #4)
+
+- El quinto commit del fork (`251c794`) proponía un LOD por distancia, pero estaba escrito contra un `NpcSystem` sin los colisionadores de la fase 11. Se adapta la idea al sistema actual en lugar de aplicar el parche tal cual.
+- Umbrales: 90 m para el nivel cercano, 210 m para el intermedio y el resto como lejano. Cadencias de actualización 1/2/4 frames respectivamente; los tres niveles siguen dibujándose y conservando su colisionador cinemático, así que el mundo no cambia de aspecto ni de physicalidad con la distancia.
+- El tiempo de simulación se acumula por agente y se reparte entre frames (`slot % cadence`) para no concentrar el trabajo en un solo fotograma. Cada paso se limita a 0,05 s para que un agente lejano no salte una arista corta; el coste es que avanza más despacio fuera del nivel cercano. `lodCounts` expone los tres recuentos al HUD de depuración; antes se mostraba un `0 / 0 / 0` fijo porque no existía el planificador.
+- El despawn usa distancia al cuadrado y se comprueba solo cada 0,25 s, igual que el spawn, para reducir raíces cuadradas en el bucle caliente. Sin fuentes geográficas ni assets nuevos.

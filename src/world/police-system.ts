@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { Camera } from 'three';
+import type { AgentColliderSink } from './agent-colliders';
 import type { RoadGraph } from './road-graph';
 import type { NpcWorld } from './npc-system';
 import { createPoliceMesh, disposeAgentMesh } from './npc-models';
@@ -16,6 +17,8 @@ const YIELD_SECONDS = 1.8;
 export class PoliceSystem {
   readonly group = new THREE.Group();
   private readonly graph: RoadGraph;
+  private readonly colliders: AgentColliderSink | undefined;
+  private readonly colliderIds: Int32Array;
   private readonly mesh: THREE.InstancedMesh;
   private readonly active = new Uint8Array(CAPACITY);
   private readonly x = new Float32Array(CAPACITY);
@@ -41,8 +44,10 @@ export class PoliceSystem {
   private rerouteCooldown = 0;
   private activeCount = 0;
 
-  constructor(graph: RoadGraph) {
+  constructor(graph: RoadGraph, colliders?: AgentColliderSink) {
     this.graph = graph;
+    this.colliders = colliders;
+    this.colliderIds = new Int32Array(CAPACITY).fill(-1);
     this.mesh = createPoliceMesh(CAPACITY);
     this.group.add(this.mesh);
     this.intersectionOwner = new Int32Array(graph.nodeCount);
@@ -63,6 +68,25 @@ export class PoliceSystem {
       nearest = Math.min(nearest, Math.hypot(dx, dz));
     }
     return nearest;
+  }
+
+  /** Keeps a scripted on-foot player outside patrol car footprints. */
+  resolveCollision(position: THREE.Vector3, radius = 0.4): void {
+    const minimum = 1.1 + radius;
+    for (let slot = 0; slot < CAPACITY; slot += 1) {
+      if (this.active[slot] !== 1) continue;
+      const dx = position.x - (this.x[slot] ?? 0);
+      const dz = position.z - (this.z[slot] ?? 0);
+      const distance = Math.hypot(dx, dz);
+      if (distance >= minimum) continue;
+      if (distance < 1e-4) {
+        position.x += minimum;
+        continue;
+      }
+      const push = (minimum - distance) / distance;
+      position.x += dx * push;
+      position.z += dz * push;
+    }
   }
 
   update(deltaSeconds: number, stars: number, target: THREE.Vector3, camera: Camera, world: NpcWorld): void {
@@ -108,6 +132,9 @@ export class PoliceSystem {
   }
 
   dispose(): void {
+    for (let slot = 0; slot < CAPACITY; slot += 1) {
+      if (this.active[slot] === 1) this.release(slot);
+    }
     this.group.remove(this.mesh);
     disposeAgentMesh(this.mesh);
   }
@@ -140,6 +167,7 @@ export class PoliceSystem {
       this.progress[slot] = 0;
       this.checkedMid[slot] = 0;
       this.activeCount += 1;
+      this.colliderIds[slot] = this.colliders?.create('vehicle', x, height, z, this.heading[slot] ?? 0) ?? -1;
       this.setRoute(slot, start, target);
       return;
     }
@@ -216,6 +244,7 @@ export class PoliceSystem {
     }
     this.y[slot] = height;
     if (nextSpeed > 0.05) this.heading[slot] = Math.atan2(bx - ax, bz - az);
+    this.colliders?.move(this.colliderIds[slot] ?? -1, this.x[slot] ?? 0, this.y[slot] ?? 0, this.z[slot] ?? 0, this.heading[slot] ?? 0);
   }
 
   private edgeStart(slot: number): number {
@@ -258,6 +287,9 @@ export class PoliceSystem {
   private release(slot: number): void {
     if (this.active[slot] !== 1) return;
     this.active[slot] = 0;
+    const colliderId = this.colliderIds[slot] ?? -1;
+    if (colliderId >= 0) this.colliders?.remove(colliderId);
+    this.colliderIds[slot] = -1;
     this.activeCount -= 1;
     this.free.push(slot);
   }

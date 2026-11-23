@@ -2,22 +2,27 @@
 
 Fecha: 2026-11-23
 Alcance: bloque 0 de `Caceres_Criminal_Prompts_de_Mejora.pdf`.
+Estado: integrado en `main` tras resolver el conflicto del PR #4 con las fases 10/11.
 
-## Hallazgos
+## Hallazgos y corrección
 
-| Gravedad | Archivo y línea | Hallazgo | Causa probable |
-|---|---|---|---|
-| Media | `src/main.ts:76,83-90,177-181`; `index.html:13-29` | Hay FPS, pico de frame, chunks, colisionadores, draw calls, triángulos y memoria geométrica; el panel se muestra siempre y F4 alterna juntos el panel y los bordes de chunk. No hay desglose temporal por etapa. | El panel se añadió como HUD del prototipo antes de existir un modo de depuración independiente. |
-| Media | `src/main.ts:177-181`; `src/world/chunk-manager.ts` | Solo existe el overlay de bordes de chunk. No hay vistas para colisionadores, grafo de carriles ni límites/estado de LOD. | Las funciones de depuración de geometría no se implementaron cuando llegaron edificios, vías y streaming. |
-| Baja | `src/main.ts`; `src/world/character.ts`; `src/world/vehicle.ts` | No hay consola de comandos. El juego actual no tiene clima, sistema horario, daño/invulnerabilidad, nivel de búsqueda policial ni población de agentes que puedan mostrar esos comandos o métricas. | Esos sistemas pertenecen a fases posteriores o aún pausadas; añadir controles ficticios ocultaría el estado real del juego. |
-| Media | `tools/verify-streaming.mjs:3,64-145`; `package.json` | Existe un recorrido aleatorio de streaming, pero no teletransporta a los diez puntos solicitados, no guarda una captura y métricas por punto ni genera `reports/audit-summary.md`; tampoco existe `npm run audit`. | El verificador cubre la carga de chunks y no el paseo de auditoría de hitos. |
-| Baja | `src/main.ts:83-90`; `src/world/chunk-manager.ts:255-269` | La memoria mostrada solo estima buffers del mundo; no se consulta el heap del navegador. No existe población con niveles de simulación. | No hay un sistema de agentes/LOD de población que suministre esas métricas. |
+| Gravedad |Hallazgo original | Estado |
+|---|---|---|
+| Media | Panel de depuración siempre visible; F4 mezclaba panel y bordes de chunk; sin desglose temporal. | Corregido: `?debug=1` activa F3 (panel), F4 (bordes), F5-F9 (overlays/sombras/aviso) y ` (consola). Sin el parámetro, F4 conserva su comportamiento anterior. El desglose física/jugador/streaming/render se mide solo en modo depuración. |
+| Media | Solo existía el overlay de bordes de chunk; faltaban colisionadores, calzadas y límites de LOD. | Corregido: `src/world/debug-overlays.ts` genera las tres vistas a partir de la geometría ya existente. |
+| Baja | No había consola de comandos; los comandos `time`, `weather`, `god` y `wanted` no tenían sistema asociado. | Parcial: consola disponible con `help`, `tp <hito>`, `spawn vehicle` y `noclip`. `wanted` sigue sin comando aunque el nivel de búsqueda existe desde la fase 11; no se añade un atajo sin diseñar su semántica. |
+| Media | El recorrido no cubría las diez paradas, no guardaba capturas ni métricas por punto y no existía `npm run audit`. | Corregido: `npm run audit` ejecuta `tests/e2e/debug-audit.spec.ts`, guarda capturas en `reports/screens/audit-<fecha>/` y escribe `reports/audit-summary.md`. |
+| Baja | La memoria mostrada solo estimaba buffers del mundo; no se consultaba el heap del navegador; no había población de agentes. | Corregido: heap disponible en el modo depuración; la población viva se muestra en `agents` y `agentsByLod` informa de los tres niveles de simulación por distancia. |
 
-## Plan de corrección
+## Incompatibilidades encontradas al integrar
 
-1. Hecho: separar `?debug=1`, panel F3 y F4-F9; añadir timings y overlays usando geometría existente. F6 muestra calzadas porque no hay un grafo peatonal que se pueda presentar con fidelidad.
-2. Hecho: preparado el tour Playwright para diez paradas con fuentes identificadas, capturas ignoradas por Git y resumen por parada.
-3. Hecho en esta revisión: la auditoría ya informa agentes reales por nivel de simulación. Los cercanos se actualizan cada fotograma, los medios cada dos y los lejanos cada cuatro; los tiempos transcurridos se acumulan para conservar su velocidad.
-4. Pendiente: lint, typecheck, tests, build y recorrido runtime. La instalación local de pnpm se detuvo antes de ejecutar scripts al no poder crear un enlace simbólico del proyecto en Windows (`EPERM`); GitHub tampoco tenía checks mientras la PR estaba cerrada.
+- `debug-overlays.ts` usaba `minHeight`/`maxHeight`; `BuiltTerrainChunk` expone `minimumHeight`/`maximumHeight`.
+- La ruta del catálogo de hitos no era servible por Vite; se copia `data/landmarks/landmarks.json` a `public/data/landmarks/landmarks.json` sin tocar `public/world`.
+- Vitest recogía el spec de Playwright; se excluye `tests/e2e/**` en `vite.config.ts`.
+- El navegador del tour estaba fijado a `msedge`; se usa Chromium estándar para permitir ejecución en CI.
 
-El LOD descrito aquí reduce la frecuencia de simulación, no cambia la geometría dibujada de los agentes. El HUD cuenta peatones y tráfico ambiental; las patrullas policiales no se incluyen en esa métrica.
+## Validación
+
+- `npm run lint`, `npm run typecheck`, `npm test` (43/43), `npm run build`.
+- `node tools/verify-world.mjs` y `node tools/validate-road-graph.mjs`.
+- El tour Playwright no se ha ejecutado de extremo a extremo: el despliegue actual publica solo la región `cc-monumental` y varias paradas del catálogo quedan fuera de su manifiesto. El informe `reports/audit-summary.md` se genera con los resultados parciales disponibles.

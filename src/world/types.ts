@@ -105,7 +105,7 @@ export interface TerrainLodData {
   readonly indices: Uint32Array;
 }
 
-export type RoadSurfaceStyle = 'asphalt' | 'stone' | 'concrete' | 'earth' | 'marking';
+export type RoadSurfaceStyle = 'asphalt' | 'stone' | 'sidewalk' | 'concrete' | 'earth' | 'marking';
 
 export type BuildingMaterial = 'casco_facade' | 'ensanche_facade' | 'periferia_facade' | 'tile_roof' | 'modern_roof' | 'monument_stone';
 

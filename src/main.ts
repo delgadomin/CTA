@@ -6,6 +6,7 @@ import { DebugConsole } from './engine/debug-console';
 import { Logger } from './engine/logger';
 import { QUALITY_PRESETS } from './engine/quality';
 import { t } from './i18n';
+import { AgentColliders } from './world/agent-colliders';
 import { ChunkManager } from './world/chunk-manager';
 import { Character } from './world/character';
 import { CrimeSystem } from './world/crime-system';
@@ -33,17 +34,17 @@ const drawCallsLabel = requiredElement<HTMLElement>('#draw-calls');
 const trianglesLabel = requiredElement<HTMLElement>('#triangles');
 const memoryLabel = requiredElement<HTMLElement>('#memory');
 const heapMemoryLabel = requiredElement<HTMLElement>('#heap-memory');
+const agentsLabel = requiredElement<HTMLElement>('#agents');
 const agentsLodLabel = requiredElement<HTMLElement>('#agents-lod');
 const systemTimesLabel = requiredElement<HTMLElement>('#system-times');
 const debugModesLabel = requiredElement<HTMLElement>('#debug-modes');
-const debugPanel = requiredElement<HTMLElement>('.debug-panel');
-const debugMode = new URLSearchParams(window.location.search).get('debug') === '1';
-const agentsLabel = requiredElement<HTMLElement>('#agents');
 const wantedLabel = requiredElement<HTMLElement>('#wanted');
 const noticeLabel = requiredElement<HTMLElement>('#notice');
 const statusLabel = requiredElement<HTMLElement>('#world-status');
+const debugPanel = requiredElement<HTMLElement>('.debug-panel');
 requiredElement<HTMLElement>('#wanted-label').textContent = t('hud.wanted');
 requiredElement<HTMLElement>('#controls-hint').textContent = t('controls.hint');
+const debugMode = new URLSearchParams(window.location.search).get('debug') === '1';
 const quality = QUALITY_PRESETS.high;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: quality.antialias, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality.pixelRatio));
@@ -87,16 +88,16 @@ scene.add(sun);
 
 let world: World | undefined;
 let chunks: ChunkManager | undefined;
+let agentColliders: AgentColliders | undefined;
 let npcs: NpcSystem | undefined;
 let police: PoliceSystem | undefined;
-let npcLoadFailed = false;
 const crime = new CrimeSystem();
 const vehicles: Vehicle[] = [];
 let activeVehicle: Vehicle | null = null;
 let inVehicle = false;
 let spacePressed = false;
-let showDebug = debugMode;
-let showChunkBorders = false;
+let showDebug = true;
+let showChunkBorders = true;
 let showColliderWireframes = false;
 let showRoadWireframes = false;
 let showLodBounds = false;
@@ -111,24 +112,11 @@ let physicsQueryMs = 0;
 let actorUpdateMs = 0;
 let streamingUpdateMs = 0;
 let renderUpdateMs = 0;
-
-const debugConsole = new DebugConsole(
-  requiredElement<HTMLElement>('#debug-console'),
-  requiredElement<HTMLElement>('#debug-console-output'),
-  requiredElement<HTMLFormElement>('#debug-console-form'),
-  requiredElement<HTMLInputElement>('#debug-console-input'),
-  {
-    teleport: teleportToLandmark,
-    spawnVehicle: spawnDebugVehicle,
-    toggleNoclip: () => {
-      noclipEnabled = !noclipEnabled;
-      cameraRig.mode = noclipEnabled ? 'free' : 'thirdPerson';
-      return `Cámara noclip ${noclipEnabled ? 'activada' : 'desactivada'}.`;
-    },
-  },
-);
-
-debugPanel.classList.toggle('is-hidden', !showDebug);
+let noticeUntil = 0;
+let bustCooldownUntil = 0;
+let recklessSeconds = 0;
+let focusInitialized = false;
+const previousFocus = new THREE.Vector3();
 
 interface DebugSnapshot {
   readonly position: { readonly x: number; readonly y: number; readonly z: number };
@@ -160,6 +148,22 @@ declare global {
   }
 }
 
+const debugConsole = new DebugConsole(
+  requiredElement<HTMLElement>('#debug-console'),
+  requiredElement<HTMLElement>('#debug-console-output'),
+  requiredElement<HTMLFormElement>('#debug-console-form'),
+  requiredElement<HTMLInputElement>('#debug-console-input'),
+  {
+    teleport: teleportToLandmark,
+    spawnVehicle: spawnDebugVehicle,
+    toggleNoclip: () => {
+      noclipEnabled = !noclipEnabled;
+      cameraRig.mode = noclipEnabled ? 'free' : 'thirdPerson';
+      return `Cámara noclip ${noclipEnabled ? 'activada' : 'desactivada'}.`;
+    },
+  },
+);
+
 function debugSnapshot(): DebugSnapshot {
   const position = character.position;
   const browserMemory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
@@ -187,18 +191,52 @@ function debugSnapshot(): DebugSnapshot {
 
 function teleportForAudit(x: number, z: number): void {
   noclipEnabled = false;
+  inVehicle = false;
+  activeVehicle = null;
   cameraRig.mode = 'thirdPerson';
   const ground = chunks?.groundHeightAt(x, z);
   character.position.set(x, ground ?? character.position.y, z);
+  character.group.visible = true;
+  focusInitialized = false;
   camera.position.set(x, character.position.y + 8, z + 9);
 }
 
 if (debugMode) window.__CTA_DEBUG__ = { teleport: teleportForAudit, metrics: debugSnapshot };
-let noticeUntil = 0;
-let bustCooldownUntil = 0;
-let recklessSeconds = 0;
-let focusInitialized = false;
-const previousFocus = new THREE.Vector3();
+
+function normalizeLandmarkQuery(value: string): string {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-ES').trim();
+}
+
+async function teleportToLandmark(query: string): Promise<string> {
+  const response = await fetch(new URL('data/landmarks/landmarks.json', new URL(import.meta.env.BASE_URL, window.location.href)));
+  if (!response.ok) throw new Error(`no se pudo leer el catálogo de hitos (${response.status}).`);
+  const catalog = await response.json() as { landmarks: { id: string; name: string; position?: { localMeters?: readonly [number, number] } }[] };
+  const normalized = normalizeLandmarkQuery(query);
+  const landmark = catalog.landmarks.find((item) => normalizeLandmarkQuery(item.id) === normalized || normalizeLandmarkQuery(item.name) === normalized);
+  const point = landmark?.position?.localMeters;
+  if (!landmark || !point) throw new Error(`no encuentro el hito «${query}» con coordenadas disponibles.`);
+  teleportForAudit(point[0], point[1]);
+  return `Teletransporte: ${landmark.name}.`;
+}
+
+function spawnDebugVehicle(): string {
+  if (!world || !chunks) throw new Error('el mundo físico todavía no está listo.');
+  const position = character.position;
+  const x = position.x + 4;
+  const z = position.z;
+  const height = chunks.groundHeightAt(x, z) ?? position.y;
+  const vehicle = new Vehicle(world, x, height, z);
+  vehicles.push(vehicle);
+  scene.add(vehicle.group);
+  world.updateSceneQueries();
+  return 'Vehículo de pruebas creado a 4 m del jugador.';
+}
+
+function updateDebugModeLabel(): void {
+  debugModesLabel.textContent = `F5 colisiones ${showColliderWireframes ? 'ON' : 'OFF'} · F6 calzadas ${showRoadWireframes ? 'ON' : 'OFF'} · F7 LOD ${showLodBounds ? 'ON' : 'OFF'} · F8 sombras ${showShadows ? 'ON' : 'OFF'} · F9 postprocesado no configurado`;
+}
+
+updateDebugModeLabel();
 
 function showNotice(message: string, timestamp: number, durationMs = 3000): void {
   noticeLabel.textContent = message;
@@ -221,18 +259,6 @@ function handleBust(timestamp: number): void {
 
 function updateDebug(timestamp: number): void {
   if (!chunks || timestamp - lastStatsUpdate < 250) return;
-  const agents = npcs?.counts;
-  agentsLabel.textContent = agents ? `${agents.pedestrians} peatones · ${agents.vehicles} coches` : npcLoadFailed ? 'sin red viaria' : 'cargando red viaria…';
-  const stars = crime.stars;
-  wantedLabel.textContent = stars > 0 ? `${'★'.repeat(stars)}${'☆'.repeat(5 - stars)}` : '—';
-  if (!debugMode) {
-    if (noticeUntil > 0 && timestamp >= noticeUntil) {
-      noticeLabel.hidden = true;
-      noticeUntil = 0;
-    }
-    lastStatsUpdate = timestamp;
-    return;
-  }
   chunksLabel.textContent = `${chunks.loadedCount} cargados · ${chunks.pendingCount} en cola · ${chunks.failures} errores`;
   collidersLabel.textContent = String(chunks.colliderCount);
   drawCallsLabel.textContent = String(renderer.info.render.calls);
@@ -240,8 +266,12 @@ function updateDebug(timestamp: number): void {
   memoryLabel.textContent = `≈ ${chunks.memoryMiB.toFixed(1)} MiB`;
   const browserMemory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
   heapMemoryLabel.textContent = browserMemory ? `≈ ${(browserMemory.usedJSHeapSize / (1024 * 1024)).toFixed(1)} MiB` : 'n/d';
-  agentsLodLabel.textContent = (npcs?.lodCounts ?? [0, 0, 0]).join(' / ');
   systemTimesLabel.textContent = `física ${physicsQueryMs.toFixed(2)} · jugador ${actorUpdateMs.toFixed(2)} · streaming ${streamingUpdateMs.toFixed(2)} · render ${renderUpdateMs.toFixed(2)} ms`;
+  const agents = npcs?.counts;
+  agentsLabel.textContent = agents ? `${agents.pedestrians} peatones · ${agents.vehicles} coches` : 'cargando red viaria…';
+  agentsLodLabel.textContent = (npcs?.lodCounts ?? [0, 0, 0]).join(' / ');
+  const stars = crime.stars;
+  wantedLabel.textContent = stars > 0 ? `${'★'.repeat(stars)}${'☆'.repeat(5 - stars)}` : '—';
   statusLabel.textContent = chunks.loadedCount > 0 ? 'Edificios, calles y terreno MDT05 en streaming' : 'Preparando la ciudad desde datos oficiales…';
   if (noticeUntil > 0 && timestamp >= noticeUntil) {
     noticeLabel.hidden = true;
@@ -287,6 +317,9 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
     }
   } else if (cameraRig.mode === 'thirdPerson') {
     character.update(frameSeconds, input, chunks, cameraRig.getYaw(), spacePressed);
+    // The character is scripted (not a Rapier body), so resolve agent overlap here.
+    npcs?.resolveCollision(character.position, 0.35);
+    police?.resolveCollision(character.position, 0.35);
     cameraRig.update(frameSeconds, character.position);
     const ch = chunks?.groundHeightAt(camera.position.x, camera.position.z);
     if (ch !== undefined && camera.position.y < ch + 0.5) camera.position.y = ch + 0.5;
@@ -317,7 +350,6 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
     const groundHeight = chunks?.groundHeightAt(camera.position.x, camera.position.z);
     if (groundHeight !== undefined) camera.position.y = groundHeight + 1.7;
   }
-  systemStart = debugMode ? performance.now() : 0;
   const focus = inVehicle && activeVehicle ? activeVehicle.position : character.position;
   let playerSpeed = 0;
   if (focusInitialized) playerSpeed = Math.min(focus.distanceTo(previousFocus) / Math.max(frameSeconds, 1 / 120), 25);
@@ -345,6 +377,7 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
     recklessSeconds = 0;
   }
 
+  systemStart = debugMode ? performance.now() : 0;
   chunks?.update(camera, timestamp);
   if (debugMode) streamingUpdateMs = performance.now() - systemStart;
   systemStart = debugMode ? performance.now() : 0;
@@ -367,42 +400,15 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-function updateDebugModeLabel(): void {
-  debugModesLabel.textContent = `F5 colisiones ${showColliderWireframes ? 'ON' : 'OFF'} · F6 calzadas ${showRoadWireframes ? 'ON' : 'OFF'} · F7 LOD ${showLodBounds ? 'ON' : 'OFF'} · F8 sombras ${showShadows ? 'ON' : 'OFF'} · F9 postprocesado no configurado`;
-}
-
-function normalizeLandmarkQuery(value: string): string {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-ES').trim();
-}
-
-async function teleportToLandmark(query: string): Promise<string> {
-  const response = await fetch(new URL('../data/landmarks/landmarks.json', import.meta.url));
-  if (!response.ok) throw new Error(`no se pudo leer el catálogo de hitos (${response.status}).`);
-  const catalog = await response.json() as { landmarks: { id: string; name: string; position?: { localMeters?: readonly [number, number] } }[] };
-  const normalized = normalizeLandmarkQuery(query);
-  const landmark = catalog.landmarks.find((item) => normalizeLandmarkQuery(item.id) === normalized || normalizeLandmarkQuery(item.name) === normalized);
-  const point = landmark?.position?.localMeters;
-  if (!landmark || !point) throw new Error(`no encuentro el hito «${query}» con coordenadas disponibles.`);
-  teleportForAudit(point[0], point[1]);
-  return `Teletransporte: ${landmark.name}.`;
-}
-
-function spawnDebugVehicle(): string {
-  if (!world) throw new Error('el mundo físico todavía no está listo.');
-  const position = character.position;
-  const x = position.x + 4;
-  const z = position.z;
-  const height = chunks?.groundHeightAt(x, z) ?? position.y;
-  const vehicle = new Vehicle(world, x, height, z);
-  vehicles.push(vehicle);
-  scene.add(vehicle.group);
-  world.updateSceneQueries();
-  return 'Vehículo de pruebas creado a 4 m del jugador.';
-}
-
-updateDebugModeLabel();
 window.addEventListener('keydown', (event: KeyboardEvent) => {
-  if (!debugMode) return;
+  if (!debugMode) {
+    if (event.code !== 'F4') return;
+    event.preventDefault();
+    showDebug = !showDebug;
+    debugPanel.classList.toggle('is-hidden', !showDebug);
+    chunks?.setDebugBorders(showDebug);
+    return;
+  }
   if (event.code === 'Escape' && debugConsole.isOpen) {
     debugConsole.setOpen(false);
     return;
@@ -438,7 +444,6 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
       event.preventDefault();
       showShadows = !showShadows;
       renderer.shadowMap.enabled = showShadows;
-      updateDebugModeLabel();
       break;
     case 'F9':
       event.preventDefault();
@@ -449,6 +454,8 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
       event.preventDefault();
       debugConsole.toggle();
       break;
+    default:
+      return;
   }
   updateDebugModeLabel();
 });
@@ -507,12 +514,14 @@ window.addEventListener('pagehide', () => {
   input.dispose();
   npcs?.dispose();
   police?.dispose();
+  agentColliders?.dispose();
   chunks?.close();
   renderer.dispose();
 });
 
 async function initializeWorld(): Promise<void> {
   world = await createPhysicsWorld();
+  agentColliders = new AgentColliders(world);
   const worldBaseUrl = new URL(import.meta.env.BASE_URL, window.location.href);
   const manifestUrl = new URL('world/cc-monumental/manifest.json', worldBaseUrl);
   chunks = new ChunkManager(scene, world, manifestUrl, worldBaseUrl);
@@ -531,11 +540,10 @@ async function initializeWorld(): Promise<void> {
     world.updateSceneQueries();
   }
   await chunks.prepareRenderer(renderer, camera);
-  chunks.setDebugBorders(showChunkBorders);
+  chunks.setDebugBorders(showDebug);
   statusLabel.textContent = 'Ciudad lista · WASD camina · clic captura el ratón';
   logger.info('World streaming initialized', { region: 'cc-monumental', stepHz: 60, lods: 3 });
   void initializeNpcs(worldBaseUrl).catch((error: unknown) => {
-    npcLoadFailed = true;
     agentsLabel.textContent = 'sin red viaria';
     logger.warn('Traffic initialization failed', { error: String(error) });
   });
@@ -552,9 +560,9 @@ async function initializeNpcs(worldBaseUrl: URL): Promise<void> {
   npcs = new NpcSystem(graph, {
     pedestrians: Math.round(150 * quality.populationDensity),
     vehicles: Math.round(60 * quality.populationDensity),
-  });
+  }, agentColliders);
   scene.add(npcs.group);
-  police = new PoliceSystem(graph);
+  police = new PoliceSystem(graph, agentColliders);
   scene.add(police.group);
   logger.info('Traffic and pedestrians initialized', {
     nodes: graph.nodeCount,

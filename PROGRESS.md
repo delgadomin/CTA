@@ -2,12 +2,6 @@
 
 ## Fase actual: 6 - Hitos y fidelidad (ampliada); fases 7-9 implementadas, fase 10 pausada
 
-### Bloque 0 - Banco de pruebas de auditoría (en curso)
-- Leído `Caceres_Criminal_Prompts_de_Mejora.pdf` y auditado el banco actual; los hallazgos y el plan están en `reports/audit-debug.md`.
-- Añadido `?debug=1`, panel F3 independiente, overlays F4-F7, toggle de sombras F8, aviso explícito de postprocesado no configurado en F9 y consola con comandos que el juego sí puede ejecutar.
-- Añadido un tour Playwright de diez ubicaciones respaldadas por el catálogo de hitos o por geometría OSM, que guarda capturas ignoradas por Git y genera `reports/audit-summary.md`.
-- Intentados lint, typecheck, tests y build: pnpm no llega a ejecutar ninguno porque Windows deniega el enlace simbólico al registrar el proyecto (`EPERM`). `node_modules` no está disponible, así que no se han podido validar el build ni ejecutar el tour en este entorno.
-
 ### Hecho
 - Repositorio inicializado desde `hhg-ptm/CTA`.
 - Leída la guía de fases: comienza con una base Vite/TypeScript y no añade juego todavía.
@@ -250,7 +244,7 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 ### Hecho hasta ahora
 - `src/world/road-graph.ts`: 41.253 nodos y 46.812 segmentos indexados en celdas de 48 m; A* reutiliza su heap y marca los costes por generación para no asignar memoria por búsqueda.
 - `src/world/npc-models.ts`: peatón y coche low-poly procedurales fusionados en una geometría por tipo; dos llamadas de dibujo para toda la población.
-- `src/world/npc-system.ts`: hasta 150 peatones y 60 coches en calidad alta (escalado por `quality.populationDensity`), spawn/despawn fuera del campo visual, evitación, cesión en intersecciones, re-ruteo tras 3 s y retirada tras dos fallos. La simulación usa tres niveles por distancia (1, 2 o 4 actualizaciones por fotograma) y conserva el tiempo acumulado para mantener la velocidad; la auditoría informa las poblaciones reales de cada nivel.
+- `src/world/npc-system.ts`: hasta 150 peatones y 60 coches en calidad alta (escalado por `quality.populationDensity`), spawn/despawn fuera del campo visual, evitación, cesión en intersecciones, re-ruteo tras 3 s y retirada tras dos fallos.
 - `main.ts` carga la red viaria de forma diferida (≈30 MB) después del primer fotograma y actualiza los agentes en el bucle de 60 Hz; el panel muestra el número de peatones y coches.
 - `tools/validate-road-graph.mjs` y `reports/audit-npcs.md`: 0 nodos aislados, 0 intersecciones sin conexiones, 11 sumideros y 9 fuentes vehiculares, 300 tramos peatonales sobre huellas (el sistema los descarta al moverse).
 - Pruebas unitarias del grafo (sentido único, grafos separados, ruta A*) y del ciclo de vida del pool; lint, typecheck y build pasan.
@@ -293,3 +287,71 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - Pulsa `E` junto a un coche ambiental para requisarlo: suben 2 estrellas y aparecen patrullas detrás de ti.
 - Atropella un peatón o conduce rápido para aumentar el nivel; el panel F4 muestra `Búsqueda`.
 - Detente cerca de una patrulla durante 2 s: aparece `DETENIDO` y vuelves a Plaza Mayor con el nivel a cero.
+
+## Corrección posterior a la Fase 11 - agentes, colisiones y materiales (completada)
+
+### Plan
+- Diagnosticar por qué los agentes instanciados se veían blancos y por qué no exertían colisión.
+- Dar a la acera un material propio para que no comparta aspecto con la calzada de piedra del casco antiguo.
+- Añadir físicas reales a peatones, tráfico y patrullas sin perder los dos draw calls por sistema.
+
+### Hecho hasta ahora
+- `src/world/npc-models.ts`: las geometrías fusionadas incluyen un atributo `color` blanco y el material usa `vertexColors`; junto con `setColorAt()` y `instanceColor.needsUpdate`, los colores por agente ya llegan a la GPU.
+- `src/world/agent-colliders.ts`: nuevo adaptador que crea cuerpos cinemáticos de Rapier (cápsula para peatones, caja para coches) y sincroniza traslación/rotación con el grafo. `src/main.ts` lo conecta a `NpcSystem` y `PoliceSystem`.
+- `src/world/vehicle.ts`: se descubrió que el controlador de Rapier solo actualiza velocidades; ahora se llama a `world.step()` después de aplicar fuerzas, de modo que el chasis integra contactos con terreno, edificios y agentes.
+- `src/world/npc-system.ts` y `src/world/police-system.ts`: empujan al jugador a pie fuera de los huecos de los agentes (`resolveCollision`) y liberan los colisionadores al desaparecer.
+- `src/world/types.ts`, `road-geometry.ts`, `road-materials.ts` y `road-builder.ts`: nuevo estilo `sidewalk`, con textura de losa clara, distinto de `stone` (calzada) y de `concrete` (bordillo); se bajó el tono del asfalto para reforzar el contraste.
+- `tests/npc.test.ts` y `tests/road-builder.test.ts`: nuevas comprobaciones de coloreado, empuje al jugador y presencia del estilo de acera. `lint`, `typecheck`, `test` (42/42) y `build` pasan.
+
+### Pendiente
+- Medir el coste de hasta 215 cuerpos cinemáticos en la prueba de resistencia de 10 minutos y, si hace falta, filtrar grupos de colisión para que los agentes solo interactúen con el coche del jugador.
+- Añadir animación de extremidades y reacciones ricas de los peatones (fase 10 pendiente).
+
+### Cómo probarlo
+- Conduce contra un coche ambiental o una patrulla: el chasis ya no los atraviesa.
+- Camina hacia un peatón: el personaje queda fuera de su hueco en lugar de superponerse.
+- Mira una calle del casco antiguo: la acera clara y el bordillo se distinguen de la calzada de piedra.
+
+## Integración del PR #4 - herramientas de auditoría (completada)
+
+### Plan
+- Resolver el conflicto entre la rama del PR y `main` conservando las fases 10/11 y la corrección de agentes.
+- Incorporar el modo de depuración, overlays, consola y tour Playwright sin cambiar la experiencia normal de juego.
+- Corregir las incompatibilidades del PR con el código actual y documentar las limitaciones reales.
+
+### Hecho hasta ahora
+- Rama de resolución basada en `origin/main` con el HEAD del PR#4 superpuesto; el HUD y la documentación se conservan de `main` y se añaden solo las herramientas nuevas.
+- `?debug=1`: F3 panel, F4 bordes, F5 colisionadores, F6 calzadas, F7 LOD, F8 sombras, F9 aviso y ` consola. Sin el parámetro, F4 mantiene su comportamiento anterior.
+- `src/engine/debug-console.ts`, `src/world/debug-overlays.ts`, `playwright.audit.config.ts`, `tests/e2e/debug-audit.spec.ts`, `tests/e2e/audit-destinations.json` y `reports/audit-debug.md` incorporados.
+- Corregidos `minimumHeight`/`maximumHeight` en el overlay de LOD, la ruta del catálogo de hitos (copiado a `public/data/landmarks/`), el navegador del tour (Chromium) y la exclusión de los specs E2E de Vitest.
+- `npm run audit` genera capturas en `reports/screens/audit-<fecha>/` y el resumen en `reports/audit-summary.md`; las capturas están ignoradas por Git.
+- `lint`, `typecheck`, `test` (42/42), `build`, `data:verify` y `audit:npcs` pasan tras la integración.
+
+### Pendiente
+- Ejecutar el tour completo una vez publicada la región urbana ampliada: el despliegue actual solo sirve `cc-monumental` y varias paradas caen fuera de su manifiesto.
+- Conectar comandos de consola `time`, `weather`, `god` y `wanted` cuando existan esos sistemas (el nivel de búsqueda ya existe en el HUD, pero no se expone aún como comando).
+
+### Cómo probarlo
+- Abre `/?debug=1` y pulsa ` para abrir la consola; escribe `help`, `tp Plaza Mayor`, `spawn vehicle` o `noclip`.
+- Prueba F5/F6/F7 para ver colisionadores, calzadas y límites de LOD; F8 alterna sombras.
+- Ejecuta `npm run audit` con el servidor de desarrollo disponible para generar el informe de las diez paradas.
+
+## LOD de simulación de agentes (completado)
+
+### Plan
+- Recuperar la idea del commit `251c794` del fork, posterior al cierre del PR #4, y adaptarla al `NpcSystem` actual con colisionadores cinemáticos.
+- Reducir el coste de los agentes lejanos sin cambiar su aspecto ni hacerlos atravesables.
+- Exponer los recuentos por nivel en el HUD de depuración y comprobar que la población no se pierde.
+
+### Hecho hasta ahora
+- `src/world/npc-system.ts`: niveles near/mid/far a 90 y 210 m con cadencias de 1/2/4 frames; el tiempo se acumula por agente, se reparte entre frames y cada paso se limita a 0,05 s. Los agentes siguen dibujándose y moviendo su colisionador; los lejanos avanzan más despacio.
+- `lodCounts` sustituye el `0 / 0 / 0` fijo en `main.ts` (HUD y `window.__CTA_DEBUG__.metrics()`).
+- El despawn usa distancia al cuadrado y se evalúa cada 0,25 s junto al spawn.
+- `tests/npc.test.ts`: nueva prueba de que la suma de los tres niveles iguala la población activa y que el nivel cercano está poblado.
+
+### Pendiente
+- Medir el ahorro real de CPU con 150 peatones y 60 coches en la prueba de resistencia de 10 minutos.
+
+### Cómo probarlo
+- Abre `/?debug=1` y observa `Agentes por LOD`: los tres números suman el total de `Agentes`.
+- Al caminar, el nivel cercano cambia mientras los agentes lejanos siguen visibles y conservan sus colisionadores.

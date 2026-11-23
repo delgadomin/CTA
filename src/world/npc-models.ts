@@ -1,6 +1,15 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
+/** Three.js only applies instanceColor when USE_COLOR is enabled; the merged
+ * geometry therefore needs a white per-vertex color attribute to multiply. */
+function withVertexColors(geometry: THREE.BufferGeometry): THREE.BufferGeometry {
+  const count = geometry.getAttribute('position')?.count ?? 0;
+  const colors = new Float32Array(count * 3).fill(1);
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  return geometry;
+}
+
 /**
  * Procedural low-poly agent models. A single merged geometry per kind keeps the
  * whole crowd at two draw calls and uses no external or copyrighted assets.
@@ -21,7 +30,7 @@ function pedestrianGeometry(): THREE.BufferGeometry {
     leg.translate(side * 0.12, 0.41, 0);
     parts.push(leg);
   }
-  return mergeGeometries(parts, false) ?? new THREE.BoxGeometry(0.5, 1.7, 0.3);
+  return withVertexColors(mergeGeometries(parts, false) ?? new THREE.BoxGeometry(0.5, 1.7, 0.3));
 }
 
 function vehicleGeometry(police = false): THREE.BufferGeometry {
@@ -47,13 +56,11 @@ function vehicleGeometry(police = false): THREE.BufferGeometry {
       parts.push(copy);
     }
   }
-  return mergeGeometries(parts, false) ?? new THREE.BoxGeometry(1.9, 1.1, 4.1);
+  return withVertexColors(mergeGeometries(parts, false) ?? new THREE.BoxGeometry(1.9, 1.1, 4.1));
 }
 
 function material(): THREE.MeshStandardMaterial {
-  const result = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.82, metalness: 0.04 });
-  result.vertexColors = false;
-  return result;
+  return new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.82, metalness: 0.04 });
 }
 
 export function createPedestrianMesh(capacity: number): THREE.InstancedMesh {

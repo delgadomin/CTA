@@ -107,10 +107,10 @@ export class ChunkDebugOverlays {
       }
     }
     if (this.showLodBounds) {
-      const { minHeight, maxHeight } = result;
+      const { minimumHeight, maximumHeight } = result;
       const box = new THREE.Box3(
-        new THREE.Vector3(entry.bounds.minX, minHeight, entry.bounds.minZ),
-        new THREE.Vector3(entry.bounds.maxX, maxHeight, entry.bounds.maxZ),
+        new THREE.Vector3(entry.bounds.minX, minimumHeight, entry.bounds.minZ),
+        new THREE.Vector3(entry.bounds.maxX, maximumHeight, entry.bounds.maxZ),
       );
       const color = view.lod === 0 ? '#61e294' : view.lod === 1 ? '#f5d547' : '#ff6d62';
       const helper = new THREE.Box3Helper(box, color);

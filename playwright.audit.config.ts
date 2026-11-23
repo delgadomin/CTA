@@ -10,7 +10,6 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:5173',
     browserName: 'chromium',
-    launchOptions: { channel: 'msedge' },
     viewport: { width: 1440, height: 900 },
   },
   webServer: {

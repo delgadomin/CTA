@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
+import type { AgentColliderSink } from '../src/world/agent-colliders';
 import { NpcSystem } from '../src/world/npc-system';
 import { RoadGraph } from '../src/world/road-graph';
 import type { RoadNetwork } from '../src/world/types';
@@ -81,6 +82,65 @@ describe('road graph for ambient agents', () => {
       expect(system.counts.pedestrians).toBeLessThanOrEqual(8);
       expect(system.counts.vehicles).toBeLessThanOrEqual(3);
       expect(system.diagnostics.reroutes).toBeGreaterThanOrEqual(0);
+    } finally {
+      system.dispose();
+    }
+  });
+
+  it('tints instanced agents and keeps a scripted player out of their footprints', () => {
+    const graph = new RoadGraph(network);
+    const tracked = new Map<number, { x: number; z: number }>();
+    let nextId = 1;
+    const colliders: AgentColliderSink = {
+      create: (_kind, x, _y, z) => {
+        const id = nextId;
+        nextId += 1;
+        tracked.set(id, { x, z });
+        return id;
+      },
+      move: (id, x, _y, z) => { tracked.set(id, { x, z }); },
+      remove: (id) => { tracked.delete(id); },
+    };
+    const system = new NpcSystem(graph, { pedestrians: 8, vehicles: 3 }, colliders);
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(0, 101, 0);
+    camera.updateMatrixWorld();
+    const player = new THREE.Vector3(0, 100, 0);
+    const world = { groundHeightAt: () => 100, collidesWithBuilding: () => false };
+    try {
+      for (let frame = 0; frame < 240; frame += 1) system.update(1 / 60, player, camera, world);
+      const meshes = system.group.children as THREE.InstancedMesh[];
+      for (const mesh of meshes) {
+        expect(mesh.geometry.getAttribute('color')).toBeDefined();
+        expect(mesh.instanceColor).not.toBeNull();
+      }
+      const occupied = tracked.values().next().value;
+      expect(occupied).toBeDefined();
+      if (!occupied) return;
+      const overlap = new THREE.Vector3(occupied.x, 100, occupied.z);
+      system.resolveCollision(overlap, 0.35);
+      expect(Math.hypot(overlap.x - occupied.x, overlap.z - occupied.z)).toBeGreaterThan(0.3);
+    } finally {
+      system.dispose();
+      expect(tracked.size).toBe(0);
+    }
+  });
+
+  it('reports ambient agents grouped by distance tiers without losing population', () => {
+    const graph = new RoadGraph(network);
+    const system = new NpcSystem(graph, { pedestrians: 8, vehicles: 3 });
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(0, 101, 0);
+    camera.updateMatrixWorld();
+    const player = new THREE.Vector3(0, 100, 0);
+    const world = { groundHeightAt: () => 100, collidesWithBuilding: () => false };
+    try {
+      for (let frame = 0; frame < 240; frame += 1) system.update(1 / 60, player, camera, world);
+      const tiers = system.lodCounts;
+      expect(tiers).toHaveLength(3);
+      const counts = system.counts;
+      expect(tiers[0] + tiers[1] + tiers[2]).toBe(counts.pedestrians + counts.vehicles);
+      expect(tiers[0]).toBeGreaterThan(0);
     } finally {
       system.dispose();
     }

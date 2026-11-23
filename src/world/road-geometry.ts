@@ -4,11 +4,14 @@ export type RoadPoint = readonly [number, number];
 export type RoadPoint3 = readonly [number, number, number];
 
 export const ROAD_VERTEX_COLORS: Record<RoadSurfaceStyle, readonly [number, number, number]> = {
-  asphalt: [0.48, 0.5, 0.48],
-  stone: [0.68, 0.61, 0.49],
-  concrete: [0.66, 0.67, 0.63],
-  earth: [0.61, 0.5, 0.37],
-  marking: [0.92, 0.88, 0.76],
+  // Calzada, acera y bordillo must stay separable under the ACES tonemap, even
+  // in the old town where the carriageway itself is also paved with stone.
+  asphalt: [0.62, 0.64, 0.66],
+  stone: [0.72, 0.7, 0.64],
+  sidewalk: [1, 0.99, 0.95],
+  concrete: [0.78, 0.79, 0.76],
+  earth: [0.8, 0.7, 0.55],
+  marking: [1, 0.98, 0.86],
 };
 
 const HIGHWAY_WIDTHS: Record<string, number> = {

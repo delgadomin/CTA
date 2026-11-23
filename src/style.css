@@ -29,7 +29,7 @@ body { min-width: 320px; min-height: 100vh; margin: 0; }
   transition: opacity 160ms ease, transform 160ms ease;
 }
 .debug-panel.is-hidden { opacity: 0; transform: translateY(-8px); pointer-events: none; }
-.debug-panel.is-hidden, .debug-console.is-hidden { display: none; }
+.debug-console.is-hidden { display: none; }
 .eyebrow, .phase-tag, dt, .hint { font-family: 'Cascadia Mono', 'Consolas', monospace; letter-spacing: 0.1em; }
 .eyebrow { margin: 0 0 18px; color: #d3ac78; font-size: 9px; font-weight: 500; }
 .eyebrow span { padding: 0 5px; color: #87928b; }
@@ -46,10 +46,13 @@ dd { margin: 0; font-family: 'Cascadia Mono', 'Consolas', monospace; font-size: 
 kbd { padding: 3px 6px; color: #f4f1e7; background: #343b36; border-radius: 3px; font: inherit; }
 .phase-tag { position: absolute; right: 29px; bottom: 24px; margin: 0; color: #f4f1e7; font-size: 9px; text-shadow: 0 1px 6px rgb(0 0 0 / 30%); }
 .phase-tag span { padding: 0 5px; color: #d3ac78; }
+.notice { position: absolute; top: 8%; left: 50%; z-index: 2; max-width: min(520px, 90vw); margin: 0; padding: 12px 18px; transform: translateX(-50%); color: #fff5df; background: rgb(23 26 25 / 90%); border-left: 3px solid #d3ac78; border-radius: 3px; font: 11px 'Cascadia Mono', 'Consolas', monospace; text-align: center; }
+#wanted { color: #e6c382; letter-spacing: 0.12em; }
 .debug-console {
   position: absolute;
   left: 24px;
   bottom: 24px;
+  z-index: 3;
   width: min(560px, calc(100vw - 48px));
   padding: 14px;
   color: #e9ece8;
@@ -60,12 +63,7 @@ kbd { padding: 3px 6px; color: #f4f1e7; background: #343b36; border-radius: 3px;
   box-shadow: 0 12px 40px rgb(0 0 0 / 35%);
 }
 .debug-console p { margin: 0 0 8px; color: #d3ac78; }
+.debug-console code { color: #f4f1e7; }
 .debug-console pre { min-height: 36px; max-height: 150px; overflow: auto; margin: 0 0 8px; white-space: pre-wrap; }
 .debug-console form { display: flex; gap: 8px; align-items: center; }
 .debug-console input { flex: 1; min-width: 0; padding: 6px 8px; color: inherit; background: #252b28; border: 1px solid #47504a; border-radius: 3px; font: inherit; }
-.gameplay-hud { position: absolute; top: 18px; right: 22px; max-width: min(320px, calc(100vw - 44px)); padding: 10px 14px; color: #f4f1e7; background: rgb(23 26 25 / 82%); border: 1px solid rgb(255 255 255 / 12%); border-radius: 4px; }
-.gameplay-hud dl { grid-template-columns: repeat(2, minmax(90px, 1fr)); gap: 14px; padding: 0; border: 0; }
-.gameplay-hud dd { font-size: 13px; }
-.gameplay-hud .hint { margin-top: 10px; }
-.notice { position: absolute; top: 8%; left: 50%; z-index: 2; max-width: min(520px, 90vw); margin: 0; padding: 12px 18px; transform: translateX(-50%); color: #fff5df; background: rgb(23 26 25 / 90%); border-left: 3px solid #d3ac78; border-radius: 3px; font: 11px 'Cascadia Mono', 'Consolas', monospace; text-align: center; }
-#wanted { color: #e6c382; letter-spacing: 0.12em; }
