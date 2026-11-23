@@ -341,17 +341,10 @@ function signSlot(item: Footprint, terrain: BuiltTerrainChunk, roads: readonly C
 }
 
 function boxSilhouette(item: Footprint, terrain: BuiltTerrainChunk, bounds: ProjectedBounds, writer: BuildingGeometryWriter): void {
-  const minX = Math.min(...item.points.map((point) => point[0]));
-  const maxX = Math.max(...item.points.map((point) => point[0]));
-  const minZ = Math.min(...item.points.map((point) => point[1]));
-  const maxZ = Math.max(...item.points.map((point) => point[1]));
-  const y = localHeight(terrain, item.center);
-  const points: RoadPoint[] = [[minX, minZ], [maxX, minZ], [maxX, maxZ], [minX, maxZ]];
-  const silhouette = footprint(item.feature, points);
-  if (!silhouette) return;
-  addWalls(writer, silhouette, terrain, bounds, false);
-  const roof: RoadPoint3[] = points.map((point) => worldPoint(point, y + item.wallHeight));
-  writer.addPolygon(item.roofMaterial, roof, [1, 1, 1], (point) => [point[0] / 4, point[2] / 4]);
+  // Preserve surveyed footprints at distant LODs; axis-aligned bounding boxes
+  // made Cáceres's irregular street fronts look like rows of unrelated cubes.
+  addWalls(writer, item, terrain, bounds, false);
+  addRoof(writer, item, terrain, true);
 }
 
 function buildLod(features: readonly ChunkFeature[], terrain: BuiltTerrainChunk, bounds: ProjectedBounds, lod: number): BuildingLodGeometry {

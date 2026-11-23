@@ -502,7 +502,9 @@ export class NpcSystem {
     mesh.setMatrixAt(instance, this.dummy.matrix);
     const palette = this.kind[slot] === 0 ? this.pedestrianColors : this.vehicleColors;
     const color = palette[this.colorIndex[slot] ?? 0] ?? palette[0];
-    if (color) mesh.setColorAt(instance, this.temporaryColor.copy(color));
+    // Crowd vertex colors already separate skin, clothing and shoes. Applying
+    // one instance tint to the whole person colored every face and garment.
+    if (color && this.kind[slot] !== 0) mesh.setColorAt(instance, this.temporaryColor.copy(color));
   }
 
   private release(slot: number): void {

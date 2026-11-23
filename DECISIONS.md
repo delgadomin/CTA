@@ -80,6 +80,13 @@
 
 # Fase 6 - hitos y fidelidad
 
+## Hitos y fidelidad
+
+- La colisión peatonal consulta la altura de las caras triangulares renderizadas de calzada, bordillo y acera, además de la altura MDT05. Se usa un índice espacial por chunk para mantener acotada la consulta; el desnivel visual del pavimento deja de hacer que el jugador se hunda bajo la calle.
+- Las fachadas conservan la huella OSM también en LOD lejano y las cubiertas mantienen la forma inferida, en vez de sustituir toda planta por la caja de su bounding box.
+- Los vehículos y peatones siguen siendo mallas procedurales originales de bajo poligonaje, ahora con cristales separados, detalles de rueda/carrocería y siluetas humanas con prendas diferenciadas. No se incorporan assets ni contenido de GTA/Rockstar.
+- El asfalto usa un valor más oscuro que piedra, hormigón y acera para separar visualmente la calzada de los espacios peatonales sin inventar marcas viales.
+
 - El inventario usa los nombres orientativos de la guía del proyecto y separa los objetivos de `cc-monumental` de los que requieren una futura región de ciudad. Los nombres se comparan exactamente después de normalizar mayúsculas, espacios y tildes; no se aplican coincidencias difusas.
 - Un objetivo no encontrado se informa como ausente del extracto OSM de la región, no como inexistente. Los objetivos de ciudad se muestran fuera de alcance mientras se procesa `cc-monumental`.
 - La consulta OSM incluye `place=square` en nodos y vías para que plazas como Plaza Mayor puedan formar parte del inventario. Los nombres de monumentos y plazas son datos geográficos permitidos; las reglas de sustitución comercial siguen aplicándose a negocios.
@@ -128,6 +135,13 @@
 - No se añaden dependencias: Playwright ya figuraba en `devDependencies` y los overlays usan Three.js.
 
 # LOD de simulación de agentes (post integración del PR #4)
+
+## Ajustes visuales y de movimiento (noviembre de 2026)
+
+- La colisión peatonal consulta la altura de las caras triangulares renderizadas de calzada, bordillo y acera, además de la altura MDT05. Se usa un índice espacial por chunk para mantener acotada la consulta; el desnivel visual del pavimento deja de hacer que el jugador se hunda bajo la calle.
+- Las fachadas conservan la huella OSM también en LOD lejano y las cubiertas mantienen la forma inferida, en vez de sustituir toda planta por la caja de su bounding box.
+- Los vehículos y peatones siguen siendo mallas procedurales originales de bajo poligonaje, ahora con cristales separados, detalles de rueda/carrocería y siluetas humanas con prendas diferenciadas. No se incorporan assets ni contenido de GTA/Rockstar.
+- El asfalto usa un valor más oscuro que piedra, hormigón y acera para separar visualmente la calzada de los espacios peatonales sin inventar marcas viales.
 
 - El quinto commit del fork (`251c794`) proponía un LOD por distancia, pero estaba escrito contra un `NpcSystem` sin los colisionadores de la fase 11. Se adapta la idea al sistema actual en lugar de aplicar el parche tal cual.
 - Umbrales: 90 m para el nivel cercano, 210 m para el intermedio y el resto como lejano. Cadencias de actualización 1/2/4 frames respectivamente; los tres niveles siguen dibujándose y conservando su colisionador cinemático, así que el mundo no cambia de aspecto ni de physicalidad con la distancia.
