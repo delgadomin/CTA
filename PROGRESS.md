@@ -104,7 +104,7 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - `node tools/verify-streaming.mjs` hace el barrido de cinco minutos; falla si no visita las 16 teselas, rebasa 300 llamadas/600.000 triángulos, supera 16 ms durante streaming o no carga la ruta del inspector.
 - Alcance excluido de la fase 4: vehículos y tráfico de IA.
 
-## Fase actual: 7 - Marcas ficticias (en curso)
+## Fase actual: 9 - Veh�culos (en curso)
 
 ## Fase 6 - Hitos y fidelidad (en curso)
 
@@ -194,3 +194,23 @@ ormalize-data.mjs\ y lo exponen como \BuildingSignSlot.name\.
 - Integrado en main.ts: modo por defecto tercera persona; el personaje se mueve con WASD relativo a la cámara y se ajusta al terreno.
 - Añadido CameraRig.getYaw() para orientar el movimiento.
 - lint, typecheck, 34 pruebas y build pasan.
+
+## Fase 9 - Vehículos (en curso)
+
+### Plan
+- Implementar controlador de vehículo con Rapier DynamicRayCastVehicleController (suspensión, tracción, dirección, freno).
+- Añadir vehículo low-poly (carrocería + 4 ruedas) con parámetros de manejo.
+- Entrar/salir con tecla E; conducir con WASD + Espacio (freno de mano).
+- Cámara de persecución reutilizando CameraRig en modo tercera persona.
+- Aparcar al menos un vehículo cerca del origen para probar.
+
+### Hecho hasta ahora
+- Añadido src/world/vehicle.ts con DynamicRayCastVehicleController y malla low-poly.
+- Integrado en main.ts: aparición de un vehículo, entrada/salida con E, conducción WASD+Espacio, cámara de persecución.
+- lint, typecheck, 34 pruebas y build pasan.
+
+### Pendiente
+- Añadir más tipos de vehículo (moto, furgoneta, taxi, patrulla, autobús) y datos en src/data/vehicles/*.json.
+- Ruedas que giran/steer (ya básico), luces, bocina, partículas, daño visual.
+- Vehículos aparcados a lo largo de calles según OSM.
+- Cámara capó y cinemática.

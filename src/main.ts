@@ -6,7 +6,9 @@ import { Logger } from './engine/logger';
 import { QUALITY_PRESETS } from './engine/quality';
 import { ChunkManager } from './world/chunk-manager';
 import { Character } from './world/character';
+import { Vehicle } from './world/vehicle';
 import { createPhysicsWorld } from './world/terrain-physics';
+import type { World } from '@dimforge/rapier3d-compat';
 import './style.css';
 
 function requiredElement<T extends Element>(selector: string): T {
@@ -48,7 +50,12 @@ const sun = new THREE.DirectionalLight('#fff0d2', 3.0);
 sun.position.set(-320, 700, 250);
 scene.add(sun);
 
+let world: World | undefined;
 let chunks: ChunkManager | undefined;
+const vehicles: Vehicle[] = [];
+let activeVehicle: Vehicle | null = null;
+let inVehicle = false;
+let spacePressed = false;
 let showDebug = true;
 let frameCount = 0;
 let frameWindowStart = performance.now();
@@ -72,7 +79,18 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
   const rawFrameMs = Math.max(0, timestamp - previousFrameTimestamp);
   previousFrameTimestamp = timestamp;
   maximumFrameMs = Math.max(maximumFrameMs, rawFrameMs);
-  if (cameraRig.mode === 'thirdPerson') {
+  if (inVehicle && activeVehicle) {
+    const driveInput = {
+      forward: input.isPressed('moveForward'),
+      backward: input.isPressed('moveBack'),
+      left: input.isPressed('moveLeft'),
+      right: input.isPressed('moveRight'),
+      handbrake: spacePressed,
+    };
+    activeVehicle.update(frameSeconds, driveInput);
+    cameraRig.mode = 'thirdPerson';
+    cameraRig.update(frameSeconds, activeVehicle.position);
+  } else if (cameraRig.mode === 'thirdPerson') {
     character.update(frameSeconds, input, chunks, cameraRig.getYaw());
     cameraRig.update(frameSeconds, character.position);
   } else {
@@ -115,6 +133,38 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
 });
 
 canvas.addEventListener('click', () => input.requestPointerLock());
+window.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (event.code === 'Space') { spacePressed = true; event.preventDefault(); }
+  if (event.code === 'KeyE') {
+    if (inVehicle && activeVehicle) {
+      character.position.copy(activeVehicle.position);
+      character.position.x += 2;
+      const h = chunks?.groundHeightAt(character.position.x, character.position.z);
+      if (h !== undefined) character.position.y = h;
+      inVehicle = false;
+      activeVehicle = null;
+      character.group.visible = true;
+      cameraRig.mode = 'thirdPerson';
+    } else {
+      // find nearest vehicle
+      let nearest: Vehicle | null = null;
+      let best = 3;
+      for (const v of vehicles) {
+        const d = v.position.distanceTo(character.position);
+        if (d < best) { best = d; nearest = v; }
+      }
+      if (nearest) {
+        inVehicle = true;
+        activeVehicle = nearest;
+        character.position.copy(nearest.position);
+        character.group.visible = false;
+      }
+    }
+  }
+});
+window.addEventListener('keyup', (event: KeyboardEvent) => {
+  if (event.code === 'Space') spacePressed = false;
+});
 window.addEventListener('pagehide', () => {
   loop.stop();
   input.dispose();
@@ -123,7 +173,7 @@ window.addEventListener('pagehide', () => {
 });
 
 async function initializeWorld(): Promise<void> {
-  const world = await createPhysicsWorld();
+  world = await createPhysicsWorld();
   const worldBaseUrl = new URL(import.meta.env.BASE_URL, window.location.href);
   const manifestUrl = new URL('world/cc-monumental/manifest.json', worldBaseUrl);
   chunks = new ChunkManager(scene, world, manifestUrl, worldBaseUrl);
@@ -132,6 +182,12 @@ async function initializeWorld(): Promise<void> {
   await chunks.initialize();
   const startHeight = chunks.groundHeightAt(0, 0);
   if (startHeight !== undefined) character.position.y = startHeight;
+  if (world) {
+    const spawnH = chunks.groundHeightAt(8, 8) ?? 0;
+    const vehicle = new Vehicle(world, 8, spawnH, 8);
+    vehicles.push(vehicle);
+    scene.add(vehicle.group);
+  }
   await chunks.prepareRenderer(renderer, camera);
   chunks.setDebugBorders(showDebug);
   statusLabel.textContent = 'Ciudad lista · WASD camina · clic captura el ratón';

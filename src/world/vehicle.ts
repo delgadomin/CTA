@@ -1,0 +1,131 @@
+import * as THREE from 'three';
+import * as RAPIER from '@dimforge/rapier3d-compat';
+import type { World } from '@dimforge/rapier3d-compat';
+
+
+const CAR_COLOR = 0xc94a3a;
+const WHEEL_COLOR = 0x1a1a1a;
+
+export class Vehicle {
+  readonly group: THREE.Group;
+  readonly chassisBody: RAPIER.RigidBody;
+  readonly controller: RAPIER.DynamicRayCastVehicleController;
+  private readonly wheels: THREE.Mesh[] = [];
+  private readonly world: World;
+
+  constructor(world: World, x: number, y: number, z: number) {
+    this.world = world;
+    this.group = new THREE.Group();
+
+    // Chassis rigid body.
+    const chassisDesc = RAPIER.RigidBodyDesc.dynamic()
+      .setTranslation(x, y + 0.6, z)
+      .setLinearDamping(0.3)
+      .setAngularDamping(2.5);
+    this.chassisBody = world.createRigidBody(chassisDesc);
+    const colliderDesc = RAPIER.ColliderDesc.cuboid(0.9, 0.35, 2.0).setMass(1200).setFriction(0.7);
+    world.createCollider(colliderDesc, this.chassisBody);
+
+    this.controller = new RAPIER.DynamicRayCastVehicleController(
+      this.chassisBody,
+      world.bodies,
+      world.colliders,
+      world.queryPipeline,
+    );
+    this.controller.indexUpAxis = 1;
+    this.controller.setIndexForwardAxis = 2;
+
+    const wheelPositions = [
+      { x: -0.75, z: 1.3 },
+      { x: 0.75, z: 1.3 },
+      { x: -0.75, z: -1.3 },
+      { x: 0.75, z: -1.3 },
+    ];
+    for (const wp of wheelPositions) {
+      this.controller.addWheel(
+        new RAPIER.Vector3(wp.x, -0.2, wp.z),
+        new RAPIER.Vector3(0, -1, 0),
+        new RAPIER.Vector3(1, 0, 0),
+        0.3,
+        0.35,
+      );
+    }
+    for (let i = 0; i < 4; i += 1) {
+      this.controller.setWheelSuspensionStiffness(i, 30);
+      this.controller.setWheelMaxSuspensionTravel(i, 0.3);
+      this.controller.setWheelSuspensionCompression(i, 4.4);
+      this.controller.setWheelSuspensionRelaxation(i, 2.3);
+      this.controller.setWheelFrictionSlip(i, 5);
+      this.controller.setWheelSideFrictionStiffness(i, 2.0);
+      this.controller.setWheelMaxSuspensionForce(i, 6000);
+      this.controller.setWheelRadius(i, 0.35);
+    }
+
+    // Visual mesh.
+    const bodyGeo = new THREE.BoxGeometry(1.8, 0.7, 4.0);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: CAR_COLOR, roughness: 0.4, metalness: 0.3 });
+    const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+    bodyMesh.position.y = 0.35;
+    bodyMesh.castShadow = true;
+    this.group.add(bodyMesh);
+
+    const cabinGeo = new THREE.BoxGeometry(1.5, 0.5, 2.0);
+    const cabinMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.3, metalness: 0.1, transparent: true, opacity: 0.6 });
+    const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+    cabin.position.set(0, 0.85, -0.2);
+    this.group.add(cabin);
+
+    const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 12);
+    wheelGeo.rotateZ(Math.PI / 2);
+    const wheelMat = new THREE.MeshStandardMaterial({ color: WHEEL_COLOR, roughness: 0.8 });
+    for (const wp of wheelPositions) {
+      const w = new THREE.Mesh(wheelGeo, wheelMat);
+      w.position.set(wp.x, 0.0, wp.z);
+      this.group.add(w);
+      this.wheels.push(w);
+    }
+  }
+
+  update(deltaSeconds: number, input: { forward: boolean; backward: boolean; left: boolean; right: boolean; handbrake: boolean }): void {
+    const steer = (input.left ? 1 : 0) - (input.right ? 1 : 0);
+    const steeringAngle = steer * 0.5;
+    this.controller.setWheelSteering(0, steeringAngle);
+    this.controller.setWheelSteering(1, steeringAngle);
+
+    const engine = input.forward ? 4000 : input.backward ? -2000 : 0;
+    this.controller.setWheelEngineForce(2, engine);
+    this.controller.setWheelEngineForce(3, engine);
+
+    const brake = input.handbrake ? 60 : input.backward && !input.forward ? 30 : 0;
+    for (let i = 0; i < 4; i += 1) this.controller.setWheelBrake(i, brake);
+
+    this.controller.updateVehicle(deltaSeconds);
+
+    // Sync visual mesh.
+    const t = this.chassisBody.translation();
+    const r = this.chassisBody.rotation();
+    this.group.position.set(t.x, t.y, t.z);
+    this.group.quaternion.set(r.x, r.y, r.z, r.w);
+
+    // Wheel visuals.
+    for (let i = 0; i < 4; i += 1) {
+      const w = this.wheels[i];
+      if (!w) continue;
+      const rot = this.controller.wheelRotation(i);
+      if (rot !== null) w.rotation.x = rot;
+      const steerAng = this.controller.wheelSteering(i);
+      if (steerAng !== null && i < 2) w.rotation.y = steerAng;
+      const hp = this.controller.wheelHardPoint(i);
+      const suspLen = this.controller.wheelSuspensionLength(i);
+      if (hp && suspLen !== null) {
+        w.position.set(hp.x - this.group.position.x, hp.y - this.group.position.y + suspLen * 0.5, hp.z - this.group.position.z);
+      }
+    }
+  }
+
+  get position(): THREE.Vector3 { return this.group.position; }
+
+  dispose(): void {
+    this.world.removeRigidBody(this.chassisBody);
+  }
+}

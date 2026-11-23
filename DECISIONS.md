@@ -28,6 +28,12 @@
 - Movimiento WASD relativo a la orientación de cámara; ajuste a altura MDT05 vía chunks.groundHeightAt.
 - Modo por defecto tercera persona; Tab alterna a cámara libre.
 
+# Fase 9 - vehículos (actualización)
+
+- Controlador Rapier DynamicRayCastVehicleController con 4 ruedas, suspensión y tracción trasera.
+- Vehículo low-poly procedural (cajas) sin assets externos; entrada/salida con E.
+- Cámara de persecución reutiliza CameraRig thirdPerson con foco en el vehículo.
+
 # Fase 2 - datos geográficos
 
 - La región inicial es un rectángulo proyectado de 1 km centrado en Plaza Mayor; EPSG:25829 permite medir chunks y huellas en metros.
