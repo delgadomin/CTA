@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import * as RAPIER from '@dimforge/rapier3d-compat';
 import { buildTerrainChunk } from '../src/world/mesh-builder';
 import { buildChunkBorderGeometry } from '../src/world/chunk-debug';
 import { classifyGround } from '../src/world/materials';
@@ -64,6 +65,26 @@ describe('Rapier terrain grid layout', () => {
     try {
       colliders.add('0_0', rawChunk.bounds, 4, new Float32Array(25).fill(400), 5);
       expect(colliders.count).toBe(1);
+    } finally {
+      colliders.clear();
+      world.free();
+    }
+  });
+
+  it('refreshes scene queries so camera raycasts see new building colliders', async () => {
+    const world = await createPhysicsWorld();
+    const colliders = new TerrainColliders(world);
+    try {
+      // Quad in the YZ plane so the +X ray hits its face head-on.
+      const positions = new Float32Array([0, -1, -1, 0, -1, 1, 0, 1, 1, 0, 1, -1]);
+      const indices = new Uint32Array([0, 1, 2, 0, 2, 3]);
+      colliders.addBuildings('building', 5, 0, positions, indices);
+      const ray = new RAPIER.Ray({ x: 0, y: 0.5, z: 0 }, { x: 1, y: 0, z: 0 });
+      expect(world.castRay(ray, 10, true)).toBeNull();
+      colliders.refreshQueries();
+      const hit = world.castRay(ray, 10, true);
+      expect(hit).not.toBeNull();
+      expect(hit?.toi).toBeCloseTo(5, 1);
     } finally {
       colliders.clear();
       world.free();

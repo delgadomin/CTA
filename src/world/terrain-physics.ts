@@ -21,6 +21,9 @@ export async function createPhysicsWorld(): Promise<World> {
 export class TerrainColliders {
   private readonly world: World;
   private readonly colliders = new Map<string, ReturnType<World['createCollider']>[]>();
+  // Rapier's scene queries are a separate acceleration structure: castRay keeps
+  // returning stale results until updateSceneQueries() rebuilds it.
+  private queriesDirty = false;
 
   constructor(world: World) {
     this.world = world;
@@ -57,6 +60,7 @@ export class TerrainColliders {
     const current = this.colliders.get(id) ?? [];
     current.push(collider);
     this.colliders.set(id, current);
+    this.queriesDirty = true;
   }
 
   remove(id: string): void {
@@ -64,6 +68,14 @@ export class TerrainColliders {
     if (!colliders) return;
     for (const collider of colliders) this.world.removeCollider(collider, true);
     this.colliders.delete(id);
+    this.queriesDirty = true;
+  }
+
+  /** Rebuilds the query pipeline once after any collider add/remove. */
+  refreshQueries(): void {
+    if (!this.queriesDirty) return;
+    this.world.updateSceneQueries();
+    this.queriesDirty = false;
   }
 
   get count(): number {

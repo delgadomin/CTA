@@ -256,6 +256,11 @@ export class ChunkManager {
     return this.colliders.count;
   }
 
+  /** Keeps Rapier scene queries in sync before camera/vehicle raycasts. */
+  refreshPhysicsQueries(): void {
+    this.colliders.refreshQueries();
+  }
+
   get memoryMiB(): number {
     return this.memoryBytes / (1024 * 1024);
   }
@@ -283,6 +288,9 @@ export class ChunkManager {
 
   cameraOcclusion(origin: THREE.Vector3, dir: THREE.Vector3, maxDist: number): number {
     let best = maxDist;
+    // Chunks may have been attached since the previous frame; castRay only sees
+    // new colliders after the query pipeline has been rebuilt.
+    this.colliders.refreshQueries();
     // Physics raycasts at several heights to catch walls of different heights.
     for (const yOffset of [0.4, 1.4, 2.6]) {
       const ray = new RAPIER.Ray(

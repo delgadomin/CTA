@@ -93,6 +93,9 @@ function updateDebug(timestamp: number): void {
 
 const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
   void interpolation;
+  // Rapier raycasts (vehicle suspension, camera occlusion) need an up-to-date
+  // query pipeline before any of this frame's collider consumers run.
+  chunks?.refreshPhysicsQueries();
   const rawFrameMs = Math.max(0, timestamp - previousFrameTimestamp);
   previousFrameTimestamp = timestamp;
   maximumFrameMs = Math.max(maximumFrameMs, rawFrameMs);
@@ -234,6 +237,8 @@ async function initializeWorld(): Promise<void> {
     const vehicle = new Vehicle(world, 8, spawnH, 8);
     vehicles.push(vehicle);
     scene.add(vehicle.group);
+    // The chassis collider was created outside TerrainColliders.
+    world.updateSceneQueries();
   }
   await chunks.prepareRenderer(renderer, camera);
   chunks.setDebugBorders(showDebug);
