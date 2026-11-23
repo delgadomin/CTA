@@ -1,18 +1,20 @@
 # Hospital de Cáceres
 
 - Estado: pendiente de aprobación humana.
-- Alcance: ciudad.
-- Fuentes OSM: Sin entidad OSM en el extracto actual.
-- Posición fuente: Sin posición en esta región..
+- Alcance: cc-monumental.
+- Fuentes OSM: [w389025250](https://www.openstreetmap.org/way/389025250)
+- Posición fuente: 39.4752462, -6.3302623.
 - Altura fuente: Sin altura fuente.
-- Huella local EPSG:25829: no disponible
+- Huella local EPSG:25829: incluida en landmarks.json
 
 ## Rasgos de referencia
 
-- La guía no define rasgos específicos; documentar con referencias y revisión humana antes de añadir detalles.
+- El Ministerio de Sanidad confirma la dirección Avenida de la Universidad 75. El polígono OSM amenity=hospital delimita el complejo Ciudad de la Salud y la Innovación; usarlo como perímetro del recinto, no como huella de un edificio individual.
 
 ## Referencias para revisión
 
+- https://www.sanidad.gob.es/ciudadanos/centros.do?metodo=realizarDetalle&numero=100115&tipo=hospital
+- https://areasaludcaceres.es/organigrama/centros/78-hospitales/166-hospital-universitario-de-caceres.html
 - https://es.wikipedia.org/wiki/C%C3%A1ceres
 - https://commons.wikimedia.org/wiki/C%C3%A1ceres
 

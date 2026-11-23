@@ -1,11 +1,11 @@
 # Estación de tren
 
 - Estado: pendiente de aprobación humana.
-- Alcance: ciudad.
-- Fuentes OSM: Sin entidad OSM en el extracto actual.
-- Posición fuente: Sin posición en esta región..
-- Altura fuente: Sin altura fuente.
-- Huella local EPSG:25829: no disponible
+- Alcance: cc-monumental.
+- Fuentes OSM: [n11738349056](https://www.openstreetmap.org/node/11738349056), [n9378734383](https://www.openstreetmap.org/node/9378734383), [w53246385](https://www.openstreetmap.org/way/53246385)
+- Posición fuente: 39.4612255, -6.3856712.
+- Altura fuente: 6 m (building:levels × 3 m)
+- Huella local EPSG:25829: incluida en landmarks.json
 
 ## Rasgos de referencia
 

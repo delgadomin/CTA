@@ -1,6 +1,9 @@
 import { BuildingGeometryWriter, type BuildingColor, type BuildingUv } from './building-geometry';
 import { sampleHeight, type RoadPoint, type RoadPoint3 } from './road-geometry';
 import type { BuiltTerrainChunk, ChunkFeature, ProjectedBounds } from './types';
+import { addConcatedralPortal, addPlazaMayorArcade, addSanFranciscoTowers } from './landmark-details';
+import { addConcatedralTower } from './concatedral-tower';
+import { addCiguenasTower } from './ciguenas-tower';
 
 const STONE_COLOR: BuildingColor = [0.92, 0.86, 0.73];
 const QUAD_UV: readonly [BuildingUv, BuildingUv, BuildingUv, BuildingUv] = [[0, 0], [1, 0], [1, 1], [0, 1]];
@@ -186,11 +189,17 @@ function addHistoricWalls(writer: BuildingGeometryWriter, features: readonly Chu
 }
 
 export function addLandmarkGeometry(writer: BuildingGeometryWriter, features: readonly ChunkFeature[], terrain: BuiltTerrainChunk, bounds: ProjectedBounds, lod: number): void {
+  addPlazaMayorArcade(writer, features, terrain, bounds, lod);
+  addConcatedralPortal(writer, features, terrain, bounds);
+  addConcatedralTower(writer, features, terrain, bounds);
+  addCiguenasTower(writer, features, terrain, bounds, lod);
+  addSanFranciscoTowers(writer, features, terrain, bounds);
   addStarArch(writer, features, terrain, bounds, lod);
   addHistoricWalls(writer, features, terrain, bounds, lod);
   for (const feature of features) {
-    if (!isTowerLandmark(feature) || !feature.points || feature.landmarkModelPath) continue;
-    const center = feature.points.reduce((sum, point) => [sum[0] + point[0] / feature.points.length, sum[1] + point[1] / feature.points.length], [0, 0]);
+    const points = feature.points;
+    if (!isTowerLandmark(feature) || !points || feature.landmarkModelPath) continue;
+    const center = points.reduce((sum, point) => [sum[0] + point[0] / points.length, sum[1] + point[1] / points.length], [0, 0]);
     if (center[0] < bounds.minX || center[0] >= bounds.maxX || center[1] < bounds.minZ || center[1] >= bounds.maxZ) continue;
     addTowerMerlons(writer, feature, terrain, lod);
   }

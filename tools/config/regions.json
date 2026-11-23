@@ -1,8 +1,8 @@
 {
   "cc-monumental": {
-    "label": "Ciudad Monumental y entorno inmediato",
+    "label": "Cáceres urbano y ciudad monumental",
     "origin": { "lat": 39.474414, "lon": -6.371556, "reference": "Plaza Mayor de Cáceres" },
-    "extentMeters": 1000,
+    "extentMeters": 7600,
     "chunkMeters": 256,
     "crs": "EPSG:25829",
     "heightGrid": { "samples": 129, "stepMeters": 2, "quantizationMeters": 0.25 }

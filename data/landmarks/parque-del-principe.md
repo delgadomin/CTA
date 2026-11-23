@@ -1,11 +1,11 @@
 # Parque del Príncipe
 
 - Estado: pendiente de aprobación humana.
-- Alcance: ciudad.
-- Fuentes OSM: Sin entidad OSM en el extracto actual.
-- Posición fuente: Sin posición en esta región..
+- Alcance: cc-monumental.
+- Fuentes OSM: [w590540343](https://www.openstreetmap.org/way/590540343)
+- Posición fuente: 39.4745418, -6.3833140.
 - Altura fuente: Sin altura fuente.
-- Huella local EPSG:25829: no disponible
+- Huella local EPSG:25829: incluida en landmarks.json
 
 ## Rasgos de referencia
 

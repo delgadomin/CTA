@@ -142,7 +142,8 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - El pipeline audita nombres OSM de vías, edificios no comerciales, superficies y POIs con coincidencia exacta normalizada; el informe enlaza los IDs fuente.
 - La consulta incluye plazas (`place=square`) y relaciones históricas. La normalización conserva sus IDs como `r<number>` y calcula un centro de referencia desde miembros exteriores, sin usarlo como huella.
 - Se confirmó la relación OSM `r5728957` del Palacio de los Golfines de Abajo; no se confunde con el Palacio de los Golfines de Arriba.
-- Los 13 de 13 hitos de `cc-monumental` aparecen en el extracto OSM regenerado. Las otras 6 referencias quedan fuera del alcance de esta región.
+- Ampliado `cc-monumental` a 7,6 km por lado alrededor del mismo origen; conserva chunks de 256 m y ahora cubre las referencias urbanas del parque, avenida, estadio, estación y campus. La descarga local contiene 30.186 elementos OSM y la región se construye en 900 chunks deterministas.
+- El catálogo encuentra ahora los 19 hitos: el hospital se vincula al perímetro cerrado OSM `w389025250` (`amenity=hospital`, Ciudad de la Salud y la Innovación). El polígono contiene el punto de Hospital de Día y la etiqueta mal escrita del museo/taxi; se usa como límite del complejo, nunca como huella de un edificio concreto.
 - Añadida una silueta procedural low-poly del Arco de la Estrella anclada al POI OSM y orientada desde la vía más cercana, además de almenado aproximado para torres. Se añadió un material procedural de piedra y un fallback visual de 7 plantas solo para torres sin altura/plantas fuente.
 - Las áreas `place=square` ya se procesan como superficies y POIs: sus huellas OSM se renderizan en el terreno con la clasificación de piedra.
 - Las líneas `barrier=city_wall` se conservan y reciben una silueta de muralla sobre su trazado OSM, con medidas visuales aproximadas documentadas por ausencia de cotas.
@@ -151,9 +152,14 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - Añadido `npm run fidelity`: compara directamente las vías y huellas OSM con los chunks y falla si falta geometría, aparece una forma inesperada o supera 1 m. La comprobación local comparó 3.486 vías/huellas con desviación máxima 0,0000 m.
 - El inspector 2D puede superponer trazados OSM originales y huellas de edificio sobre el mundo; queda pendiente la revisión visual humana.
 - La extracción nueva incluye `barrier=city_wall`; los chunks regenerados conservan sus tramos. Se añadieron cigüeñas low-poly en torres y una selección estable de tejados del casco; al acercarse el jugador baten las alas y despegan, y vuelven a posarse cuando se aleja.
-- El data build regeneró 16 chunks; el verificador confirmó hashes, terreno, ruta y ausencia de nombres comerciales bloqueados.
+- Añadido un relieve low-poly de soportales en el frente del Ayuntamiento hacia Plaza Mayor, orientado mediante huellas OSM. Las medidas son aproximaciones visuales documentadas y el hito permanece pendiente de revisión humana.
+- Añadido un relieve low-poly de portada apuntada a la Concatedral en el lado de su huella OSM orientado a Plaza Mayor y una torre occidental procedural de tres cuerpos con cuatro flameros, situada según el extremo oeste de la huella. Las dimensiones y el anclaje son aproximaciones, pendientes de revisión visual.
+- Añadidas dos torres low-poly sobre la fachada de San Francisco Javier orientada a San Jorge, a partir de su huella OSM y los rasgos de torre cuadrada documentados por el SIG municipal. Tamaños y ubicación precisa siguen pendientes de comparación fotográfica.
+- Confirmado que la escalinata de Plaza San Jorge reutiliza peldaños OSM `highway=steps`; se documentaron fuentes institucionales y límites geométricos de los detalles monumentales pendientes.
+- La ficha oficial de Cáceres Histórica y el CEFOT 1 describen la Torre de las Cigüeñas como cuadrada, con cuerpo superior volado sobre ménsulas y merlones. El punto OSM nombrado para el museo está dentro del perímetro de la relación del palacio y fuera del patio; la nueva silueta se ancla a ese punto, no a la huella completa del palacio.
+- El data build regeneró 900 chunks; los verificadores confirmaron hashes, terreno MDT05 completo, fidelidad de 15.024 vías/huellas con desviación máxima 0,0000 m, red vial, ruta y ausencia de nombres comerciales bloqueados.
 
 ### Pendiente
-- Completar los modelos específicos de soportales de Plaza Mayor, Concatedral, escalinata de San Francisco Javier y Torre de las Cigüeñas. El punto OSM de esta última no trae una huella, así que necesita revisión de referencia antes de modelar.
-- Ampliar la fuente geográfica para los seis hitos fuera de la región actual.
+- Revisar visualmente con fotos los soportales, portada y torres recién añadidos, en especial las proporciones y el anclaje de las torres de la Concatedral y las Cigüeñas. La escalinata ya se genera desde las vías OSM `highway=steps`.
+- Revisar visualmente con fotos la colocación del hospital como recinto y distinguir los edificios individuales dentro del complejo.
 - Ejecutar lint, typecheck, pruebas, build y revisión visual; ningún hito puede pasar a aprobado sin comparación humana con fotografías. Este entorno no tiene npm/node_modules; la instalación con pnpm fue bloqueada al crear el enlace de dependencias.

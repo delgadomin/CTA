@@ -44,7 +44,8 @@ function heightMetadata(tags, feature) {
 
 function geometryType(element, rings, tags) {
   if (element.type === 'node') return 'point';
-  const area = Boolean(tags.building || tags.area === 'yes' || tags.place === 'square' || tags.leisure || tags.landuse);
+  const hospitalSite = tags.amenity === 'hospital' && rings.some((ring) => ring.length >= 4 && ring[0].lat === ring.at(-1).lat && ring[0].lon === ring.at(-1).lon);
+  const area = Boolean(tags.building || tags.area === 'yes' || tags.place === 'square' || tags.leisure || tags.landuse || hospitalSite);
   if (area && rings.some((ring) => ring.length >= 4)) return element.type === 'relation' ? 'multipolygon' : 'polygon';
   return 'line';
 }
@@ -93,7 +94,9 @@ export function buildLandmarkDataset(targets, features, sourceElements, origin, 
     const matches = names.flatMap((name) => featuresByName.get(name) ?? []);
     const sourceIds = [...new Set(matches.map((feature) => feature.id))].sort();
     const sources = sourceIds.map((id) => enrichSource(id, featuresById.get(id) ?? [], elementsById, origin)).filter(Boolean);
-    const primary = sources.find((source) => source.footprintLocalMeters?.some((ring) => ring.length >= 4)) ?? sources[0];
+    const primary = sources.find((source) => source.id === target.anchorSourceId)
+      ?? sources.find((source) => source.footprintLocalMeters?.some((ring) => ring.length >= 4))
+      ?? sources[0];
     return {
       id: target.id,
       name: target.name,
@@ -116,7 +119,7 @@ export function buildLandmarkDataset(targets, features, sourceElements, origin, 
 
 function markdownFor(landmark) {
   const ids = landmark.sourceIds.length ? landmark.sources.map((source) => `[${source.id}](${source.url})`).join(', ') : 'Sin entidad OSM en el extracto actual.';
-  const point = landmark.position?.lon !== undefined ? `${landmark.position.lat.toFixed(7)}, ${landmark.position.lon.toFixed(7)}` : 'Sin posición en esta región.';
+  const point = landmark.position?.lon !== undefined ? `${landmark.position.lat.toFixed(7)}, ${landmark.position.lon.toFixed(7)}` : 'Sin posición en esta región';
   const height = landmark.heightMeters !== null ? `${landmark.heightMeters} m (OSM height)` : landmark.heightFromLevelsMeters !== null ? `${landmark.heightFromLevelsMeters} m (building:levels × 3 m)` : 'Sin altura fuente.';
   const features = landmark.keyFeatures.length ? landmark.keyFeatures.map((feature) => `- ${feature}`).join('\n') : '- La guía no define rasgos específicos; documentar con referencias y revisión humana antes de añadir detalles.';
   return `# ${landmark.name}\n\n- Estado: pendiente de aprobación humana.\n- Alcance: ${landmark.scope}.\n- Fuentes OSM: ${ids}\n- Posición fuente: ${point}.\n- Altura fuente: ${height}\n- Huella local EPSG:25829: ${landmark.footprintLocalMeters ? 'incluida en landmarks.json' : 'no disponible'}\n\n## Rasgos de referencia\n\n${features}\n\n## Referencias para revisión\n\n${landmark.references.map((url) => `- ${url}`).join('\n')}\n\n## Aprobación\n\nNo cambiar el estado a aprobado sin comparación humana con fotografías.\n`;
