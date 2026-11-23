@@ -25,6 +25,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint && npm run typecheck && npm test && npm run build
+      # configure-pages injects the Pages metadata (base path, origin) that deploy-pages expects.
+      - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
