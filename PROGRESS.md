@@ -180,3 +180,17 @@ ormalize-data.mjs\ y lo exponen como \BuildingSignSlot.name\.
 ### Pendiente
 - Revisar visualmente los r�tulos en navegador y ajustar tama�o/contraste.
 - A�adir m�s cadenas reales si aparecen en futuras regiones.
+
+## Fase 8 - Personaje jugable (en curso)
+
+### Plan
+- Añadir un personaje low-poly procedural (src/world/character.ts) con animación de caminata.
+- Controlar el personaje con WASD en modo tercera persona; la cámara orbita alrededor (CameraRig ya soporta thirdPerson).
+- El personaje se ajusta a la altura del terreno (chunks.groundHeightAt) y rota hacia la dirección de movimiento.
+- Alternar libre/tercera persona con Tab.
+
+### Hecho hasta ahora
+- Añadido Character con malla low-poly (torso, cabeza, brazos, piernas, pies) y animación de caminata.
+- Integrado en main.ts: modo por defecto tercera persona; el personaje se mueve con WASD relativo a la cámara y se ajusta al terreno.
+- Añadido CameraRig.getYaw() para orientar el movimiento.
+- lint, typecheck, 34 pruebas y build pasan.

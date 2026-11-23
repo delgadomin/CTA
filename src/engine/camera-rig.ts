@@ -43,6 +43,8 @@ export class CameraRig {
     return this.mode;
   }
 
+  getYaw(): number { return this.yaw; }
+
   update(deltaSeconds: number, focus?: Vector3): void {
     this.input.sampleGamepad();
     if (this.input.consumePressed('lookToggle')) this.toggleMode();

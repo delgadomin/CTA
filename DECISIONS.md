@@ -22,6 +22,12 @@
 - Rótulos renderizados con CanvasTexture en `chunk-manager.ts` (\`createBrandSign\`), liberados al descargar el chunk.
 - `verify-world.mjs` limita la comprobación de marcas a nombres comerciales (fictional/commercial) con límites de palabra.
 
+# Fase 8 - personaje (actualización)
+
+- Personaje low-poly procedural (cajas) sin assets externos; animación de caminata por rotación de extremidades.
+- Movimiento WASD relativo a la orientación de cámara; ajuste a altura MDT05 vía chunks.groundHeightAt.
+- Modo por defecto tercera persona; Tab alterna a cámara libre.
+
 # Fase 2 - datos geográficos
 
 - La región inicial es un rectángulo proyectado de 1 km centrado en Plaza Mayor; EPSG:25829 permite medir chunks y huellas en metros.

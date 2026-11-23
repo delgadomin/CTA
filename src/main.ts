@@ -5,6 +5,7 @@ import { InputManager } from './engine/input-manager';
 import { Logger } from './engine/logger';
 import { QUALITY_PRESETS } from './engine/quality';
 import { ChunkManager } from './world/chunk-manager';
+import { Character } from './world/character';
 import { createPhysicsWorld } from './world/terrain-physics';
 import './style.css';
 
@@ -38,8 +39,11 @@ const camera = new THREE.PerspectiveCamera(54, window.innerWidth / window.innerH
 camera.position.set(0, 570, 72);
 const input = new InputManager(canvas);
 const cameraRig = new CameraRig(camera, input, 5.2, 0.002, 2.07, -0.12);
+cameraRig.mode = 'thirdPerson';
 const logger = new Logger('world', 'info');
+const character = new Character();
 scene.add(new THREE.HemisphereLight('#e7eff0', '#475447', 2.25));
+scene.add(character.group);
 const sun = new THREE.DirectionalLight('#fff0d2', 3.0);
 sun.position.set(-320, 700, 250);
 scene.add(sun);
@@ -68,11 +72,21 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
   const rawFrameMs = Math.max(0, timestamp - previousFrameTimestamp);
   previousFrameTimestamp = timestamp;
   maximumFrameMs = Math.max(maximumFrameMs, rawFrameMs);
-  cameraRig.update(frameSeconds);
-  camera.position.x = THREE.MathUtils.clamp(camera.position.x, -500, 500);
-  camera.position.z = THREE.MathUtils.clamp(camera.position.z, -500, 500);
-  const groundHeight = chunks?.groundHeightAt(camera.position.x, camera.position.z);
-  if (groundHeight !== undefined) camera.position.y = groundHeight + 1.7;
+  if (cameraRig.mode === 'thirdPerson') {
+    character.update(frameSeconds, input, chunks, cameraRig.getYaw());
+    cameraRig.update(frameSeconds, character.position);
+  } else {
+    cameraRig.update(frameSeconds);
+    character.position.copy(camera.position);
+    const characterGround = chunks?.groundHeightAt(character.position.x, character.position.z);
+    if (characterGround !== undefined) character.position.y = characterGround;
+  }
+  if (cameraRig.mode === 'free') {
+    camera.position.x = THREE.MathUtils.clamp(camera.position.x, -500, 500);
+    camera.position.z = THREE.MathUtils.clamp(camera.position.z, -500, 500);
+    const groundHeight = chunks?.groundHeightAt(camera.position.x, camera.position.z);
+    if (groundHeight !== undefined) camera.position.y = groundHeight + 1.7;
+  }
   chunks?.update(camera, timestamp);
   renderer.render(scene, camera);
   frameCount += 1;
@@ -116,6 +130,8 @@ async function initializeWorld(): Promise<void> {
   chunks.events.on('chunkLoaded', ({ id, lod }) => logger.debug('Terrain chunk loaded', { id, lod }));
   chunks.events.on('chunkUnloaded', ({ id }) => logger.debug('Terrain chunk unloaded', { id }));
   await chunks.initialize();
+  const startHeight = chunks.groundHeightAt(0, 0);
+  if (startHeight !== undefined) character.position.y = startHeight;
   await chunks.prepareRenderer(renderer, camera);
   chunks.setDebugBorders(showDebug);
   statusLabel.textContent = 'Ciudad lista · WASD camina · clic captura el ratón';
