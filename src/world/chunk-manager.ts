@@ -283,13 +283,26 @@ export class ChunkManager {
 
   cameraOcclusion(origin: THREE.Vector3, dir: THREE.Vector3, maxDist: number): number {
     let best = maxDist;
-    for (const yOffset of [0, 1.2, 2.4]) {
+    // Physics raycasts at several heights to catch walls of different heights.
+    for (const yOffset of [0.4, 1.4, 2.6]) {
       const ray = new RAPIER.Ray(
         { x: origin.x, y: origin.y + yOffset, z: origin.z },
         { x: dir.x, y: dir.y, z: dir.z },
       );
       const hit = this.world.castRay(ray, maxDist, true);
       if (hit && hit.toi < best) best = hit.toi;
+    }
+    // Fallback: walk along the ray and stop when entering a building footprint.
+    const steps = 24;
+    for (let s = 1; s <= steps; s += 1) {
+      const t = (s / steps) * maxDist;
+      if (t >= best) break;
+      const x = origin.x + dir.x * t;
+      const z = origin.z + dir.z * t;
+      if (this.collidesWithBuilding(x, z, 0.35)) {
+        if (t < best) best = t;
+        break;
+      }
     }
     return best;
   }

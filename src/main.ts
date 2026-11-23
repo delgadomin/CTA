@@ -109,11 +109,36 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
     cameraRig.update(frameSeconds, activeVehicle.position);
     const vh = chunks?.groundHeightAt(camera.position.x, camera.position.z);
     if (vh !== undefined && camera.position.y < vh + 0.5) camera.position.y = vh + 0.5;
+    if (chunks?.collidesWithBuilding(camera.position.x, camera.position.z, 0)) {
+      const dir = camera.position.clone().sub(activeVehicle.position);
+      const dist = dir.length();
+      if (dist > 0.1) {
+        dir.normalize();
+        for (let i = 0; i < 8; i += 1) {
+          camera.position.copy(activeVehicle.position).addScaledVector(dir, dist * (1 - (i + 1) / 9));
+          if (!chunks.collidesWithBuilding(camera.position.x, camera.position.z, 0)) break;
+        }
+      }
+    }
   } else if (cameraRig.mode === 'thirdPerson') {
     character.update(frameSeconds, input, chunks, cameraRig.getYaw(), spacePressed);
     cameraRig.update(frameSeconds, character.position);
     const ch = chunks?.groundHeightAt(camera.position.x, camera.position.z);
     if (ch !== undefined && camera.position.y < ch + 0.5) camera.position.y = ch + 0.5;
+    // Safety: if the camera ended up inside a building footprint, pull it toward the character.
+    if (chunks?.collidesWithBuilding(camera.position.x, camera.position.z, 0)) {
+      const dir = camera.position.clone().sub(character.position);
+      const dist = dir.length();
+      if (dist > 0.1) {
+        dir.normalize();
+        for (let i = 0; i < 8; i += 1) {
+          camera.position.copy(character.position).addScaledVector(dir, dist * (1 - (i + 1) / 9));
+          if (!chunks.collidesWithBuilding(camera.position.x, camera.position.z, 0)) break;
+        }
+      }
+      const ch2 = chunks.groundHeightAt(camera.position.x, camera.position.z);
+      if (ch2 !== undefined && camera.position.y < ch2 + 0.5) camera.position.y = ch2 + 0.5;
+    }
   } else {
     cameraRig.update(frameSeconds);
     character.position.copy(camera.position);
