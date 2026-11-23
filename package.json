@@ -16,6 +16,7 @@
     "data:build": "node tools/data-build.mjs",
     "data:build:fresh": "node tools/data-build.mjs --fresh",
     "fidelity": "node tools/fidelity-check.mjs",
+    "audit:npcs": "node tools/validate-road-graph.mjs",
     "data:osm:fresh": "node tools/fetch-osm.mjs --fresh",
     "data:elevation": "node tools/fetch-elevation.mjs",
     "data:verify": "node tools/verify-world.mjs"

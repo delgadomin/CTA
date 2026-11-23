@@ -38,6 +38,14 @@
           <input id="debug-console-input" autocomplete="off" spellcheck="false" aria-label="Comando de depuración" />
         </form>
       </section>
+      <section class="gameplay-hud" aria-label="Estado de juego">
+        <dl>
+          <div><dt>Agentes</dt><dd id="agents">0</dd></div>
+          <div><dt id="wanted-label">Búsqueda</dt><dd id="wanted">—</dd></div>
+        </dl>
+        <p class="hint" id="controls-hint">WASD camina · Mayús corre · E roba/sale · clic captura el ratón</p>
+      </section>
+      <p id="notice" class="notice" role="status" hidden></p>
       <p class="phase-tag">CÁCERES <span>/</span> MUNDO ABIERTO</p>
     </main>
     <script type="module" src="./src/main.ts"></script>

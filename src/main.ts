@@ -5,8 +5,14 @@ import { InputManager } from './engine/input-manager';
 import { DebugConsole } from './engine/debug-console';
 import { Logger } from './engine/logger';
 import { QUALITY_PRESETS } from './engine/quality';
+import { t } from './i18n';
 import { ChunkManager } from './world/chunk-manager';
 import { Character } from './world/character';
+import { CrimeSystem } from './world/crime-system';
+import { NpcSystem } from './world/npc-system';
+import { PoliceSystem } from './world/police-system';
+import { RoadGraph } from './world/road-graph';
+import type { RoadNetwork } from './world/types';
 import { Vehicle } from './world/vehicle';
 import { createPhysicsWorld } from './world/terrain-physics';
 import type { World } from '@dimforge/rapier3d-compat';
@@ -31,8 +37,13 @@ const agentsLodLabel = requiredElement<HTMLElement>('#agents-lod');
 const systemTimesLabel = requiredElement<HTMLElement>('#system-times');
 const debugModesLabel = requiredElement<HTMLElement>('#debug-modes');
 const debugPanel = requiredElement<HTMLElement>('.debug-panel');
-const statusLabel = requiredElement<HTMLElement>('#world-status');
 const debugMode = new URLSearchParams(window.location.search).get('debug') === '1';
+const agentsLabel = requiredElement<HTMLElement>('#agents');
+const wantedLabel = requiredElement<HTMLElement>('#wanted');
+const noticeLabel = requiredElement<HTMLElement>('#notice');
+const statusLabel = requiredElement<HTMLElement>('#world-status');
+requiredElement<HTMLElement>('#wanted-label').textContent = t('hud.wanted');
+requiredElement<HTMLElement>('#controls-hint').textContent = t('controls.hint');
 const quality = QUALITY_PRESETS.high;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: quality.antialias, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality.pixelRatio));
@@ -76,6 +87,10 @@ scene.add(sun);
 
 let world: World | undefined;
 let chunks: ChunkManager | undefined;
+let npcs: NpcSystem | undefined;
+let police: PoliceSystem | undefined;
+let npcLoadFailed = false;
+const crime = new CrimeSystem();
 const vehicles: Vehicle[] = [];
 let activeVehicle: Vehicle | null = null;
 let inVehicle = false;
@@ -180,9 +195,45 @@ function teleportForAudit(x: number, z: number): void {
 }
 
 if (debugMode) window.__CTA_DEBUG__ = { teleport: teleportForAudit, metrics: debugSnapshot };
+let noticeUntil = 0;
+let bustCooldownUntil = 0;
+let recklessSeconds = 0;
+let focusInitialized = false;
+const previousFocus = new THREE.Vector3();
+
+function showNotice(message: string, timestamp: number, durationMs = 3000): void {
+  noticeLabel.textContent = message;
+  noticeLabel.hidden = false;
+  noticeUntil = timestamp + durationMs;
+}
+
+function handleBust(timestamp: number): void {
+  bustCooldownUntil = timestamp + 4000;
+  crime.reset();
+  inVehicle = false;
+  activeVehicle = null;
+  character.group.visible = true;
+  character.position.set(0, chunks?.groundHeightAt(0, 0) ?? 0, 0);
+  cameraRig.mode = 'thirdPerson';
+  focusInitialized = false;
+  showNotice(t('notice.busted'), timestamp, 3500);
+  logger.info('Player busted', { stars: crime.stars });
+}
 
 function updateDebug(timestamp: number): void {
-  if (!debugMode || !chunks || timestamp - lastStatsUpdate < 250) return;
+  if (!chunks || timestamp - lastStatsUpdate < 250) return;
+  const agents = npcs?.counts;
+  agentsLabel.textContent = agents ? `${agents.pedestrians} peatones · ${agents.vehicles} coches` : npcLoadFailed ? 'sin red viaria' : 'cargando red viaria…';
+  const stars = crime.stars;
+  wantedLabel.textContent = stars > 0 ? `${'★'.repeat(stars)}${'☆'.repeat(5 - stars)}` : '—';
+  if (!debugMode) {
+    if (noticeUntil > 0 && timestamp >= noticeUntil) {
+      noticeLabel.hidden = true;
+      noticeUntil = 0;
+    }
+    lastStatsUpdate = timestamp;
+    return;
+  }
   chunksLabel.textContent = `${chunks.loadedCount} cargados · ${chunks.pendingCount} en cola · ${chunks.failures} errores`;
   collidersLabel.textContent = String(chunks.colliderCount);
   drawCallsLabel.textContent = String(renderer.info.render.calls);
@@ -193,6 +244,10 @@ function updateDebug(timestamp: number): void {
   agentsLodLabel.textContent = '0 / 0 / 0';
   systemTimesLabel.textContent = `física ${physicsQueryMs.toFixed(2)} · jugador ${actorUpdateMs.toFixed(2)} · streaming ${streamingUpdateMs.toFixed(2)} · render ${renderUpdateMs.toFixed(2)} ms`;
   statusLabel.textContent = chunks.loadedCount > 0 ? 'Edificios, calles y terreno MDT05 en streaming' : 'Preparando la ciudad desde datos oficiales…';
+  if (noticeUntil > 0 && timestamp >= noticeUntil) {
+    noticeLabel.hidden = true;
+    noticeUntil = 0;
+  }
   lastStatsUpdate = timestamp;
 }
 
@@ -264,6 +319,33 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
     if (groundHeight !== undefined) camera.position.y = groundHeight + 1.7;
   }
   systemStart = debugMode ? performance.now() : 0;
+  const focus = inVehicle && activeVehicle ? activeVehicle.position : character.position;
+  let playerSpeed = 0;
+  if (focusInitialized) playerSpeed = Math.min(focus.distanceTo(previousFocus) / Math.max(frameSeconds, 1 / 120), 25);
+  previousFocus.copy(focus);
+  focusInitialized = true;
+  if (inVehicle && activeVehicle) playerSpeed = activeVehicle.speed;
+
+  if (npcs && chunks) npcs.update(frameSeconds, focus, camera, chunks);
+  if (police && chunks) {
+    police.update(frameSeconds, crime.stars, focus, camera, chunks);
+    crime.update(frameSeconds, police.nearestDistance(focus), playerSpeed);
+    if (crime.busted && timestamp > bustCooldownUntil) handleBust(timestamp);
+  }
+
+  if (npcs && inVehicle && activeVehicle && activeVehicle.speed > 6 && npcs.checkVehicleImpact(activeVehicle.position)) {
+    if (crime.report('pedestrianImpact', activeVehicle.position.x, activeVehicle.position.z)) {
+      npcs.alarm(activeVehicle.position.x, activeVehicle.position.z);
+      showNotice(t('notice.pedestrianImpact'), timestamp);
+    }
+  }
+  if (inVehicle && activeVehicle && activeVehicle.speed > 16) {
+    recklessSeconds += frameSeconds;
+    if (recklessSeconds > 2.5 && crime.report('recklessDriving', focus.x, focus.z)) recklessSeconds = 0;
+  } else {
+    recklessSeconds = 0;
+  }
+
   chunks?.update(camera, timestamp);
   if (debugMode) streamingUpdateMs = performance.now() - systemStart;
   systemStart = debugMode ? performance.now() : 0;
@@ -386,18 +468,34 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
       character.group.visible = true;
       cameraRig.mode = 'thirdPerson';
     } else {
-      // find nearest vehicle
+      // Prefer a vehicle the player already owns, then requisition an ambient one.
       let nearest: Vehicle | null = null;
       let best = 3;
       for (const v of vehicles) {
         const d = v.position.distanceTo(character.position);
         if (d < best) { best = d; nearest = v; }
       }
+      if (!nearest && npcs && world) {
+        const claimed = npcs.claimVehicle(character.position, 4.5);
+        if (claimed) {
+          const stolen = new Vehicle(world, claimed.x, claimed.y, claimed.z);
+          vehicles.push(stolen);
+          scene.add(stolen.group);
+          world.updateSceneQueries();
+          nearest = stolen;
+          if (crime.report('vehicleTheft', claimed.x, claimed.z)) {
+            npcs.alarm(claimed.x, claimed.z);
+            showNotice(t('notice.vehicleTheft'), performance.now());
+          }
+        }
+      }
       if (nearest) {
         inVehicle = true;
         activeVehicle = nearest;
         character.position.copy(nearest.position);
         character.group.visible = false;
+      } else {
+        showNotice(t('notice.noVehicle'), performance.now(), 1600);
       }
     }
   }
@@ -408,6 +506,8 @@ window.addEventListener('keyup', (event: KeyboardEvent) => {
 window.addEventListener('pagehide', () => {
   loop.stop();
   input.dispose();
+  npcs?.dispose();
+  police?.dispose();
   chunks?.close();
   renderer.dispose();
 });
@@ -435,6 +535,33 @@ async function initializeWorld(): Promise<void> {
   chunks.setDebugBorders(showChunkBorders);
   statusLabel.textContent = 'Ciudad lista · WASD camina · clic captura el ratón';
   logger.info('World streaming initialized', { region: 'cc-monumental', stepHz: 60, lods: 3 });
+  void initializeNpcs(worldBaseUrl).catch((error: unknown) => {
+    npcLoadFailed = true;
+    agentsLabel.textContent = 'sin red viaria';
+    logger.warn('Traffic initialization failed', { error: String(error) });
+  });
+}
+
+async function initializeNpcs(worldBaseUrl: URL): Promise<void> {
+  // Deferred until the visible world is ready: the road graph is ~30 MB and
+  // must not block the first rendered frame.
+  const url = new URL('world/cc-monumental/road-network.json', worldBaseUrl);
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`road-network.json HTTP ${response.status}`);
+  const network = (await response.json()) as RoadNetwork;
+  const graph = new RoadGraph(network);
+  npcs = new NpcSystem(graph, {
+    pedestrians: Math.round(150 * quality.populationDensity),
+    vehicles: Math.round(60 * quality.populationDensity),
+  });
+  scene.add(npcs.group);
+  police = new PoliceSystem(graph);
+  scene.add(police.group);
+  logger.info('Traffic and pedestrians initialized', {
+    nodes: graph.nodeCount,
+    segments: graph.segments.length,
+    density: quality.populationDensity,
+  });
 }
 
 void initializeWorld().catch((error: unknown) => {

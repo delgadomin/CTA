@@ -63,3 +63,9 @@ kbd { padding: 3px 6px; color: #f4f1e7; background: #343b36; border-radius: 3px;
 .debug-console pre { min-height: 36px; max-height: 150px; overflow: auto; margin: 0 0 8px; white-space: pre-wrap; }
 .debug-console form { display: flex; gap: 8px; align-items: center; }
 .debug-console input { flex: 1; min-width: 0; padding: 6px 8px; color: inherit; background: #252b28; border: 1px solid #47504a; border-radius: 3px; font: inherit; }
+.gameplay-hud { position: absolute; top: 18px; right: 22px; max-width: min(320px, calc(100vw - 44px)); padding: 10px 14px; color: #f4f1e7; background: rgb(23 26 25 / 82%); border: 1px solid rgb(255 255 255 / 12%); border-radius: 4px; }
+.gameplay-hud dl { grid-template-columns: repeat(2, minmax(90px, 1fr)); gap: 14px; padding: 0; border: 0; }
+.gameplay-hud dd { font-size: 13px; }
+.gameplay-hud .hint { margin-top: 10px; }
+.notice { position: absolute; top: 8%; left: 50%; z-index: 2; max-width: min(520px, 90vw); margin: 0; padding: 12px 18px; transform: translateX(-50%); color: #fff5df; background: rgb(23 26 25 / 90%); border-left: 3px solid #d3ac78; border-radius: 3px; font: 11px 'Cascadia Mono', 'Consolas', monospace; text-align: center; }
+#wanted { color: #e6c382; letter-spacing: 0.12em; }
