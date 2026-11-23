@@ -22,21 +22,45 @@ function finish(parts: THREE.BufferGeometry[], fallback: THREE.BufferGeometry): 
 /** Low-poly but shaped crowd models, merged so each agent category stays one draw call. */
 function pedestrianGeometry(): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
-  addPart(parts, new THREE.CapsuleGeometry(0.23, 0.38, 4, 8), 0xffffff, new THREE.Vector3(0, 1.15, 0));
-  addPart(parts, new THREE.CylinderGeometry(0.11, 0.13, 0.14, 8), 0xd8d0c4, new THREE.Vector3(0, 1.45, 0));
+  const skin = 0xe8bd9b;
+  const jacket = 0x536c76;
+  addPart(parts, new THREE.CapsuleGeometry(0.23, 0.38, 4, 8), jacket, new THREE.Vector3(0, 1.15, 0));
+  addPart(parts, new THREE.CylinderGeometry(0.12, 0.16, 0.12, 10), 0xd8d0c4, new THREE.Vector3(0, 1.45, 0));
+  addPart(parts, new THREE.CapsuleGeometry(0.2, 0.14, 2, 8), 0x353a43, new THREE.Vector3(0, 0.78, 0));
+  // A contrasting shirt front, collar and belt keep clothing readable at a glance.
+  addPart(parts, new THREE.BoxGeometry(0.12, 0.42, 0.025), 0xd8d0c4, new THREE.Vector3(0, 1.16, 0.224));
+  addPart(parts, new THREE.ConeGeometry(0.07, 0.25, 4), 0x8a4438, new THREE.Vector3(0, 1.03, 0.244));
+  addPart(parts, new THREE.BoxGeometry(0.38, 0.055, 0.29), 0x57504a, new THREE.Vector3(0, 0.83, 0));
+  addPart(parts, new THREE.BoxGeometry(0.08, 0.065, 0.025), 0xc5b27e, new THREE.Vector3(0, 0.83, 0.16));
   addPart(parts, new THREE.SphereGeometry(0.145, 10, 8), 0xe8bd9b, new THREE.Vector3(0, 1.68, 0));
   addPart(parts, new THREE.SphereGeometry(0.15, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), 0x38271f, new THREE.Vector3(0, 1.73, 0));
+  addPart(parts, new THREE.SphereGeometry(0.035, 7, 5), 0x38271f, new THREE.Vector3(0, 1.62, 0.14));
+  for (const side of [-1, 1]) {
+    addPart(parts, new THREE.SphereGeometry(0.025, 6, 5), skin, new THREE.Vector3(side * 0.14, 1.67, 0));
+    addPart(parts, new THREE.SphereGeometry(0.016, 6, 5), 0x292522, new THREE.Vector3(side * 0.052, 1.69, 0.132));
+    addPart(parts, new THREE.BoxGeometry(0.1, 0.16, 0.025), 0xffffff, new THREE.Vector3(side * 0.12, 1.18, 0.215));
+  }
   for (const side of [-1, 1]) {
     const arm = new THREE.CapsuleGeometry(0.075, 0.35, 3, 6);
     arm.rotateZ(side * -0.12);
-    addPart(parts, arm, 0xffffff, new THREE.Vector3(side * 0.29, 1.12, 0));
-    addPart(parts, new THREE.SphereGeometry(0.065, 7, 5), 0xe8bd9b, new THREE.Vector3(side * 0.32, 0.83, 0));
+    addPart(parts, arm, jacket, new THREE.Vector3(side * 0.29, 1.12, 0));
+    addPart(parts, new THREE.CapsuleGeometry(0.058, 0.16, 2, 6), jacket, new THREE.Vector3(side * 0.32, 0.82, 0.015));
+    addPart(parts, new THREE.SphereGeometry(0.065, 7, 5), skin, new THREE.Vector3(side * 0.32, 0.69, 0.025));
     const leg = new THREE.CapsuleGeometry(0.085, 0.43, 3, 6);
     addPart(parts, leg, 0x353a43, new THREE.Vector3(side * 0.12, 0.48, 0));
-    const shoe = new THREE.BoxGeometry(0.15, 0.12, 0.26);
+    const shoe = new THREE.SphereGeometry(0.13, 9, 6);
+    shoe.scale(1, 0.55, 1.55);
     addPart(parts, shoe, 0x282522, new THREE.Vector3(side * 0.12, 0.08, 0.055));
   }
   return finish(parts, new THREE.CapsuleGeometry(0.25, 1.2, 4, 8));
+}
+
+function paneGeometry(points: readonly (readonly [number, number, number])[]): THREE.BufferGeometry {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(points.flatMap((point) => point), 3));
+  geometry.setIndex([0, 1, 2, 0, 2, 3]);
+  geometry.computeVertexNormals();
+  return geometry;
 }
 
 function cabinGeometry(): THREE.BufferGeometry {
@@ -60,11 +84,22 @@ function vehicleGeometry(police = false): THREE.BufferGeometry {
   body.rotateX(Math.PI / 2);
   body.scale(1, 0.47, 1);
   addPart(parts, body, 0xffffff, new THREE.Vector3(0, 0.62, 0));
-  addPart(parts, cabinGeometry(), 0x273d49, new THREE.Vector3(0, 0, 0));
+  addPart(parts, cabinGeometry(), 0xffffff, new THREE.Vector3(0, 0, 0));
+  // Windshields and side windows are separate panes; the old solid dark cabin
+  // tinted the entire vehicle and made it read as a stack of blocks.
+  const glass = 0x304b58;
+  addPart(parts, paneGeometry([[-0.64, 0.84, 0.79], [0.64, 0.84, 0.79], [0.46, 1.27, 0.42], [-0.46, 1.27, 0.42]]), glass, new THREE.Vector3(0, 0, 0));
+  addPart(parts, paneGeometry([[0.64, 0.84, -0.75], [-0.64, 0.84, -0.75], [-0.46, 1.27, -0.48], [0.46, 1.27, -0.48]]), glass, new THREE.Vector3(0, 0, 0));
+  for (const side of [-1, 1]) {
+    addPart(parts, paneGeometry([[side * 0.731, 0.84, 0.72], [side * 0.731, 0.84, 0.04], [side * 0.535, 1.27, 0.04], [side * 0.535, 1.27, 0.42]]), glass, new THREE.Vector3(0, 0, 0));
+    addPart(parts, paneGeometry([[side * 0.731, 0.84, -0.04], [side * 0.731, 0.84, -0.68], [side * 0.535, 1.27, -0.48], [side * 0.535, 1.27, -0.04]]), glass, new THREE.Vector3(0, 0, 0));
+  }
   addPart(parts, new THREE.BoxGeometry(1.58, 0.16, 1.15), 0xffffff, new THREE.Vector3(0, 0.72, 1.18));
   addPart(parts, new THREE.BoxGeometry(1.58, 0.16, 0.88), 0xffffff, new THREE.Vector3(0, 0.72, -1.42));
   addPart(parts, new THREE.BoxGeometry(1.92, 0.13, 0.16), 0x4b4a46, new THREE.Vector3(0, 0.42, 2.02));
   addPart(parts, new THREE.BoxGeometry(1.92, 0.13, 0.16), 0x4b4a46, new THREE.Vector3(0, 0.42, -2.02));
+  addPart(parts, new THREE.BoxGeometry(0.65, 0.16, 0.045), 0x252b2e, new THREE.Vector3(0, 0.56, 2.02));
+  for (const x of [-0.2, 0, 0.2]) addPart(parts, new THREE.BoxGeometry(0.025, 0.13, 0.05), 0x85898a, new THREE.Vector3(x, 0.56, 2.05));
   for (const side of [-1, 1]) {
     addPart(parts, new THREE.BoxGeometry(0.34, 0.2, 0.13), 0xffe8ad, new THREE.Vector3(side * 0.61, 0.67, 1.91));
     addPart(parts, new THREE.BoxGeometry(0.3, 0.18, 0.12), 0xd85145, new THREE.Vector3(side * 0.64, 0.67, -1.93));
@@ -80,6 +115,9 @@ function vehicleGeometry(police = false): THREE.BufferGeometry {
       const hub = new THREE.CylinderGeometry(0.15, 0.15, 0.23, 8);
       hub.rotateZ(Math.PI / 2);
       addPart(parts, hub, 0x9da2a5, new THREE.Vector3(side * 0.9, 0.36, z));
+    }
+    for (const z of [0.18, -0.88]) {
+      addPart(parts, new THREE.BoxGeometry(0.018, 0.42, 0.025), 0x3e4244, new THREE.Vector3(side * 0.74, 0.62, z));
     }
   }
   if (police) {

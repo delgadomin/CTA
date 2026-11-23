@@ -2,10 +2,10 @@ import * as THREE from 'three';
 import type { RoadSurfaceStyle } from './types';
 
 const ROAD_PALETTES: Record<Exclude<RoadSurfaceStyle, 'marking'>, readonly [number, number, number]> = {
-  asphalt: [128, 132, 136],
-  stone: [210, 198, 172],
+  asphalt: [67, 72, 76],
+  stone: [191, 178, 151],
   sidewalk: [238, 232, 216],
-  concrete: [196, 198, 190],
+  concrete: [177, 178, 171],
   earth: [183, 147, 109],
 };
 
@@ -56,7 +56,7 @@ function makeRoadTexture(style: Exclude<RoadSurfaceStyle, 'marking'>): THREE.Can
   const count = style === 'earth' ? 600 : 420;
   for (let index = 0; index < count; index += 1) {
     const shade = random() > 0.5 ? 1 : -1;
-    const alpha = 0.06 + random() * 0.16;
+    const alpha = style === 'asphalt' ? 0.12 + random() * 0.2 : 0.06 + random() * 0.16;
     const gray = shade > 0 ? 255 : 20;
     context.fillStyle = `rgb(${gray} ${gray} ${gray} / ${alpha})`;
     const size = 1 + random() * (style === 'earth' ? 2.8 : 1.6);

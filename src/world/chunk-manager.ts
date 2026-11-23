@@ -9,6 +9,7 @@ import { ChunkDebugOverlays } from './debug-overlays';
 import { BuildingRenderer } from './building-renderer';
 import { sampleHeight } from './road-geometry';
 import { RoadRenderer } from './road-renderer';
+import { RoadHeightIndex } from './road-height-index';
 import { createStork, updateStork } from './stork';
 import { TerrainColliders } from './terrain-physics';
 import type { BuiltTerrainChunk, ChunkEntry, TerrainChunkEvents, TerrainLodData, WorldManifest } from './types';
@@ -158,6 +159,7 @@ export class ChunkManager {
   private readonly debugOverlays: ChunkDebugOverlays;
   private readonly debugBorderMaterial = new THREE.LineBasicMaterial({ color: '#f06d4e', depthTest: true, toneMapped: false });
   private readonly records = new Map<string, ChunkRecord>();
+  private readonly roadHeights = new Map<string, RoadHeightIndex>();
   private readonly completed: CompletedChunk[] = [];
   private manifest: WorldManifest | undefined;
   private assets: AssetManager | undefined;
@@ -320,13 +322,23 @@ export class ChunkManager {
   }
 
   groundHeightAt(x: number, z: number): number | undefined {
+    let height: number | undefined;
     for (const record of this.records.values()) {
       if (record.state !== 'loaded' || !record.result) continue;
       const bounds = record.entry.bounds;
       if (x < bounds.minX || x > bounds.maxX || z < bounds.minZ || z > bounds.maxZ) continue;
-      return sampleHeight(record.result, x, z);
+      height = sampleHeight(record.result, x, z);
+      break;
     }
-    return undefined;
+    if (height === undefined) return undefined;
+    for (const record of this.records.values()) {
+      if (record.state !== 'loaded') continue;
+      const bounds = record.entry.bounds;
+      if (x < bounds.minX || x > bounds.maxX || z < bounds.minZ || z > bounds.maxZ) continue;
+      const roadHeight = this.roadHeights.get(record.entry.id)?.heightAt(x, z);
+      if (roadHeight !== undefined && roadHeight > height) height = roadHeight;
+    }
+    return height;
   }
 
   setDebugBorders(visible: boolean): void {
@@ -414,6 +426,7 @@ export class ChunkManager {
       const buildingMeshes = this.buildingRenderer.createMeshes(item.result.buildings, centerX, centerZ);
       for (const mesh of buildingMeshes[record.lod] ?? []) { mesh.visible = true; this.scene.add(mesh); }
       record.result = item.result;
+      if (item.result.roads) this.roadHeights.set(item.id, new RoadHeightIndex(item.result.roads, record.entry.bounds));
       record.meshes = meshes;
       record.buildingMeshes = buildingMeshes;
       record.decorationMeshes = decorationMeshes;
@@ -566,6 +579,7 @@ export class ChunkManager {
   };
 
   private unload(record: ChunkRecord, emit = true): void {
+    this.roadHeights.delete(record.entry.id);
     this.removeDebugBorder(record);
     this.debugOverlays.removeChunk(record.entry.id);
     if (record.hasCollider) this.colliders.remove(record.entry.id);

@@ -72,7 +72,7 @@ export class Vehicle {
     this.group.add(bodyMesh);
 
     const cabinGeo = taperedCabinGeometry();
-    const cabinMat = new THREE.MeshStandardMaterial({ color: 0x263b47, roughness: 0.28, metalness: 0.18, transparent: true, opacity: 0.84 });
+    const cabinMat = new THREE.MeshStandardMaterial({ color: CAR_COLOR, roughness: 0.38, metalness: 0.18 });
     const cabin = new THREE.Mesh(cabinGeo, cabinMat);
     cabin.position.set(0, 0, -0.18);
     cabin.castShadow = true;
@@ -87,10 +87,24 @@ export class Vehicle {
       mesh.castShadow = true;
       this.group.add(mesh);
     };
-    addDetail(new THREE.BoxGeometry(1.72, 0.16, 1.05), bodyMat, 0, 0.42, 1.25);
-    addDetail(new THREE.BoxGeometry(1.72, 0.16, 0.78), bodyMat, 0, 0.42, -1.45);
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x263e4a, roughness: 0.2, metalness: 0.12, side: THREE.DoubleSide });
+    const addPane = (points: readonly (readonly [number, number, number])[]) => {
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(points.flatMap((point) => point), 3));
+      geometry.setIndex([0, 1, 2, 0, 2, 3]);
+      geometry.computeVertexNormals();
+      addDetail(geometry, glassMat, 0, 0, 0);
+    };
+    addPane([[-0.64, 0.57, 0.79], [0.64, 0.57, 0.79], [0.48, 1.08, 0.42], [-0.48, 1.08, 0.42]]);
+    addPane([[0.64, 0.57, -0.75], [-0.64, 0.57, -0.75], [-0.48, 1.08, -0.48], [0.48, 1.08, -0.48]]);
+    for (const side of [-1, 1]) {
+      addPane([[side * 0.731, 0.58, 0.72], [side * 0.731, 0.58, 0.04], [side * 0.535, 1.08, 0.04], [side * 0.535, 1.08, 0.42]]);
+      addPane([[side * 0.731, 0.58, -0.04], [side * 0.731, 0.58, -0.68], [side * 0.535, 1.08, -0.48], [side * 0.535, 1.08, -0.04]]);
+    }
     addDetail(new THREE.BoxGeometry(1.9, 0.14, 0.16), trimMat, 0, 0.2, 2.02);
     addDetail(new THREE.BoxGeometry(1.9, 0.14, 0.16), trimMat, 0, 0.2, -2.02);
+    addDetail(new THREE.BoxGeometry(0.62, 0.17, 0.045), trimMat, 0, 0.35, 2.02);
+    for (const x of [-0.2, 0, 0.2]) addDetail(new THREE.BoxGeometry(0.025, 0.14, 0.05), trimMat, x, 0.35, 2.05);
     for (const side of [-1, 1]) {
       addDetail(new THREE.BoxGeometry(0.32, 0.2, 0.1), lightMat, side * 0.62, 0.4, 1.91);
       addDetail(new THREE.BoxGeometry(0.28, 0.17, 0.1), rearLightMat, side * 0.66, 0.42, -1.91);
@@ -100,11 +114,17 @@ export class Vehicle {
     const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 12);
     wheelGeo.rotateZ(Math.PI / 2);
     const wheelMat = new THREE.MeshStandardMaterial({ color: WHEEL_COLOR, roughness: 0.8 });
+    const hubGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.27, 10);
+    hubGeo.rotateZ(Math.PI / 2);
+    const hubMat = new THREE.MeshStandardMaterial({ color: 0xa7a9a5, roughness: 0.35, metalness: 0.65 });
     for (const wp of wheelPositions) {
       const w = new THREE.Mesh(wheelGeo, wheelMat);
       w.position.set(wp.x, 0.0, wp.z);
       this.group.add(w);
       this.wheels.push(w);
+      const hub = new THREE.Mesh(hubGeo, hubMat);
+      hub.position.x = 0.02;
+      w.add(hub);
     }
   }
 

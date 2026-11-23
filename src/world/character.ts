@@ -134,12 +134,15 @@ export class Character {
       const length = Math.hypot(dirX, dirZ) || 1;
       const stepX = (dirX / length) * speed * deltaSeconds;
       const stepZ = (dirZ / length) * speed * deltaSeconds;
-      const nextX = this.group.position.x + stepX;
-      if (!chunks || (chunks.groundHeightAt(nextX, this.group.position.z) !== undefined && !chunks.collidesWithBuilding(nextX, this.group.position.z, 0.4))) {
+      const substeps = Math.max(1, Math.ceil(Math.max(Math.abs(stepX), Math.abs(stepZ)) / 0.2));
+      const incrementX = stepX / substeps;
+      const incrementZ = stepZ / substeps;
+      for (let index = 0; index < substeps; index += 1) {
+        const nextX = this.group.position.x + incrementX;
+        if (chunks && (chunks.groundHeightAt(nextX, this.group.position.z) === undefined || chunks.collidesWithBuilding(nextX, this.group.position.z, 0.4))) break;
         this.group.position.x = nextX;
-      }
-      const nextZ = this.group.position.z + stepZ;
-      if (!chunks || (chunks.groundHeightAt(this.group.position.x, nextZ) !== undefined && !chunks.collidesWithBuilding(this.group.position.x, nextZ, 0.4))) {
+        const nextZ = this.group.position.z + incrementZ;
+        if (chunks && (chunks.groundHeightAt(this.group.position.x, nextZ) === undefined || chunks.collidesWithBuilding(this.group.position.x, nextZ, 0.4))) break;
         this.group.position.z = nextZ;
       }
       const targetYaw = Math.atan2(dirX, dirZ);
