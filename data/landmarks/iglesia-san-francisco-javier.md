@@ -9,11 +9,12 @@
 
 ## Rasgos de referencia
 
-- Iglesia situada sobre la escalinata de la Plaza de San Jorge.
+- Fachada encalada con dos torres de planta cuadrada, una a cada lado, rematadas por campanarios y chapiteles; su colocación procedural y medidas requieren comparación fotográfica.
 
 ## Referencias para revisión
 
-- https://es.wikipedia.org/wiki/Iglesia_de_San_Francisco_Javier_(C%C3%A1ceres)
+- https://sig.caceres.es/serweb/monumentos/ficha.php?id=42-iglesiaFranciscoJavier
+- https://sig.caceres.es/fotosOriginales/BIC/PDF/26.pdf
 - https://commons.wikimedia.org/wiki/Ciudad_Monumental_de_C%C3%A1ceres
 
 ## Aprobación

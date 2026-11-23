@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { inflateSync } from 'node:zlib';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const MAX_ROAD_NETWORK_BYTES = 64 * 1024 * 1024;
 const regionName = process.argv.find((argument) => argument.startsWith('--region='))?.split('=')[1] ?? 'cc-monumental';
 const directory = path.join(ROOT, 'public/world', regionName);
 const manifest = JSON.parse(await readFile(path.join(directory, 'manifest.json'), 'utf8'));
@@ -47,7 +48,7 @@ for (const chunk of manifest.chunks) {
     if (!['casco', 'ensanche', 'periferia'].includes(feature.zone)
       || !Number.isFinite(feature.visualFloors) || feature.visualFloors < 1 || feature.visualFloors > 40
       || !Number.isFinite(feature.visualHeightMeters) || feature.visualHeightMeters < 2.8 || feature.visualHeightMeters > 80
-      || !['flat', 'gabled', 'hipped', 'unknown'].includes(feature.roofShape)) {
+      || !['flat', 'gabled', 'hipped', 'unknown', 'many'].includes(feature.roofShape)) {
       throw new Error(`Building ${feature.id} has invalid visual height, zone, or roof metadata.`);
     }
     if (feature.landmarkModelPath && !/^landmarks\/w\d+\.glb$/.test(feature.landmarkModelPath)) throw new Error(`Building ${feature.id} references an unsafe landmark model path.`);
@@ -71,7 +72,7 @@ for (const chunk of manifest.chunks) {
 
 if (manifest.roadNetwork) {
   const metadata = manifest.roadNetwork;
-  if (metadata.path !== 'road-network.json' || metadata.bytes > 16 * 1024 * 1024) throw new Error('Unsafe road network metadata.');
+  if (metadata.path !== 'road-network.json' || metadata.bytes > MAX_ROAD_NETWORK_BYTES) throw new Error('Unsafe road network metadata.');
   const networkBytes = await readFile(path.join(directory, metadata.path));
   if (networkBytes.byteLength !== metadata.bytes) throw new Error('Road network size mismatch.');
   if (createHash('sha256').update(networkBytes).digest('hex') !== metadata.sha256) throw new Error('Road network SHA-256 mismatch.');

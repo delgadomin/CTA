@@ -1,10 +1,10 @@
 # Fidelity check — cc-monumental
 
 Tolerance: 1.00 m.
-Road centerlines: 675.
-Building footprints: 2811.
+Road centerlines: 7876.
+Building footprints: 7148.
 Maximum projected vertex deviation: 0.0000 m.
-Human approvals pending: 13.
+Human approvals pending: 19.
 - Plaza Mayor (plaza-mayor)
 - Arco de la Estrella (arco-de-la-estrella)
 - Torre de Bujaco (torre-de-bujaco)
@@ -18,6 +18,12 @@ Human approvals pending: 13.
 - Palacio de Carvajal (palacio-de-carvajal)
 - Muralla de Cáceres (muralla-de-caceres)
 - Paseo de Cánovas (paseo-de-canovas)
+- Avenida de España (avenida-de-espana)
+- Parque del Príncipe (parque-del-principe)
+- Estadio Príncipe Felipe (estadio-principe-felipe)
+- Estación de tren (estacion-de-tren)
+- Hospital de Cáceres (hospital-de-caceres)
+- Campus universitario (campus-universitario)
 Result: PASS.
 
 Comparison projects the cached OSM way coordinates and serialized chunk geometry to EPSG:25829 local meters; every road and building vertex must match within tolerance.

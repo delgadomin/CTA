@@ -1,9 +1,9 @@
 # Campus universitario
 
 - Estado: pendiente de aprobación humana.
-- Alcance: ciudad.
-- Fuentes OSM: Sin entidad OSM en el extracto actual.
-- Posición fuente: Sin posición en esta región..
+- Alcance: cc-monumental.
+- Fuentes OSM: [w83134082](https://www.openstreetmap.org/way/83134082)
+- Posición fuente: 39.4795668, -6.3415839.
 - Altura fuente: Sin altura fuente.
 - Huella local EPSG:25829: no disponible
 

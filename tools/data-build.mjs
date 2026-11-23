@@ -61,7 +61,7 @@ const sourceFeatures = [...data.roads, ...data.buildings, ...data.surfaces, ...d
 const landmarkDataset = buildLandmarkDataset(landmarkCatalog.landmarks, sourceFeatures, osm.elements, resolvedRegion.origin, regionName);
 await writeLandmarkDataset(ROOT, landmarkDataset);
 const landmarkStatuses = JSON.parse(await readFile(path.join(ROOT, 'data/landmarks/status.json'), 'utf8'));
-const landmarkAudit = auditLandmarks(sourceFeatures, landmarkCatalog.landmarks, regionName);
+const landmarkAudit = auditLandmarks(sourceFeatures, landmarkCatalog.landmarks, regionName, landmarkDataset);
 const pendingLandmarkApprovals = landmarkCatalog.landmarks.filter((landmark) => landmark.scope === regionName && landmarkStatuses.landmarks?.[landmark.id]?.status !== 'approved');
 const worldBuildings = new Map(data.chunks.flatMap((chunk) => chunk.features.filter((feature) => feature.featureType === 'building').map((feature) => [feature.id, feature])));
 const worldBuildingsByZone = Object.fromEntries(['casco', 'ensanche', 'periferia'].map((zone) => [zone, [...worldBuildings.values()].filter((building) => building.zone === zone).length]));
@@ -202,7 +202,7 @@ const brandLines = [
   '',
 ];
 const fidelityLines = [
-  '# Informe de fidelidad - Ciudad Monumental',
+  `# Informe de fidelidad - ${regionDefinition.label}`,
   '',
   `Región: ${regionName}; CRS: ${regionDefinition.crs}; rectángulo: ${regionDefinition.extentMeters} x ${regionDefinition.extentMeters} m.`,
   `Fuente OSM: fecha base ${osm.osm3s?.timestamp_osm_base ?? 'no informada'}.`,

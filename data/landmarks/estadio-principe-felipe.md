@@ -1,11 +1,11 @@
 # Estadio Príncipe Felipe
 
 - Estado: pendiente de aprobación humana.
-- Alcance: ciudad.
-- Fuentes OSM: Sin entidad OSM en el extracto actual.
-- Posición fuente: Sin posición en esta región..
+- Alcance: cc-monumental.
+- Fuentes OSM: [w257266364](https://www.openstreetmap.org/way/257266364)
+- Posición fuente: 39.4870905, -6.4124291.
 - Altura fuente: Sin altura fuente.
-- Huella local EPSG:25829: no disponible
+- Huella local EPSG:25829: incluida en landmarks.json
 
 ## Rasgos de referencia
 

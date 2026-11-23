@@ -1,6 +1,6 @@
 # Progreso del proyecto
 
-## Fase actual: 5 - Edificios
+## Fase actual: 6 - Hitos y fidelidad (ampliada); fases 7-9 implementadas, fase 10 pausada
 
 ### Hecho
 - Repositorio inicializado desde `hhg-ptm/CTA`.
@@ -104,7 +104,7 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - `node tools/verify-streaming.mjs` hace el barrido de cinco minutos; falla si no visita las 16 teselas, rebasa 300 llamadas/600.000 triángulos, supera 16 ms durante streaming o no carga la ruta del inspector.
 - Alcance excluido de la fase 4: vehículos y tráfico de IA.
 
-## Fase actual: 9 - Veh�culos (en curso)
+## Fase actual: 9 - Vehículos (en curso)
 
 ## Fase 6 - Hitos y fidelidad (en curso)
 
@@ -145,41 +145,47 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - La consulta incluye plazas (`place=square`) y relaciones históricas. La normalización conserva sus IDs como `r<number>` y calcula un centro de referencia desde miembros exteriores, sin usarlo como huella.
 - Se confirmó la relación OSM `r5728957` del Palacio de los Golfines de Abajo; no se confunde con el Palacio de los Golfines de Arriba.
 - Los 13 de 13 hitos de `cc-monumental` aparecen en el extracto OSM regenerado. Las otras 6 referencias quedan fuera del alcance de esta región.
+- Ampliado `cc-monumental` a 7,6 km por lado alrededor del mismo origen; conserva chunks de 256 m y ahora cubre las referencias urbanas del parque, avenida, estadio, estación y campus. La descarga local contiene 30.186 elementos OSM y la región se construye en 900 chunks deterministas.
+- El catálogo encuentra ahora los 19 hitos: el hospital se vincula al perímetro cerrado OSM `w389025250` (`amenity=hospital`, Ciudad de la Salud y la Innovación). El polígono contiene el punto de Hospital de Día y la etiqueta mal escrita del museo/taxi; se usa como límite del complejo, nunca como huella de un edificio concreto.
 - Añadida una silueta procedural low-poly del Arco de la Estrella anclada al POI OSM y orientada desde la vía más cercana, además de almenado aproximado para torres. Se añadió un material procedural de piedra y un fallback visual de 7 plantas solo para torres sin altura/plantas fuente.
 - Las áreas `place=square` ya se procesan como superficies y POIs: sus huellas OSM se renderizan en el terreno con la clasificación de piedra.
 - Las líneas `barrier=city_wall` se conservan y reciben una silueta de muralla sobre su trazado OSM, con medidas visuales aproximadas documentadas por ausencia de cotas.
 - El informe de hitos ahora indica la geometría fuente disponible (huella, polígono, trazado, vía o punto/centro); evita tratar un POI sin huella como si fuera un edificio modelable.
 - Añadido el catálogo canónico de fase 6 con 19 entradas, una ficha Markdown por hito y `status.json` en pendiente. El pipeline incorpora posiciones, huellas y alturas solo cuando la extracción OSM las aporta; los hitos exteriores siguen sin fuente geométrica en la región actual.
-- Añadido `npm run fidelity`: compara directamente las vías y huellas OSM con los chunks y falla si falta geometría, aparece una forma inesperada o supera 1 m. La comprobación local comparó 3.486 vías/huellas con desviación máxima 0,0000 m.
+- Añadido `npm run fidelity`: compara directamente las vías y huellas OSM con los chunks y falla si falta geometría, aparece una forma inesperada o supera 1 m. La comprobación local comparó 15.024 vías/huellas con desviación máxima 0,0000 m.
 - El inspector 2D puede superponer trazados OSM originales y huellas de edificio sobre el mundo; queda pendiente la revisión visual humana.
 - La extracción nueva incluye `barrier=city_wall`; los chunks regenerados conservan sus tramos. Se añadieron cigüeñas low-poly en torres y una selección estable de tejados del casco; al acercarse el jugador baten las alas y despegan, y vuelven a posarse cuando se aleja.
-- El data build regeneró 16 chunks; el verificador confirmó hashes, terreno, ruta y ausencia de nombres comerciales bloqueados.
+- El data build regeneró 900 chunks; los verificadores confirmaron hashes, terreno MDT05 completo, fidelidad de 15.024 vías/huellas con desviación máxima 0,0000 m, red vial, ruta y ausencia de nombres comerciales bloqueados.
 - Se completaron los modelos low-poly específicos de fase 6 (soportales de Plaza Mayor, campanario de la Concatedral, escalinata de San Francisco Javier y torre sintética de Torre de las Cigüeñas); todos los valores dimensionales son aproximaciones pendientes de revisión fotográfica. lint, typecheck, 34 pruebas y build pasan.
+- Añadido un relieve low-poly de soportales en el frente del Ayuntamiento hacia Plaza Mayor, orientado mediante huellas OSM. Las medidas son aproximaciones visuales documentadas y el hito permanece pendiente de revisión humana.
+- Añadida una portada apuntada a la Concatedral en el lado de su huella OSM orientado a Plaza Mayor y una torre occidental procedural de tres cuerpos con cuatro flameros, situada según el extremo oeste de la huella. Las dimensiones y el anclaje son aproximaciones, pendientes de revisión visual.
+- Añadidas dos torres low-poly sobre la fachada de San Francisco Javier orientada a San Jorge, a partir de su huella OSM y los rasgos de torre cuadrada documentados por el SIG municipal. Tamaños y ubicación precisa siguen pendientes de comparación fotográfica.
+- Confirmado que la escalinata de Plaza San Jorge reutiliza peldaños OSM `highway=steps`; se documentaron fuentes institucionales y límites geométricos de los detalles monumentales pendientes.
+- La ficha oficial de Cáceres Histórica y el CEFOT 1 describen la Torre de las Cigüeñas como cuadrada, con cuerpo superior volado sobre ménsulas y merlones. El punto OSM nombrado para el museo está dentro del perímetro de la relación del palacio y fuera del patio; la nueva silueta se ancla a ese punto, no a la huella completa del palacio.
 
 ### Pendiente
-- Modelos low-poly específicos completados: soportales de Plaza Mayor, campanario de la Concatedral (w385037723), escalinata de San Francisco Javier hacia Plaza de San Jorge y torre sintética de Torre de las Cigüeñas (fuente puntual n13723182454, huella 7,5 m documentada como fallback). Valores dimensionales pendientes de revisión fotográfica.
-- Ampliar la fuente geográfica para los seis hitos fuera de la región actual.
-- Ejecutar lint, typecheck, pruebas, build y revisión visual; ningún hito puede pasar a aprobado sin comparación humana con fotografías. Este entorno no tiene npm/node_modules; la instalación con pnpm fue bloqueada al crear el enlace de dependencias.
+- Revisar visualmente con fotos los soportales, portada y torres recién añadidos, en especial las proporciones y el anclaje de las torres de la Concatedral y las Cigüeñas. La escalinata ya se genera desde las vías OSM `highway=steps`.
+- Revisar visualmente con fotos la colocación del hospital como recinto y distinguir los edificios individuales dentro del complejo.
+- Ejecutar lint, typecheck, pruebas, build y revisión visual; ningún hito puede pasar a aprobado sin comparación humana con fotografías.
 
 ## Fase 7 - Marcas ficticias (en curso)
 
 ### Plan
-- Sustituir nombres comerciales reales por identidades ficticias originales; ampliar 	ools/brand-blocklist.json con las cadenas reales presentes en el extracto OSM.
-- Renderizar r�tulos (sign slots) sobre fachadas comerciales con el nombre ficticio.
-- Verificar que ning�n nombre de marca real aparezca en los chunks (verify-world).
-- Actualizar eports/brands.md y documentar en DECISIONS.md.
+- Sustituir nombres comerciales reales por identidades ficticias originales; ampliar `tools/brand-blocklist.json` con las cadenas reales presentes en el extracto OSM.
+- Renderizar rótulos (sign slots) sobre fachadas comerciales con el nombre ficticio.
+- Verificar que ningún nombre de marca real aparezca en los chunks (verify-world).
+- Actualizar `reports/brands.md` y documentar en `DECISIONS.md`.
 
 ### Hecho hasta ahora
-- Ampliado rand-blocklist.json con 8 cadenas reales (supermercados, bancos, hoteles, restaurantes, farmacias v�a gen�ricos) mapeadas a marcas ficticias; 26 POIs ahora quedan como \mapped\.
-- Los edificios comerciales reciben un nombre ficticio en \
-ormalize-data.mjs\ y lo exponen como \BuildingSignSlot.name\.
-- A�adido renderizado de r�tulos en \chunk-manager.ts\ (\createBrandSign\) con textura canvas; se crean al cargar el chunk y se liberan al descargarlo.
-- \erify-world.mjs\ ahora comprueba solo nombres comerciales (fictional/commercial) con l�mites de palabra, evitando falsos positivos por calles.
+- Ampliado `brand-blocklist.json` con 8 cadenas reales (supermercados, bancos, hoteles, restaurantes, farmacias vía genéricos) mapeadas a marcas ficticias; 26 POIs ahora quedan como `mapped`.
+- Los edificios comerciales reciben un nombre ficticio en `normalize-data.mjs` y lo exponen como `BuildingSignSlot.name`.
+- Añadido renderizado de rótulos en `chunk-manager.ts` (`createBrandSign`) con textura canvas; se crean al cargar el chunk y se liberan al descargarlo.
+- `verify-world.mjs` ahora comprueba solo nombres comerciales (fictional/commercial) con límites de palabra, evitando falsos positivos por calles.
 - lint, typecheck, 34 pruebas, build y verify-world pasan.
 
 ### Pendiente
-- Revisar visualmente los r�tulos en navegador y ajustar tama�o/contraste.
-- A�adir m�s cadenas reales si aparecen en futuras regiones.
+- Revisar visualmente los rótulos en navegador y ajustar tamaño/contraste.
+- Añadir más cadenas reales si aparecen en futuras regiones.
 
 ## Fase 8 - Personaje jugable (en curso)
 
@@ -219,4 +225,10 @@ ormalize-data.mjs\ y lo exponen como \BuildingSignSlot.name\.
 - Añadido collidesWithBuilding en ChunkManager basado en huellas de edificio; el personaje desliza en lugar de atravesar.
 - Añadido salto (Espacio) y gravedad/ajuste al terreno en Character.
 - Pies ahora son hijos de las piernas para que se animen al caminar.
-- Añadido ootprints a BuiltBuildingChunk.
+- Añadido `footprints` a `BuiltBuildingChunk`.
+
+### Integración del PR #3 (merge)
+- Fusionada la rama `codex/phase-6-landmark-followup`: región ampliada a 7,6 km, 900 chunks, 19 hitos y módulos de detalle de hitos (`landmark-details.ts`, `concatedral-tower.ts`, `ciguenas-tower.ts`).
+- Los conflictos de datos (16 chunks, manifiesto, informes) se resolvieron con la versión del PR porque el manifiesto guarda SHA-256 por chunk; mezclar chunks de versiones distintas rompería la verificación.
+- `PROGRESS.md` conserva las notas de las fases 7-9 y añade las novedades del PR; se corrigió la codificación mixta UTF-8/CP1252 heredada.
+- Causa raíz identificada para la colisión de cámara con edificios: Rapier no actualiza el query pipeline hasta llamar a `world.step()` o `world.updateSceneQueries()`. El `castRay` devuelve `null` antes de esa llamada (comprobado empíricamente). Pendiente de aplicar el arreglo.
