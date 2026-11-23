@@ -38,7 +38,7 @@ describe('road geometry rules', () => {
       { id: 'priority', featureType: 'prop', kind: 'give_way', position: [0, 0.1] },
     ];
     const built = buildRoadChunk(roads, terrain, bounds);
-    expect(built.surfaces.map((surface) => surface.style)).toEqual(expect.arrayContaining(['asphalt', 'stone', 'concrete']));
+    expect(built.surfaces.map((surface) => surface.style)).toEqual(expect.arrayContaining(['asphalt', 'stone', 'sidewalk', 'concrete']));
     expect(built.triangleCount).toBeGreaterThan(20);
     expect(built.markings.indices.length).toBeGreaterThan(0);
     expect(built.colliderIndices.length).toBeGreaterThan(0);

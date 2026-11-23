@@ -5,6 +5,7 @@ import { InputManager } from './engine/input-manager';
 import { Logger } from './engine/logger';
 import { QUALITY_PRESETS } from './engine/quality';
 import { t } from './i18n';
+import { AgentColliders } from './world/agent-colliders';
 import { ChunkManager } from './world/chunk-manager';
 import { Character } from './world/character';
 import { CrimeSystem } from './world/crime-system';
@@ -80,6 +81,7 @@ scene.add(sun);
 
 let world: World | undefined;
 let chunks: ChunkManager | undefined;
+let agentColliders: AgentColliders | undefined;
 let npcs: NpcSystem | undefined;
 let police: PoliceSystem | undefined;
 const crime = new CrimeSystem();
@@ -171,6 +173,9 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
     }
   } else if (cameraRig.mode === 'thirdPerson') {
     character.update(frameSeconds, input, chunks, cameraRig.getYaw(), spacePressed);
+    // The character is scripted (not a Rapier body), so resolve agent overlap here.
+    npcs?.resolveCollision(character.position, 0.35);
+    police?.resolveCollision(character.position, 0.35);
     cameraRig.update(frameSeconds, character.position);
     const ch = chunks?.groundHeightAt(camera.position.x, camera.position.z);
     if (ch !== undefined && camera.position.y < ch + 0.5) camera.position.y = ch + 0.5;
@@ -308,12 +313,14 @@ window.addEventListener('pagehide', () => {
   input.dispose();
   npcs?.dispose();
   police?.dispose();
+  agentColliders?.dispose();
   chunks?.close();
   renderer.dispose();
 });
 
 async function initializeWorld(): Promise<void> {
   world = await createPhysicsWorld();
+  agentColliders = new AgentColliders(world);
   const worldBaseUrl = new URL(import.meta.env.BASE_URL, window.location.href);
   const manifestUrl = new URL('world/cc-monumental/manifest.json', worldBaseUrl);
   chunks = new ChunkManager(scene, world, manifestUrl, worldBaseUrl);
@@ -352,9 +359,9 @@ async function initializeNpcs(worldBaseUrl: URL): Promise<void> {
   npcs = new NpcSystem(graph, {
     pedestrians: Math.round(150 * quality.populationDensity),
     vehicles: Math.round(60 * quality.populationDensity),
-  });
+  }, agentColliders);
   scene.add(npcs.group);
-  police = new PoliceSystem(graph);
+  police = new PoliceSystem(graph, agentColliders);
   scene.add(police.group);
   logger.info('Traffic and pedestrians initialized', {
     nodes: graph.nodeCount,

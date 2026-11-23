@@ -2,15 +2,16 @@ import * as THREE from 'three';
 import type { RoadSurfaceStyle } from './types';
 
 const ROAD_PALETTES: Record<Exclude<RoadSurfaceStyle, 'marking'>, readonly [number, number, number]> = {
-  asphalt: [176, 181, 178],
-  stone: [221, 202, 166],
-  concrete: [211, 213, 204],
+  asphalt: [128, 132, 136],
+  stone: [210, 198, 172],
+  sidewalk: [238, 232, 216],
+  concrete: [196, 198, 190],
   earth: [183, 147, 109],
 };
 
 export function createRoadMaterials(): Map<RoadSurfaceStyle, THREE.MeshStandardMaterial> {
   const materials = new Map<RoadSurfaceStyle, THREE.MeshStandardMaterial>();
-  for (const style of ['asphalt', 'stone', 'concrete', 'earth'] as const) {
+  for (const style of ['asphalt', 'stone', 'sidewalk', 'concrete', 'earth'] as const) {
     const texture = makeRoadTexture(style);
     materials.set(style, new THREE.MeshStandardMaterial({ map: texture, vertexColors: true, roughness: 0.92, side: THREE.DoubleSide }));
   }
@@ -37,7 +38,7 @@ function makeRoadTexture(style: Exclude<RoadSurfaceStyle, 'marking'>): THREE.Can
     seed = (seed * 1664525 + 1013904223) >>> 0;
     return seed / 4294967296;
   };
-  if (style === 'stone') {
+  if (style === 'stone' || style === 'sidewalk') {
     context.strokeStyle = 'rgb(89 77 58 / 28%)';
     context.lineWidth = 2;
     for (let y = 0; y <= 128; y += 32) {

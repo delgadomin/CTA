@@ -100,6 +100,10 @@ export class Vehicle {
     for (let i = 0; i < 4; i += 1) this.controller.setWheelBrake(i, brake);
 
     this.controller.updateVehicle(deltaSeconds);
+    // Rapier's vehicle controller only changes velocities; stepping the world is
+    // what integrates the chassis and resolves contacts with terrain, buildings
+    // and the kinematic agent colliders.
+    this.world.step();
 
     // Sync visual mesh.
     const t = this.chassisBody.translation();

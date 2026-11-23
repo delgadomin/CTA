@@ -36,7 +36,7 @@ export function buildRoadChunk(features: readonly ChunkFeature[], terrain: Built
       const sidewalk = side > 0
         ? [width / 2 + CURB_WIDTH, width / 2 + CURB_WIDTH + SIDEWALK_WIDTH] as const
         : [-width / 2 - CURB_WIDTH - SIDEWALK_WIDTH, -width / 2 - CURB_WIDTH] as const;
-      addCorridor(builderFor('stone'), centerline, SIDEWALK_WIDTH, bounds, lift + 0.09, `${road.id ?? 'road'}:sidewalk:${side}`, offsetAt, sidewalk);
+      addCorridor(builderFor('sidewalk'), centerline, SIDEWALK_WIDTH, bounds, lift + 0.09, `${road.id ?? 'road'}:sidewalk:${side}`, offsetAt, sidewalk);
       const curb = side > 0
         ? [width / 2, width / 2 + CURB_WIDTH] as const
         : [-width / 2 - CURB_WIDTH, -width / 2] as const;

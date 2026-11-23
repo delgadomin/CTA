@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { Camera } from 'three';
+import type { AgentColliderSink } from './agent-colliders';
 import { RoadGraph } from './road-graph';
 import type { AgentMode } from './road-graph';
 import { createPedestrianMesh, createVehicleMesh, disposeAgentMesh } from './npc-models';
@@ -34,6 +35,8 @@ const INTERSECTION_YIELD_SECONDS = 2.5;
 export class NpcSystem {
   readonly group = new THREE.Group();
   private readonly graph: RoadGraph;
+  private readonly colliders: AgentColliderSink | undefined;
+  private readonly colliderIds: Int32Array;
   private readonly pedestrianMesh: THREE.InstancedMesh;
   private readonly vehicleMesh: THREE.InstancedMesh;
   private readonly pedestrianCapacity: number;
@@ -75,11 +78,13 @@ export class NpcSystem {
   private totalReroutes = 0;
   private totalDespawns = 0;
 
-  constructor(graph: RoadGraph, counts: NpcCounts) {
+  constructor(graph: RoadGraph, counts: NpcCounts, colliders?: AgentColliderSink) {
     this.graph = graph;
+    this.colliders = colliders;
     this.pedestrianCapacity = Math.max(1, counts.pedestrians);
     this.vehicleCapacity = Math.max(1, counts.vehicles);
     const capacity = this.pedestrianCapacity + this.vehicleCapacity;
+    this.colliderIds = new Int32Array(capacity).fill(-1);
     this.pedestrianMesh = createPedestrianMesh(this.pedestrianCapacity);
     this.vehicleMesh = createVehicleMesh(this.vehicleCapacity);
     this.group.add(this.pedestrianMesh, this.vehicleMesh);
@@ -173,6 +178,26 @@ export class NpcSystem {
     return false;
   }
 
+  /** Pushes an on-foot player out of agent footprints (Rapier handles the car). */
+  resolveCollision(position: THREE.Vector3, radius = 0.4): void {
+    const capacity = this.pedestrianCapacity + this.vehicleCapacity;
+    for (let slot = 0; slot < capacity; slot += 1) {
+      if (this.active[slot] !== 1) continue;
+      const minimum = (this.kind[slot] === 0 ? 0.32 : 1.1) + radius;
+      const dx = position.x - (this.x[slot] ?? 0);
+      const dz = position.z - (this.z[slot] ?? 0);
+      const distance = Math.hypot(dx, dz);
+      if (distance >= minimum) continue;
+      if (distance < 1e-4) {
+        position.x += minimum;
+        continue;
+      }
+      const push = (minimum - distance) / distance;
+      position.x += dx * push;
+      position.z += dz * push;
+    }
+  }
+
   update(deltaSeconds: number, player: THREE.Vector3, camera: Camera, world: NpcWorld): void {
     const dt = Math.min(Math.max(deltaSeconds, 0), 0.05);
     this.elapsed += dt;
@@ -187,9 +212,14 @@ export class NpcSystem {
     this.vehicleMesh.count = this.activeVehicles;
     this.pedestrianMesh.instanceMatrix.needsUpdate = true;
     this.vehicleMesh.instanceMatrix.needsUpdate = true;
+    if (this.pedestrianMesh.instanceColor) this.pedestrianMesh.instanceColor.needsUpdate = true;
+    if (this.vehicleMesh.instanceColor) this.vehicleMesh.instanceColor.needsUpdate = true;
   }
 
   dispose(): void {
+    for (let slot = 0; slot < this.active.length; slot += 1) {
+      if (this.active[slot] === 1) this.release(slot);
+    }
     this.group.remove(this.pedestrianMesh, this.vehicleMesh);
     disposeAgentMesh(this.pedestrianMesh);
     disposeAgentMesh(this.vehicleMesh);
@@ -249,6 +279,7 @@ export class NpcSystem {
       this.colorIndex[slot] = Math.floor(this.random() * (kind === 0 ? this.pedestrianColors.length : this.vehicleColors.length));
       if (kind === 0) this.activePedestrians += 1;
       else this.activeVehicles += 1;
+      this.colliderIds[slot] = this.colliders?.create(mode, x, height, z, 0) ?? -1;
       this.setRoute(slot, start, mode);
       return;
     }
@@ -329,6 +360,7 @@ export class NpcSystem {
     } else if (nextSpeed > 0.05) {
       this.heading[slot] = Math.atan2(bx - ax, bz - az);
     }
+    this.colliders?.move(this.colliderIds[slot] ?? -1, this.x[slot] ?? 0, this.y[slot] ?? 0, this.z[slot] ?? 0, this.heading[slot] ?? 0);
   }
 
   private blockedAhead(slot: number, player: THREE.Vector3): boolean {
@@ -442,6 +474,9 @@ export class NpcSystem {
   private release(slot: number): void {
     if (this.active[slot] !== 1) return;
     this.active[slot] = 0;
+    const colliderId = this.colliderIds[slot] ?? -1;
+    if (colliderId >= 0) this.colliders?.remove(colliderId);
+    this.colliderIds[slot] = -1;
     if (this.kind[slot] === 0) {
       this.activePedestrians -= 1;
       this.freePedestrians.push(slot);

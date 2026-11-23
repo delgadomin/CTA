@@ -288,3 +288,27 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - Atropella un peatón o conduce rápido para aumentar el nivel; el panel F4 muestra `Búsqueda`.
 - Detente cerca de una patrulla durante 2 s: aparece `DETENIDO` y vuelves a Plaza Mayor con el nivel a cero.
 
+## Corrección posterior a la Fase 11 - agentes, colisiones y materiales (completada)
+
+### Plan
+- Diagnosticar por qué los agentes instanciados se veían blancos y por qué no exertían colisión.
+- Dar a la acera un material propio para que no comparta aspecto con la calzada de piedra del casco antiguo.
+- Añadir físicas reales a peatones, tráfico y patrullas sin perder los dos draw calls por sistema.
+
+### Hecho hasta ahora
+- `src/world/npc-models.ts`: las geometrías fusionadas incluyen un atributo `color` blanco y el material usa `vertexColors`; junto con `setColorAt()` y `instanceColor.needsUpdate`, los colores por agente ya llegan a la GPU.
+- `src/world/agent-colliders.ts`: nuevo adaptador que crea cuerpos cinemáticos de Rapier (cápsula para peatones, caja para coches) y sincroniza traslación/rotación con el grafo. `src/main.ts` lo conecta a `NpcSystem` y `PoliceSystem`.
+- `src/world/vehicle.ts`: se descubrió que el controlador de Rapier solo actualiza velocidades; ahora se llama a `world.step()` después de aplicar fuerzas, de modo que el chasis integra contactos con terreno, edificios y agentes.
+- `src/world/npc-system.ts` y `src/world/police-system.ts`: empujan al jugador a pie fuera de los huecos de los agentes (`resolveCollision`) y liberan los colisionadores al desaparecer.
+- `src/world/types.ts`, `road-geometry.ts`, `road-materials.ts` y `road-builder.ts`: nuevo estilo `sidewalk`, con textura de losa clara, distinto de `stone` (calzada) y de `concrete` (bordillo); se bajó el tono del asfalto para reforzar el contraste.
+- `tests/npc.test.ts` y `tests/road-builder.test.ts`: nuevas comprobaciones de coloreado, empuje al jugador y presencia del estilo de acera. `lint`, `typecheck`, `test` (42/42) y `build` pasan.
+
+### Pendiente
+- Medir el coste de hasta 215 cuerpos cinemáticos en la prueba de resistencia de 10 minutos y, si hace falta, filtrar grupos de colisión para que los agentes solo interactúen con el coche del jugador.
+- Añadir animación de extremidades y reacciones ricas de los peatones (fase 10 pendiente).
+
+### Cómo probarlo
+- Conduce contra un coche ambiental o una patrulla: el chasis ya no los atraviesa.
+- Camina hacia un peatón: el personaje queda fuera de su hueco en lugar de superponerse.
+- Mira una calle del casco antiguo: la acera clara y el bordillo se distinguen de la calzada de piedra.
+
