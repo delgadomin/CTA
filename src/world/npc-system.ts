@@ -1,0 +1,370 @@
+import * as THREE from 'three';
+import type { Camera } from 'three';
+import { RoadGraph } from './road-graph';
+import type { AgentMode } from './road-graph';
+import { createPedestrianMesh, createVehicleMesh, disposeAgentMesh } from './npc-models';
+
+export interface NpcWorld {
+  groundHeightAt(x: number, z: number): number | undefined;
+  collidesWithBuilding(x: number, z: number, radius?: number): boolean;
+}
+
+export interface NpcCounts {
+  readonly pedestrians: number;
+  readonly vehicles: number;
+}
+
+const MAX_ROUTE = 24;
+const SPAWN_MIN_METERS = 45;
+const DESPAWN_METERS = 330;
+const INTERSECTION_YIELD_SECONDS = 2.5;
+
+/**
+ * Ambient pedestrians and traffic driven by the OSM-derived road graph.
+ * All agent state lives in typed arrays and instances are pooled, so the hot
+ * loop performs no per-agent allocations and stays at two draw calls.
+ */
+export class NpcSystem {
+  readonly group = new THREE.Group();
+  private readonly graph: RoadGraph;
+  private readonly pedestrianMesh: THREE.InstancedMesh;
+  private readonly vehicleMesh: THREE.InstancedMesh;
+  private readonly pedestrianCapacity: number;
+  private readonly vehicleCapacity: number;
+  private readonly active: Uint8Array;
+  private readonly kind: Uint8Array;
+  private readonly x: Float32Array;
+  private readonly y: Float32Array;
+  private readonly z: Float32Array;
+  private readonly heading: Float32Array;
+  private readonly speed: Float32Array;
+  private readonly scale: Float32Array;
+  private readonly edge: Int32Array;
+  private readonly progress: Float32Array;
+  private readonly route: Int32Array;
+  private readonly routeLength: Uint8Array;
+  private readonly routeIndex: Uint8Array;
+  private readonly stuckTime: Float32Array;
+  private readonly checkedMid: Uint8Array;
+  private readonly reroutes: Uint8Array;
+  private readonly claimTime: Float32Array;
+  private readonly intersectionOwner: Int32Array;
+  private readonly colorIndex: Uint8Array;
+  private readonly freePedestrians: number[] = [];
+  private readonly freeVehicles: number[] = [];
+  private readonly pedestrianColors: THREE.Color[] = [];
+  private readonly vehicleColors: THREE.Color[] = [];
+  private readonly dummy = new THREE.Object3D();
+  private readonly cameraDirection = new THREE.Vector3();
+  private readonly temporaryColor = new THREE.Color();
+  private randomState = 0x9e3779b9;
+  private elapsed = 0;
+  private spawnCooldown = 0;
+  private activePedestrians = 0;
+  private activeVehicles = 0;
+  private totalReroutes = 0;
+  private totalDespawns = 0;
+
+  constructor(graph: RoadGraph, counts: NpcCounts) {
+    this.graph = graph;
+    this.pedestrianCapacity = Math.max(1, counts.pedestrians);
+    this.vehicleCapacity = Math.max(1, counts.vehicles);
+    const capacity = this.pedestrianCapacity + this.vehicleCapacity;
+    this.pedestrianMesh = createPedestrianMesh(this.pedestrianCapacity);
+    this.vehicleMesh = createVehicleMesh(this.vehicleCapacity);
+    this.group.add(this.pedestrianMesh, this.vehicleMesh);
+    this.active = new Uint8Array(capacity);
+    this.kind = new Uint8Array(capacity);
+    this.x = new Float32Array(capacity);
+    this.y = new Float32Array(capacity);
+    this.z = new Float32Array(capacity);
+    this.heading = new Float32Array(capacity);
+    this.speed = new Float32Array(capacity);
+    this.scale = new Float32Array(capacity);
+    this.edge = new Int32Array(capacity);
+    this.progress = new Float32Array(capacity);
+    this.route = new Int32Array(capacity * MAX_ROUTE);
+    this.routeLength = new Uint8Array(capacity);
+    this.routeIndex = new Uint8Array(capacity);
+    this.stuckTime = new Float32Array(capacity);
+    this.checkedMid = new Uint8Array(capacity);
+    this.reroutes = new Uint8Array(capacity);
+    this.claimTime = new Float32Array(graph.nodeCount);
+    this.intersectionOwner = new Int32Array(graph.nodeCount);
+    this.colorIndex = new Uint8Array(capacity);
+    for (let slot = this.pedestrianCapacity - 1; slot >= 0; slot -= 1) this.freePedestrians.push(slot);
+    for (let slot = capacity - 1; slot >= this.pedestrianCapacity; slot -= 1) this.freeVehicles.push(slot);
+    for (let i = 0; i < 8; i += 1) this.pedestrianColors.push(new THREE.Color().setHSL(i / 8, 0.45, 0.42 + (i % 2) * 0.12));
+    for (let i = 0; i < 6; i += 1) this.vehicleColors.push(new THREE.Color().setHSL((i * 0.17) % 1, 0.52, 0.38 + (i % 3) * 0.09));
+  }
+
+  get counts(): NpcCounts {
+    return { pedestrians: this.activePedestrians, vehicles: this.activeVehicles };
+  }
+
+  get diagnostics(): { readonly reroutes: number; readonly despawns: number } {
+    return { reroutes: this.totalReroutes, despawns: this.totalDespawns };
+  }
+
+  update(deltaSeconds: number, player: THREE.Vector3, camera: Camera, world: NpcWorld): void {
+    const dt = Math.min(Math.max(deltaSeconds, 0), 0.05);
+    this.elapsed += dt;
+    this.cameraDirection.set(0, 0, -1).applyQuaternion(camera.quaternion);
+    this.maintainPopulation(dt, player, world);
+    for (let slot = 0; slot < this.active.length; slot += 1) {
+      if (this.active[slot] !== 1) continue;
+      this.advance(slot, dt, player, world);
+      if (this.active[slot] === 1) this.render(slot);
+    }
+    this.pedestrianMesh.count = this.activePedestrians;
+    this.vehicleMesh.count = this.activeVehicles;
+    this.pedestrianMesh.instanceMatrix.needsUpdate = true;
+    this.vehicleMesh.instanceMatrix.needsUpdate = true;
+  }
+
+  dispose(): void {
+    this.group.remove(this.pedestrianMesh, this.vehicleMesh);
+    disposeAgentMesh(this.pedestrianMesh);
+    disposeAgentMesh(this.vehicleMesh);
+  }
+
+  private maintainPopulation(dt: number, player: THREE.Vector3, world: NpcWorld): void {
+    this.spawnCooldown -= dt;
+    for (let slot = 0; slot < this.active.length; slot += 1) {
+      if (this.active[slot] !== 1) continue;
+      const distance = Math.hypot((this.x[slot] ?? 0) - player.x, (this.z[slot] ?? 0) - player.z);
+      if (distance > DESPAWN_METERS) this.release(slot);
+    }
+    if (this.spawnCooldown > 0) return;
+    this.spawnCooldown = 0.25;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (this.activePedestrians < this.pedestrianCapacity) this.spawn(0, player, world);
+      if (this.activeVehicles < this.vehicleCapacity) this.spawn(1, player, world);
+    }
+  }
+
+  private spawn(kind: number, player: THREE.Vector3, world: NpcWorld): void {
+    const pool = kind === 0 ? this.freePedestrians : this.freeVehicles;
+    const slot = pool.pop();
+    if (slot === undefined) return;
+    const mode: AgentMode = kind === 0 ? 'pedestrian' : 'vehicle';
+    for (let attempt = 0; attempt < 14; attempt += 1) {
+      const angle = this.random() * Math.PI * 2;
+      const radius = SPAWN_MIN_METERS + this.random() * (DESPAWN_METERS - SPAWN_MIN_METERS - 40);
+      const x = player.x + Math.cos(angle) * radius;
+      const z = player.z + Math.sin(angle) * radius;
+      const towardX = x - player.x;
+      const towardZ = z - player.z;
+      if (towardX * (this.cameraDirection.x ?? 0) + towardZ * (this.cameraDirection.z ?? 0) > -radius * 0.15) continue;
+      const height = world.groundHeightAt(x, z);
+      if (height === undefined || world.collidesWithBuilding(x, z, 1)) continue;
+      const start = this.graph.nearestNode(x, z, mode);
+      if (start < 0) continue;
+      const edges = this.graph.outgoingEdges(start, mode);
+      if (edges.length === 0) continue;
+      const first = edges[Math.floor(this.random() * edges.length)] ?? -1;
+      if (first < 0) continue;
+      this.active[slot] = 1;
+      this.kind[slot] = kind;
+      this.x[slot] = x;
+      this.y[slot] = height;
+      this.z[slot] = z;
+      this.scale[slot] = kind === 0 ? 0.92 + this.random() * 0.16 : 0.94 + this.random() * 0.12;
+      this.speed[slot] = 0;
+      this.edge[slot] = first;
+      this.progress[slot] = 0;
+      this.routeLength[slot] = 0;
+      this.routeIndex[slot] = 0;
+      this.stuckTime[slot] = 0;
+      this.checkedMid[slot] = 0;
+      this.reroutes[slot] = 0;
+      this.colorIndex[slot] = Math.floor(this.random() * (kind === 0 ? this.pedestrianColors.length : this.vehicleColors.length));
+      if (kind === 0) this.activePedestrians += 1;
+      else this.activeVehicles += 1;
+      this.setRoute(slot, start, mode);
+      return;
+    }
+    pool.push(slot);
+  }
+
+  private advance(slot: number, dt: number, player: THREE.Vector3, world: NpcWorld): void {
+    const edge = this.edge[slot] ?? -1;
+    const segment = this.graph.edgeSegment(edge);
+    const info = this.graph.segments[segment];
+    if (!info) { this.release(slot); return; }
+    const forward = (edge & 1) === 0;
+    const toNode = forward ? info.to : info.from;
+    const mode: AgentMode = this.kind[slot] === 0 ? 'pedestrian' : 'vehicle';
+    let desired = mode === 'pedestrian' ? 1.5 : Math.min(info.speed, 14);
+    desired *= this.kind[slot] === 0 ? 0.85 + (this.scale[slot] ?? 1) * 0.2 : 0.75 + (this.scale[slot] ?? 1) * 0.25;
+
+    if (this.blockedAhead(slot, player)) desired = 0;
+    if ((this.progress[slot] ?? 0) > 0.94) {
+      const owner = this.intersectionOwner[toNode] ?? 0;
+      if (owner !== 0 && owner !== slot + 1 && this.elapsed - (this.claimTime[toNode] ?? 0) < INTERSECTION_YIELD_SECONDS) desired = 0;
+      else {
+        this.intersectionOwner[toNode] = slot + 1;
+        this.claimTime[toNode] = this.elapsed;
+      }
+    }
+
+    const currentSpeed = this.speed[slot] ?? 0;
+    const nextSpeed = currentSpeed + (desired - currentSpeed) * Math.min(1, dt * 3.5);
+    this.speed[slot] = nextSpeed;
+    if (nextSpeed < 0.2) this.stuckTime[slot] = (this.stuckTime[slot] ?? 0) + dt;
+    else this.stuckTime[slot] = 0;
+    if ((this.stuckTime[slot] ?? 0) > 3) this.handleStuck(slot, toNode, mode);
+    if (this.active[slot] !== 1) return;
+
+    let progress = (this.progress[slot] ?? 0) + (nextSpeed * dt) / info.length;
+    if (progress >= 1) {
+      const nextEdge = this.selectNextEdge(slot, toNode, mode);
+      if (nextEdge < 0) { this.release(slot); return; }
+      this.edge[slot] = nextEdge;
+      this.checkedMid[slot] = 0;
+      progress -= 1;
+    }
+    this.progress[slot] = progress;
+    const current = this.edge[slot] ?? edge;
+    const currentInfo = this.graph.segments[this.graph.edgeSegment(current)];
+    if (!currentInfo) { this.release(slot); return; }
+    const currentForward = (current & 1) === 0;
+    const ax = this.graph.nodeX[currentForward ? currentInfo.from : currentInfo.to] ?? 0;
+    const az = this.graph.nodeZ[currentForward ? currentInfo.from : currentInfo.to] ?? 0;
+    const bx = this.graph.nodeX[currentForward ? currentInfo.to : currentInfo.from] ?? 0;
+    const bz = this.graph.nodeZ[currentForward ? currentInfo.to : currentInfo.from] ?? 0;
+    this.x[slot] = ax + (bx - ax) * progress;
+    this.z[slot] = az + (bz - az) * progress;
+    const height = world.groundHeightAt(this.x[slot] ?? 0, this.z[slot] ?? 0);
+    if (height === undefined) {
+      this.release(slot);
+      return;
+    }
+    // Footprint tests walk all nearby chunks, so sample once per half segment.
+    const mid = progress >= 0.5 ? 1 : 0;
+    if (mid !== (this.checkedMid[slot] ?? 0)) {
+      this.checkedMid[slot] = mid;
+      if (world.collidesWithBuilding(this.x[slot] ?? 0, this.z[slot] ?? 0, 0.5)) {
+        this.release(slot);
+        return;
+      }
+    }
+    this.y[slot] = height;
+    if (nextSpeed > 0.05) this.heading[slot] = Math.atan2(bx - ax, bz - az);
+  }
+
+  private blockedAhead(slot: number, player: THREE.Vector3): boolean {
+    const x = this.x[slot] ?? 0;
+    const z = this.z[slot] ?? 0;
+    const heading = this.heading[slot] ?? 0;
+    const forwardX = Math.sin(heading);
+    const forwardZ = Math.cos(heading);
+    const reach = this.kind[slot] === 0 ? 2.4 : 7;
+    for (let other = 0; other < this.active.length; other += 1) {
+      if (other === slot || this.active[other] !== 1) continue;
+      const dx = (this.x[other] ?? 0) - x;
+      const dz = (this.z[other] ?? 0) - z;
+      if (dx * dx + dz * dz > reach * reach) continue;
+      if (dx * forwardX + dz * forwardZ > 0) return true;
+    }
+    if (this.kind[slot] === 0) {
+      const dx = player.x - x;
+      const dz = player.z - z;
+      if (dx * dx + dz * dz < 9 && dx * forwardX + dz * forwardZ > 0) return true;
+    }
+    return false;
+  }
+
+  private handleStuck(slot: number, node: number, mode: AgentMode): void {
+    this.stuckTime[slot] = 0;
+    this.reroutes[slot] = (this.reroutes[slot] ?? 0) + 1;
+    this.totalReroutes += 1;
+    if ((this.reroutes[slot] ?? 0) > 2) {
+      this.totalDespawns += 1;
+      this.release(slot);
+      return;
+    }
+    this.setRoute(slot, node, mode);
+    const edges = this.graph.outgoingEdges(node, mode);
+    const next = edges[Math.floor(this.random() * edges.length)];
+    if (next !== undefined) this.edge[slot] = next;
+    this.checkedMid[slot] = 0;
+    this.progress[slot] = 0;
+  }
+
+  private setRoute(slot: number, start: number, mode: AgentMode): void {
+    // Long cross-city searches would spike a frame; keep ambient trips local.
+    let destination = -1;
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const candidate = Math.floor(this.random() * this.graph.nodeCount);
+      const dx = (this.graph.nodeX[candidate] ?? 0) - (this.graph.nodeX[start] ?? 0);
+      const dz = (this.graph.nodeZ[candidate] ?? 0) - (this.graph.nodeZ[start] ?? 0);
+      const squared = dx * dx + dz * dz;
+      if (squared > 80 * 80 && squared < 520 * 520) { destination = candidate; break; }
+    }
+    const path = destination >= 0 ? this.graph.route(start, destination, mode) : [];
+    const limit = Math.min(path.length, MAX_ROUTE);
+    for (let i = 0; i < limit; i += 1) this.route[slot * MAX_ROUTE + i] = path[i] ?? -1;
+    this.routeLength[slot] = limit;
+    this.routeIndex[slot] = 1;
+  }
+
+  private selectNextEdge(slot: number, node: number, mode: AgentMode): number {
+    const index = this.routeIndex[slot] ?? 0;
+    const target = index < (this.routeLength[slot] ?? 0) ? this.route[slot * MAX_ROUTE + index] ?? -1 : -1;
+    const edges = this.graph.outgoingEdges(node, mode);
+    for (const edge of edges) {
+      if (this.graph.edgeDestination(edge) === target) {
+        this.routeIndex[slot] = index + 1;
+        return edge;
+      }
+    }
+    if (index >= (this.routeLength[slot] ?? 0)) this.setRoute(slot, node, mode);
+    // Pick a different street when the planned turn is unavailable; avoid a U-turn.
+    let alternatives = 0;
+    for (const edge of edges) if (this.graph.edgeDestination(edge) !== node) alternatives += 1;
+    if (alternatives === 0) return edges[0] ?? -1;
+    let pick = Math.floor(this.random() * alternatives);
+    for (const edge of edges) {
+      if (this.graph.edgeDestination(edge) === node) continue;
+      if (pick === 0) return edge;
+      pick -= 1;
+    }
+    return edges[0] ?? -1;
+  }
+
+  private render(slot: number): void {
+    const mesh = this.kind[slot] === 0 ? this.pedestrianMesh : this.vehicleMesh;
+    const instance = this.kind[slot] === 0 ? slot : slot - this.pedestrianCapacity;
+    const bob = this.kind[slot] === 0 ? Math.sin(this.elapsed * 8 + slot) * Math.min((this.speed[slot] ?? 0) / 8, 0.05) : 0;
+    this.dummy.position.set(this.x[slot] ?? 0, (this.y[slot] ?? 0) + bob, this.z[slot] ?? 0);
+    this.dummy.rotation.set(0, this.heading[slot] ?? 0, 0);
+    this.dummy.scale.setScalar(this.scale[slot] ?? 1);
+    this.dummy.updateMatrix();
+    mesh.setMatrixAt(instance, this.dummy.matrix);
+    const palette = this.kind[slot] === 0 ? this.pedestrianColors : this.vehicleColors;
+    const color = palette[this.colorIndex[slot] ?? 0] ?? palette[0];
+    if (color) mesh.setColorAt(instance, this.temporaryColor.copy(color));
+  }
+
+  private release(slot: number): void {
+    if (this.active[slot] !== 1) return;
+    this.active[slot] = 0;
+    if (this.kind[slot] === 0) {
+      this.activePedestrians -= 1;
+      this.freePedestrians.push(slot);
+    } else {
+      this.activeVehicles -= 1;
+      this.freeVehicles.push(slot);
+    }
+  }
+
+  private random(): number {
+    let state = this.randomState;
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    this.randomState = state >>> 0;
+    return this.randomState / 0x100000000;
+  }
+}

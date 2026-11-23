@@ -232,3 +232,31 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - Los conflictos de datos (16 chunks, manifiesto, informes) se resolvieron con la versión del PR porque el manifiesto guarda SHA-256 por chunk; mezclar chunks de versiones distintas rompería la verificación.
 - `PROGRESS.md` conserva las notas de las fases 7-9 y añade las novedades del PR; se corrigió la codificación mixta UTF-8/CP1252 heredada.
 - Causa raíz corregida para la colisión de cámara con edificios: Rapier no actualiza el query pipeline hasta llamar a `world.step()` o `world.updateSceneQueries()`. El `castRay` devolvía `null` antes de esa llamada (comprobado empíricamente). `TerrainColliders` marca los cambios y `refreshQueries()` reconstruye el pipeline; `main.ts` lo invoca al inicio de cada fotograma y tras crear el vehículo. Nueva prueba que verifica que un rayo no ve el collider hasta refrescar y lo detecta después.
+
+## Fase 10 - tráfico y peatones (en curso)
+
+### Plan
+- Convertir `road-network.json` en un grafo dirigido con índice espacial y A*; separar la red vehicular (sentidos y carriles) de la peatonal (`walkable` en ambos sentidos).
+- Simular peatones y coches con arreglos tipados, *pooling*, aparición detrás de la cámara, LOD por distancia, evitación local, prioridad en intersecciones y detección de atascos.
+- Renderizar ambas poblaciones con dos `InstancedMesh` procedurales, sin assets externos.
+- Validar el grafo y generar `reports/audit-npcs.md` con `npm run audit:npcs`.
+
+### Hecho hasta ahora
+- `src/world/road-graph.ts`: 41.253 nodos y 46.812 segmentos indexados en celdas de 48 m; A* reutiliza su heap y marca los costes por generación para no asignar memoria por búsqueda.
+- `src/world/npc-models.ts`: peatón y coche low-poly procedurales fusionados en una geometría por tipo; dos llamadas de dibujo para toda la población.
+- `src/world/npc-system.ts`: hasta 150 peatones y 60 coches en calidad alta (escalado por `quality.populationDensity`), spawn/despawn fuera del campo visual, evitación, cesión en intersecciones, re-ruteo tras 3 s y retirada tras dos fallos.
+- `main.ts` carga la red viaria de forma diferida (≈30 MB) después del primer fotograma y actualiza los agentes en el bucle de 60 Hz; el panel muestra el número de peatones y coches.
+- `tools/validate-road-graph.mjs` y `reports/audit-npcs.md`: 0 nodos aislados, 0 intersecciones sin conexiones, 11 sumideros y 9 fuentes vehiculares, 300 tramos peatonales sobre huellas (el sistema los descarta al moverse).
+- Pruebas unitarias del grafo (sentido único, grafos separados, ruta A*) y del ciclo de vida del pool; lint, typecheck y build pasan.
+
+### Pendiente
+- Semáforos y señales de stop: el extracto OSM no los incluye en el grafo; hoy se usa prioridad por llegada con tiempo máximo de espera.
+- Animación de extremidades por agente, reacciones al jugador (mirar/huir), voces en español y escenas de vida (sentarse, escaparates).
+- Prueba de resistencia de 10 minutos con 150 peatones y 60 coches y medición de coste de IA (<4 ms/frame).
+- Carga del grafo en Web Worker para reducir el bloqueo de parseo inicial.
+- `npm run fidelity` falla por un problema de entorno previo a esta fase: la caché local `data/raw/osm/cc-monumental.json` sigue siendo el extracto antiguo de 1 km (4.561 elementos), mientras el mundo fusionado cubre 7,6 km (41.527 elementos). Requiere `npm run data:osm:fresh` y reconstruir datos; `verify:data` y `audit:npcs` sí pasan con los datos desplegados.
+
+### Cómo probarlo
+- `npm run audit:npcs` regenera el informe del grafo.
+- Abrir la web desplegada: los agentes aparecen a 45–290 m del jugador, siempre detrás de la cámara; el panel F4 muestra `Agentes`.
+

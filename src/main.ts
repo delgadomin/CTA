@@ -6,6 +6,9 @@ import { Logger } from './engine/logger';
 import { QUALITY_PRESETS } from './engine/quality';
 import { ChunkManager } from './world/chunk-manager';
 import { Character } from './world/character';
+import { NpcSystem } from './world/npc-system';
+import { RoadGraph } from './world/road-graph';
+import type { RoadNetwork } from './world/types';
 import { Vehicle } from './world/vehicle';
 import { createPhysicsWorld } from './world/terrain-physics';
 import type { World } from '@dimforge/rapier3d-compat';
@@ -25,6 +28,7 @@ const collidersLabel = requiredElement<HTMLElement>('#colliders');
 const drawCallsLabel = requiredElement<HTMLElement>('#draw-calls');
 const trianglesLabel = requiredElement<HTMLElement>('#triangles');
 const memoryLabel = requiredElement<HTMLElement>('#memory');
+const agentsLabel = requiredElement<HTMLElement>('#agents');
 const statusLabel = requiredElement<HTMLElement>('#world-status');
 const quality = QUALITY_PRESETS.high;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: quality.antialias, powerPreference: 'high-performance' });
@@ -69,6 +73,7 @@ scene.add(sun);
 
 let world: World | undefined;
 let chunks: ChunkManager | undefined;
+let npcs: NpcSystem | undefined;
 const vehicles: Vehicle[] = [];
 let activeVehicle: Vehicle | null = null;
 let inVehicle = false;
@@ -87,6 +92,8 @@ function updateDebug(timestamp: number): void {
   drawCallsLabel.textContent = String(renderer.info.render.calls);
   trianglesLabel.textContent = renderer.info.render.triangles.toLocaleString('es-ES');
   memoryLabel.textContent = `≈ ${chunks.memoryMiB.toFixed(1)} MiB`;
+  const agents = npcs?.counts;
+  agentsLabel.textContent = agents ? `${agents.pedestrians} peatones · ${agents.vehicles} coches` : 'cargando red viaria…';
   statusLabel.textContent = chunks.loadedCount > 0 ? 'Edificios, calles y terreno MDT05 en streaming' : 'Preparando la ciudad desde datos oficiales…';
   lastStatsUpdate = timestamp;
 }
@@ -154,6 +161,10 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
     const groundHeight = chunks?.groundHeightAt(camera.position.x, camera.position.z);
     if (groundHeight !== undefined) camera.position.y = groundHeight + 1.7;
   }
+  if (npcs && chunks) {
+    const focus = inVehicle && activeVehicle ? activeVehicle.position : character.position;
+    npcs.update(frameSeconds, focus, camera, chunks);
+  }
   chunks?.update(camera, timestamp);
   renderer.render(scene, camera);
   frameCount += 1;
@@ -217,6 +228,7 @@ window.addEventListener('keyup', (event: KeyboardEvent) => {
 window.addEventListener('pagehide', () => {
   loop.stop();
   input.dispose();
+  npcs?.dispose();
   chunks?.close();
   renderer.dispose();
 });
@@ -244,6 +256,30 @@ async function initializeWorld(): Promise<void> {
   chunks.setDebugBorders(showDebug);
   statusLabel.textContent = 'Ciudad lista · WASD camina · clic captura el ratón';
   logger.info('World streaming initialized', { region: 'cc-monumental', stepHz: 60, lods: 3 });
+  void initializeNpcs(worldBaseUrl).catch((error: unknown) => {
+    agentsLabel.textContent = 'sin red viaria';
+    logger.warn('Traffic initialization failed', { error: String(error) });
+  });
+}
+
+async function initializeNpcs(worldBaseUrl: URL): Promise<void> {
+  // Deferred until the visible world is ready: the road graph is ~30 MB and
+  // must not block the first rendered frame.
+  const url = new URL('world/cc-monumental/road-network.json', worldBaseUrl);
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`road-network.json HTTP ${response.status}`);
+  const network = (await response.json()) as RoadNetwork;
+  const graph = new RoadGraph(network);
+  npcs = new NpcSystem(graph, {
+    pedestrians: Math.round(150 * quality.populationDensity),
+    vehicles: Math.round(60 * quality.populationDensity),
+  });
+  scene.add(npcs.group);
+  logger.info('Traffic and pedestrians initialized', {
+    nodes: graph.nodeCount,
+    segments: graph.segments.length,
+    density: quality.populationDensity,
+  });
 }
 
 void initializeWorld().catch((error: unknown) => {
