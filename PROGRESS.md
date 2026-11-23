@@ -214,3 +214,9 @@ ormalize-data.mjs\ y lo exponen como \BuildingSignSlot.name\.
 - Ruedas que giran/steer (ya básico), luces, bocina, partículas, daño visual.
 - Vehículos aparcados a lo largo de calles según OSM.
 - Cámara capó y cinemática.
+
+### Correcciones (buildings collision, salto, pies)
+- Añadido collidesWithBuilding en ChunkManager basado en huellas de edificio; el personaje desliza en lugar de atravesar.
+- Añadido salto (Espacio) y gravedad/ajuste al terreno en Character.
+- Pies ahora son hijos de las piernas para que se animen al caminar.
+- Añadido ootprints a BuiltBuildingChunk.

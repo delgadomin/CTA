@@ -158,6 +158,7 @@ export interface BuiltBuildingChunk {
   readonly roofAnchors: readonly BuildingRoofAnchor[];
   readonly landmarkModels: readonly LandmarkModelInstance[];
   readonly storks: readonly StorkInstance[];
+  readonly footprints: readonly (readonly (readonly [number, number])[])[];
 }
 
 export interface RoadSurfaceGeometry {

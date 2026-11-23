@@ -91,7 +91,7 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
     cameraRig.mode = 'thirdPerson';
     cameraRig.update(frameSeconds, activeVehicle.position);
   } else if (cameraRig.mode === 'thirdPerson') {
-    character.update(frameSeconds, input, chunks, cameraRig.getYaw());
+    character.update(frameSeconds, input, chunks, cameraRig.getYaw(), spacePressed);
     cameraRig.update(frameSeconds, character.position);
   } else {
     cameraRig.update(frameSeconds);

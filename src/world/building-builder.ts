@@ -399,6 +399,9 @@ export function buildBuildingChunk(features: readonly ChunkFeature[], terrain: B
     addWalls(colliderWriter, item, terrain, bounds, false, true);
   }
   const collider = colliderWriter.buildCollider();
-  return { levels, colliderPositions: collider.positions, colliderIndices: collider.indices, signSlots: extras.signs, roofAnchors: extras.anchors, landmarkModels: extras.models, storks: extras.storks };
+  const footprints = features
+    .filter((feature) => feature.featureType === 'building' && Array.isArray(feature.points) && (feature.points?.length ?? 0) >= 3)
+    .map((feature) => feature.points as (readonly [number, number])[]);
+  return { levels, colliderPositions: collider.positions, colliderIndices: collider.indices, signSlots: extras.signs, roofAnchors: extras.anchors, landmarkModels: extras.models, storks: extras.storks, footprints };
 }
 

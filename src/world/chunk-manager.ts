@@ -121,6 +121,29 @@ function createBrandSign(slot: { readonly name: string; readonly position: reado
   return mesh;
 }
 
+function pointInPolygon(x: number, z: number, points: readonly (readonly [number, number])[]): boolean {
+  let inside = false;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i, i += 1) {
+    const xi = points[i]?.[0] ?? 0;
+    const zi = points[i]?.[1] ?? 0;
+    const xj = points[j]?.[0] ?? 0;
+    const zj = points[j]?.[1] ?? 0;
+    const intersect = ((zi > z) !== (zj > z)) && (x < ((xj - xi) * (z - zi)) / (zj - zi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function distancePointToSegment(px: number, pz: number, ax: number, az: number, bx: number, bz: number): number {
+  const dx = bx - ax;
+  const dz = bz - az;
+  const lenSq = dx * dx + dz * dz;
+  const t = lenSq < 1e-12 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / lenSq));
+  const cx = ax + dx * t;
+  const cz = az + dz * t;
+  return Math.hypot(px - cx, pz - cz);
+}
+
 export class ChunkManager {
   readonly events = new EventBus<TerrainChunkEvents>();
   readonly worker: Worker;
@@ -238,6 +261,23 @@ export class ChunkManager {
 
   get failures(): number {
     return this.errorCount;
+  }
+
+  collidesWithBuilding(x: number, z: number, radius = 0.4): boolean {
+    for (const record of this.records.values()) {
+      if (record.state !== 'loaded' || !record.result?.buildings) continue;
+      for (const pts of record.result.buildings.footprints) {
+        if (pts.length < 3) continue;
+        if (pointInPolygon(x, z, pts)) return true;
+        for (let i = 0; i < pts.length; i += 1) {
+          const a = pts[i];
+          const b = pts[(i + 1) % pts.length];
+          if (!a || !b) continue;
+          if (distancePointToSegment(x, z, a[0], a[1], b[0], b[1]) < radius) return true;
+        }
+      }
+    }
+    return false;
   }
 
   groundHeightAt(x: number, z: number): number | undefined {
