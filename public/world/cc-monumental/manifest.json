@@ -20,16 +20,16 @@
       "attribution": "© OpenStreetMap contributors",
       "license": "ODbL 1.0",
       "url": "https://www.openstreetmap.org/copyright",
-      "retrievedAt": "2026-11-22T23:10:26Z",
-      "bytes": 2310657,
-      "sha256": "866fd5351d159b8244ac6f72462ca562a2c2d05b0d2f995cc9ca48a214d33327"
+      "retrievedAt": "2026-11-22T14:45:50Z",
+      "bytes": 2291371,
+      "sha256": "61c1f1f3829d84b89d63171c97244b048843177ff0a3300f8ff139b02612ecfd"
     },
     "terrain": {
       "attribution": "Obra derivada de MDT05-cob1 2008-2015 CC-BY 4.0 scne.es",
       "product": "IGN/CNIG PNOA MDT05 1ª cobertura (Elevacion25830_5), servido por WCS 2.0.1",
       "url": "https://servicios.idee.es/wcs-inspire/mdt?service=WCS&version=2.0.1&request=GetCoverage&coverageId=Elevacion25830_5&subsettingCrs=http%3A%2F%2Fwww.opengis.net%2Fdef%2Fcrs%2FEPSG%2F0%2F25829&outputCrs=http%3A%2F%2Fwww.opengis.net%2Fdef%2Fcrs%2FEPSG%2F0%2F25829&format=application%2Fasc&subset=x%28725577.2276890515%2C726601.2276890515%29&subset=y%284372211.106076299%2C4373235.106076299%29",
       "license": "CC BY 4.0 scne.es",
-      "retrievedAt": "2026-11-22T20:29:49.335Z",
+      "retrievedAt": "2026-11-22T12:44:49.328Z",
       "outputCrs": "EPSG:25829",
       "sha256": "408000206307ec3414ea234b62fe9a6d91fe1a59a5f6e396fac18960e1ad4e86",
       "grid": {
@@ -58,9 +58,9 @@
       "ensanche": 1904,
       "periferia": 460
     },
-    "surfaces": 147,
+    "surfaces": 133,
     "props": 628,
-    "pois": 391
+    "pois": 378
   },
   "roadNetwork": {
     "path": "road-network.json",
@@ -94,8 +94,8 @@
         "maxX": -256,
         "maxZ": -256
       },
-      "bytes": 37784,
-      "sha256": "39fd68dd71a7eaabedb7b299d6cb18c59f04fd643654c52b7620a57aa92b478c",
+      "bytes": 37848,
+      "sha256": "5553e109c1aa59c9b8e9ab7265a0e9321c317b6db38ae91099b72c466bcf01a1",
       "featureCount": 253,
       "missingTerrainSamples": 0
     },
@@ -108,9 +108,9 @@
         "maxX": 0,
         "maxZ": -256
       },
-      "bytes": 41578,
-      "sha256": "2c168370a32a64a9453a222ee0f4112047dbc6e1a1a9196c26186511eaaf077d",
-      "featureCount": 251,
+      "bytes": 40942,
+      "sha256": "6210491dfc5e2733e9d0eea60c066caef91d946e22aadd318c6d8c7b555fbc77",
+      "featureCount": 247,
       "missingTerrainSamples": 0
     },
     {
@@ -122,9 +122,9 @@
         "maxX": 256,
         "maxZ": -256
       },
-      "bytes": 59207,
-      "sha256": "28b6ee01bf21dddea5c6a58e887629920d97473ac0850192a926907f785341bc",
-      "featureCount": 316,
+      "bytes": 58617,
+      "sha256": "beaa9f26e1e4b600f3f4b2b704ee894d20271fdbb84923858f9c2564b03f3766",
+      "featureCount": 312,
       "missingTerrainSamples": 0
     },
     {
@@ -136,8 +136,8 @@
         "maxX": 512,
         "maxZ": -256
       },
-      "bytes": 25898,
-      "sha256": "4295ec33da24b0f7de18e13c41694cc0d28b4e01ddebe6547ccbbe3561eb0813",
+      "bytes": 25884,
+      "sha256": "9e1bd050f6bbb744144adabc24483d0b70675495aca8fdbaee98489265667d10",
       "featureCount": 42,
       "missingTerrainSamples": 0
     },
@@ -150,8 +150,8 @@
         "maxX": -256,
         "maxZ": 0
       },
-      "bytes": 48192,
-      "sha256": "5a0d354e9041e1bcc87702d989cfd81d3ec4d251ce75b0e9161d35ed42a508e0",
+      "bytes": 48271,
+      "sha256": "cfb434a8faad454821ad4f244f20090a290b27da867a6cda62a4aecfdd16b8c5",
       "featureCount": 307,
       "missingTerrainSamples": 0
     },
@@ -164,9 +164,9 @@
         "maxX": 0,
         "maxZ": 0
       },
-      "bytes": 75230,
-      "sha256": "41978328554c3d7fb456b298bfb769dd0504fe65e67fc3823c6741c5b7750c2f",
-      "featureCount": 458,
+      "bytes": 72130,
+      "sha256": "4ac74099b33db55d88cddfb23b603c3b3a37a8b276430ba1fcc3cd4bfbd68ad0",
+      "featureCount": 449,
       "missingTerrainSamples": 0
     },
     {
@@ -178,9 +178,9 @@
         "maxX": 256,
         "maxZ": 0
       },
-      "bytes": 70717,
-      "sha256": "92d22edbdea8f9cf07fb160153cb16e251de0b404c598286715dc33e0c5bfda7",
-      "featureCount": 365,
+      "bytes": 69485,
+      "sha256": "6b3ea63a75516d376e8d4b15a04e1462c7ec25ecdbca3c6a2e63b54de2286010",
+      "featureCount": 359,
       "missingTerrainSamples": 0
     },
     {
@@ -192,8 +192,8 @@
         "maxX": 512,
         "maxZ": 0
       },
-      "bytes": 45191,
-      "sha256": "c718f1307fd74df75341dd12103a8e13a99f871b4f8592df3d63eaabdd407133",
+      "bytes": 45161,
+      "sha256": "7daf84158c228ea6b2957d5e4fe59f74c20060cdea169ec3348616430ab2cfc7",
       "featureCount": 240,
       "missingTerrainSamples": 0
     },
@@ -206,8 +206,8 @@
         "maxX": -256,
         "maxZ": 256
       },
-      "bytes": 62682,
-      "sha256": "eb5afe0ebc52127743bb39aa81b1ff4accc207d481b55a233ba64e2eacee02a4",
+      "bytes": 62632,
+      "sha256": "016f38d7610a3732f2baefc012104e6f043fef7a465577dc22fdd89f5a0aaa96",
       "featureCount": 430,
       "missingTerrainSamples": 0
     },
@@ -220,9 +220,9 @@
         "maxX": 0,
         "maxZ": 256
       },
-      "bytes": 64685,
-      "sha256": "313bb6f54abe6254764dc6bf3f3d7f59094c35214972d6031d839b8ebada7bb7",
-      "featureCount": 411,
+      "bytes": 63076,
+      "sha256": "2252851cd0d39bc3290aaabef6bf48006d622ea33b7c712ee6f6b59652ce0a7f",
+      "featureCount": 406,
       "missingTerrainSamples": 0
     },
     {
@@ -234,9 +234,9 @@
         "maxX": 256,
         "maxZ": 256
       },
-      "bytes": 83170,
-      "sha256": "6e12cc591583c470f134a930e6e82099b26da443cc4e47656cd77adf657a7a62",
-      "featureCount": 495,
+      "bytes": 82206,
+      "sha256": "2d33d3ce12e5567432be8398a4db97c658505de405e41ef098b0ea59cb4f2775",
+      "featureCount": 490,
       "missingTerrainSamples": 0
     },
     {
@@ -248,9 +248,9 @@
         "maxX": 512,
         "maxZ": 256
       },
-      "bytes": 51513,
-      "sha256": "40d38255e8afbd99538b0eb287034ca78cf9dac334cb9f1ff6deac5cedbbe6a2",
-      "featureCount": 283,
+      "bytes": 51287,
+      "sha256": "0a1afdb873a84657d9bed501b0013dfbca3b1a2b5f5cbb01a227f038ef08cc48",
+      "featureCount": 281,
       "missingTerrainSamples": 0
     },
     {
@@ -262,8 +262,8 @@
         "maxX": -256,
         "maxZ": 512
       },
-      "bytes": 57516,
-      "sha256": "32b474574657694fee9225baf9f2127206dfadf3e3bc86d2d25c819f484e959d",
+      "bytes": 57452,
+      "sha256": "268fa569589da2fb8dc973c0fe3f03ff4e9a7db3802389e90d6df4d5d506c85b",
       "featureCount": 413,
       "missingTerrainSamples": 0
     },
@@ -276,8 +276,8 @@
         "maxX": 0,
         "maxZ": 512
       },
-      "bytes": 52403,
-      "sha256": "db238130f59e86ee830a7554ad515389f31ec220feed29d6bb424651d4e010f4",
+      "bytes": 52357,
+      "sha256": "c2aeb42aa3adca0256892c56882723a28f40edd09da4f2f755c573154c612d09",
       "featureCount": 331,
       "missingTerrainSamples": 0
     },
@@ -290,8 +290,8 @@
         "maxX": 256,
         "maxZ": 512
       },
-      "bytes": 56953,
-      "sha256": "d1894258b0a09c169d6ca52129775bff6e32f3b983684c343084300b96a9d327",
+      "bytes": 56866,
+      "sha256": "de8bd0976b164a670b0d55e37337134dc383c14e8b4140f86c905aa147d35dd7",
       "featureCount": 351,
       "missingTerrainSamples": 0
     },
@@ -304,8 +304,8 @@
         "maxX": 512,
         "maxZ": 512
       },
-      "bytes": 46859,
-      "sha256": "c602d809db2817c957b1f35554abf5ff32c340aa7cdf934058782b225a691235",
+      "bytes": 46798,
+      "sha256": "c9aac1b3df0ebfe0b81e90459c99829efe9464658ba57d8a5a0e44b600c87c27",
       "featureCount": 248,
       "missingTerrainSamples": 0
     }

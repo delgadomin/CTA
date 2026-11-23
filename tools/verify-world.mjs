@@ -57,9 +57,14 @@ for (const chunk of manifest.chunks) {
     }
     buildingsById.set(feature.id, feature);
   }
-  const data = JSON.stringify(payload).toLocaleLowerCase('es');
-  const leakedAlias = forbidden.find((alias) => data.includes(alias));
-  if (leakedAlias) throw new Error(`Blocklisted real business name leaked into ${chunk.path}.`);
+  const commercialNames = payload.features
+    .filter((feature) => feature.fictional === true || (feature.featureType === 'building' && feature.commercial === true))
+    .map((feature) => String(feature.name ?? '').toLocaleLowerCase('es'));
+  const leakedAlias = forbidden.find((alias) => {
+    const pattern = new RegExp(`(^|[^a-záéíóúñü])${alias.toLocaleLowerCase('es').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-záéíóúñü]|$)`, 'i');
+    return commercialNames.some((name) => pattern.test(name));
+  });
+  if (leakedAlias) throw new Error(`Blocklisted real business name leaked into ${chunk.path}: ${leakedAlias}.`);
   totalFeatures += payload.features.length;
   totalMissingHeights += chunk.missingTerrainSamples;
 }

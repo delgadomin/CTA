@@ -127,6 +127,7 @@ export interface BuildingLodGeometry {
 export interface BuildingSignSlot {
   readonly buildingId: string;
   readonly category: string;
+  readonly name: string;
   readonly position: readonly [number, number, number];
   readonly heading: number;
   readonly width: number;

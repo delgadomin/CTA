@@ -1,6 +1,12 @@
 {
   "brands": [
     { "aliases": ["Zrrcus"], "gameName": "Tigrus" },
-    { "aliases": ["Mercadona"], "gameName": "MercaRoba" }
+    { "aliases": ["Mercadona", "Dia", "Spar", "Carrefour", "Carrefour Express", "HIPER TAMBO"], "gameName": "MercaRoba" },
+    { "aliases": ["Telepizza", "WyCo Restaurants", "100 Montaditos"], "gameName": "Mesón de la Estrella" },
+    { "aliases": ["Granier"], "gameName": "Panadería del Arco" },
+    { "aliases": ["Vodafone"], "gameName": "Telefonía del Casco" },
+    { "aliases": ["Unicaja Banco", "Unicaja", "Banco Santander", "Santander", "BBVA", "Abanca", "Caja Rural", "Cajalmendralejo"], "gameName": "Banco de la Ciudad" },
+    { "aliases": ["Correos"], "gameName": "Mensajería del Arco" },
+    { "aliases": ["Gran Hotel Don Manuel", "Exe Hotels", "Petit Palace Hotelity", "Petit Palace", "NH", "Hilton", "Curio Collection", "Relais & Chateaux"], "gameName": "Posada del Arco" }
   ]
 }

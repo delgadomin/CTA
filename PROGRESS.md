@@ -104,7 +104,9 @@ Los datos fuente se guardan en cach√© local ignorada por git; el juego usa los c
 - `node tools/verify-streaming.mjs` hace el barrido de cinco minutos; falla si no visita las 16 teselas, rebasa 300 llamadas/600.000 tri√°ngulos, supera 16 ms durante streaming o no carga la ruta del inspector.
 - Alcance excluido de la fase 4: veh√≠culos y tr√°fico de IA.
 
-## Fase actual: 6 - Hitos y fidelidad (en curso)
+## Fase actual: 7 - Marcas ficticias (en curso)
+
+## Fase 6 - Hitos y fidelidad (en curso)
 
 ## Fase 5 - Edificios (completada)
 
@@ -158,3 +160,23 @@ Los datos fuente se guardan en cach√© local ignorada por git; el juego usa los c
 - Modelos low-poly espec√≠ficos completados: soportales de Plaza Mayor, campanario de la Concatedral (w385037723), escalinata de San Francisco Javier hacia Plaza de San Jorge y torre sint√©tica de Torre de las Cig√ºe√±as (fuente puntual n13723182454, huella 7,5 m documentada como fallback). Valores dimensionales pendientes de revisi√≥n fotogr√°fica.
 - Ampliar la fuente geogr√°fica para los seis hitos fuera de la regi√≥n actual.
 - Ejecutar lint, typecheck, pruebas, build y revisi√≥n visual; ning√∫n hito puede pasar a aprobado sin comparaci√≥n humana con fotograf√≠as. Este entorno no tiene npm/node_modules; la instalaci√≥n con pnpm fue bloqueada al crear el enlace de dependencias.
+
+## Fase 7 - Marcas ficticias (en curso)
+
+### Plan
+- Sustituir nombres comerciales reales por identidades ficticias originales; ampliar 	ools/brand-blocklist.json con las cadenas reales presentes en el extracto OSM.
+- Renderizar rÛtulos (sign slots) sobre fachadas comerciales con el nombre ficticio.
+- Verificar que ning˙n nombre de marca real aparezca en los chunks (verify-world).
+- Actualizar eports/brands.md y documentar en DECISIONS.md.
+
+### Hecho hasta ahora
+- Ampliado rand-blocklist.json con 8 cadenas reales (supermercados, bancos, hoteles, restaurantes, farmacias vÌa genÈricos) mapeadas a marcas ficticias; 26 POIs ahora quedan como \mapped\.
+- Los edificios comerciales reciben un nombre ficticio en \
+ormalize-data.mjs\ y lo exponen como \BuildingSignSlot.name\.
+- AÒadido renderizado de rÛtulos en \chunk-manager.ts\ (\createBrandSign\) con textura canvas; se crean al cargar el chunk y se liberan al descargarlo.
+- \erify-world.mjs\ ahora comprueba solo nombres comerciales (fictional/commercial) con lÌmites de palabra, evitando falsos positivos por calles.
+- lint, typecheck, 34 pruebas, build y verify-world pasan.
+
+### Pendiente
+- Revisar visualmente los rÛtulos en navegador y ajustar tamaÒo/contraste.
+- AÒadir m·s cadenas reales si aparecen en futuras regiones.

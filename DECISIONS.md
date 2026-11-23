@@ -15,6 +15,13 @@
 - La escalinata de San Francisco Javier se modela con 12 gradas de 0,18 m desde el edificio hacia Plaza de San Jorge.
 - Torre de las Cigüeñas (n13723182454) es un punto OSM sin huella: se usa una torre sintética de 7,5 m y 24 m documentada como fallback visual. Se añade ancla de cigüeña sobre ella.
 
+# Fase 7 - marcas ficticias (actualización)
+
+- `tools/brand-blocklist.json` ampliado con cadenas reales presentes en el extracto (supermercados, bancos, hoteles, restaurantes, telefonía, mensajería, panadería) mapeadas a marcas ficticias existentes.
+- Los edificios comerciales reciben nombre ficticio en `normalize-data.mjs` y lo exponen en `BuildingSignSlot.name`.
+- Rótulos renderizados con CanvasTexture en `chunk-manager.ts` (\`createBrandSign\`), liberados al descargar el chunk.
+- `verify-world.mjs` limita la comprobación de marcas a nombres comerciales (fictional/commercial) con límites de palabra.
+
 # Fase 2 - datos geográficos
 
 - La región inicial es un rectángulo proyectado de 1 km centrado en Plaza Mayor; EPSG:25829 permite medir chunks y huellas en metros.

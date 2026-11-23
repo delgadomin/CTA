@@ -1,7 +1,7 @@
 # Informe de fidelidad - Ciudad Monumental
 
 Región: cc-monumental; CRS: EPSG:25829; rectángulo: 1000 x 1000 m.
-Fuente OSM: fecha base 2026-11-22T23:10:26Z.
+Fuente OSM: fecha base 2026-11-22T14:45:50Z.
 Origen UTM fijado en Plaza Mayor: E 726089.228 m, N 4372723.106 m.
 
 | Medida | Resultado |
@@ -20,15 +20,15 @@ Origen UTM fijado en Plaza Mayor: E 726089.228 m, N 4372723.106 m.
 | Huellas incluidas en chunks del mundo | 2811 |
 | Plantas OSM explícitas | 13 |
 | Sustituciones GLB de hitos seguras | 0 |
-| Superficies y agua | 147 |
+| Superficies y agua | 133 |
 | Árboles y mobiliario | 628 |
-| Puntos de interés | 391 |
-| Hitos de referencia presentes / objetivo regional | 13 / 13 |
+| Puntos de interés | 378 |
+| Hitos de referencia presentes / objetivo regional | 12 / 13 |
 | Hitos pendientes de aprobación humana | 13 |
 | Geometrías en superposición OSM | 675 vías · 2811 huellas |
 | Edificios sin altura/planta OSM | 2834 |
 | Muestras MDT05 ausentes | 0 |
-| Comercios pendientes de revisión de marca | 158 |
+| Comercios pendientes de revisión de marca | 132 |
 
 Los atributos de altura y plantas ausentes permanecen nulos en los datos fuente. La altura visual usa height=* → building:levels × 3 m → planta visual por zona/tipo; las fachadas conservan el número fuente y el valor inferido por separado.
 El inspector 2D ofrece una superposición cian/magenta de la geometría OSM original frente a los chunks procesados. La herramienta `npm run fidelity` compara cada vértice de las vías y huellas fuente que intersectan el mundo con una tolerancia máxima de 1 m.
@@ -52,7 +52,7 @@ La comparación usa coincidencia exacta de nombre tras normalizar mayúsculas, e
 | Concatedral de Santa María | presente | huella de edificio, punto | [w385037723](https://www.openstreetmap.org/way/385037723) |
 | Plaza de San Jorge | presente | vía | [w35883265](https://www.openstreetmap.org/way/35883265) |
 | Iglesia de San Francisco Javier | presente | huella de edificio, punto | [w385037722](https://www.openstreetmap.org/way/385037722) |
-| Palacio de los Golfines de Abajo | presente | centro de relación | [r5728957](https://www.openstreetmap.org/relation/5728957) |
+| Palacio de los Golfines de Abajo | no encontrado en el extracto | — | — |
 | Casa de las Veletas | presente | huella de edificio | [w382363931](https://www.openstreetmap.org/way/382363931) |
 | Torre de las Cigüeñas | presente | punto | [n13723182454](https://www.openstreetmap.org/node/13723182454) |
 | Palacio de Carvajal | presente | huella de edificio, punto | [w467504813](https://www.openstreetmap.org/way/467504813) |

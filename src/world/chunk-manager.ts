@@ -24,6 +24,7 @@ interface ChunkRecord {
   decorationMeshes?: THREE.Mesh[];
   landmarkObjects?: THREE.Object3D[];
   storks?: THREE.Group[];
+  signs?: THREE.Mesh[];
   debugBorder?: THREE.LineSegments;
   memoryBytes: number;
   debugMemoryBytes: number;
@@ -88,6 +89,36 @@ function objectByteSize(object: THREE.Object3D): number {
     if (geometry.index) bytes += geometry.index.array.byteLength;
   });
   return bytes;
+}
+
+function createBrandSign(slot: { readonly name: string; readonly position: readonly [number, number, number]; readonly heading: number; readonly width: number }): THREE.Mesh {
+  const name = slot.name || 'Tienda';
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 64;
+  const context = canvas.getContext('2d');
+  if (context) {
+    context.fillStyle = '#2a2520';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = '#f2e6c9';
+    context.font = 'bold 26px sans-serif';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(name, canvas.width / 2, canvas.height / 2);
+    context.strokeStyle = '#f2e6c9';
+    context.lineWidth = 2;
+    context.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
+  const geometry = new THREE.PlaneGeometry(Math.max(1.2, slot.width), 0.6);
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.set(slot.position[0], slot.position[1], slot.position[2]);
+  mesh.rotation.y = slot.heading;
+  mesh.castShadow = false;
+  mesh.receiveShadow = false;
+  return mesh;
 }
 
 export class ChunkManager {
@@ -300,6 +331,11 @@ export class ChunkManager {
         this.scene.add(stork);
         return stork;
       });
+      record.signs = (item.result.buildings?.signSlots ?? []).map((slot) => {
+        const mesh = createBrandSign(slot);
+        this.scene.add(mesh);
+        return mesh;
+      });
       const roadBuffers = item.result.roads;
       const roadDataBytes = roadBuffers
         ? roadBuffers.colliderPositions.byteLength + roadBuffers.colliderIndices.byteLength + roadBuffers.props.reduce((sum, prop) => sum + prop.positions.byteLength + prop.headings.byteLength, 0)
@@ -446,6 +482,7 @@ export class ChunkManager {
     }
     if (record.landmarkObjects) for (const object of record.landmarkObjects) this.scene.remove(object);
     if (record.storks) for (const stork of record.storks) this.scene.remove(stork);
+    if (record.signs) for (const sign of record.signs) { this.scene.remove(sign); (sign.material as THREE.Material).dispose(); sign.geometry.dispose(); (sign.material as { map?: THREE.Texture }).map?.dispose(); }
     if (emit && record.state === 'loaded') this.events.emit('chunkUnloaded', { id: record.entry.id });
   }
 }

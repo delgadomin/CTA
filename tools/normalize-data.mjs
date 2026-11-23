@@ -171,10 +171,15 @@ export function normalizeOsm(osm, regionDefinition, brandBlocklist, elevation, l
         const floors = Number.parseFloat(tags['building:levels'] ?? '') || null;
         const heightMeters = Number.parseFloat(String(tags.height ?? '').replace(',', '.')) || null;
         const visualFloors = visualBuildingFloors(tags, zone);
+        const commercial = isCommercial(tags);
+        const poiCategory = classifyPoi(tags);
+        const mappedBrand = commercial ? blocklistedName(tags, brandBlocklist) : undefined;
+        const commercialName = commercial ? (mappedBrand?.gameName ?? fakeBusinessName(poiCategory ?? { key: 'business', value: tags.building }, element.id)) : '';
         buildings.push({
           id: `w${element.id}`,
           featureType: 'building',
-          ...(!isCommercial(tags) && tags.name ? { name: tags.name } : {}),
+          ...(commercial && commercialName ? { name: commercialName } : {}),
+          ...(!commercial && tags.name ? { name: tags.name } : {}),
           floors,
           heightMeters,
           visualFloors,
@@ -187,8 +192,8 @@ export function normalizeOsm(osm, regionDefinition, brandBlocklist, elevation, l
           buildingType: tags.building,
           historic: tags.historic ?? '',
           zone,
-          commercial: Boolean(isCommercial(tags)),
-          commercialCategory: isCommercial(tags) ? `${classifyPoi(tags)?.key ?? 'business'}:${classifyPoi(tags)?.value ?? tags.building}` : '',
+          commercial,
+          commercialCategory: commercial ? `${poiCategory?.key ?? 'business'}:${poiCategory?.value ?? tags.building}` : '',
           landmarkModelPath: landmarkModelIds.has(`w${element.id}`) ? `landmarks/w${element.id}.glb` : '',
           points,
           bounds,

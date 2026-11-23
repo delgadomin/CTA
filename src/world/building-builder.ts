@@ -302,6 +302,7 @@ function signSlot(item: Footprint, terrain: BuiltTerrainChunk, roads: readonly C
   return {
     buildingId: item.feature.id ?? '',
     category: item.feature.commercialCategory ?? 'business:shop',
+    name: item.feature.name ?? item.feature.commercialCategory ?? 'Tienda',
     position: [midpoint[0], localHeight(terrain, midpoint) + item.wallHeight * 0.55, midpoint[1]],
     heading: Math.atan2(normalX, normalZ),
     width: Math.min(bestLength * 0.7, 3.5),
