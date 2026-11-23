@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
 import type { World } from '@dimforge/rapier3d-compat';
+import { createSedanBodyGeometry, createWheelArchGeometry } from './npc-models';
 
 
 const CAR_COLOR = 0xc94a3a;
@@ -62,12 +63,9 @@ export class Vehicle {
     }
 
     // Visual mesh.
-    const bodyGeo = new THREE.CapsuleGeometry(0.78, 2.15, 4, 10);
-    bodyGeo.rotateX(Math.PI / 2);
-    bodyGeo.scale(1, 0.5, 1);
+    const bodyGeo = createSedanBodyGeometry();
     const bodyMat = new THREE.MeshStandardMaterial({ color: CAR_COLOR, roughness: 0.4, metalness: 0.3 });
     const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
-    bodyMesh.position.y = 0.32;
     bodyMesh.castShadow = true;
     this.group.add(bodyMesh);
 
@@ -101,14 +99,21 @@ export class Vehicle {
       addPane([[side * 0.731, 0.58, 0.72], [side * 0.731, 0.58, 0.04], [side * 0.535, 1.08, 0.04], [side * 0.535, 1.08, 0.42]]);
       addPane([[side * 0.731, 0.58, -0.04], [side * 0.731, 0.58, -0.68], [side * 0.535, 1.08, -0.48], [side * 0.535, 1.08, -0.04]]);
     }
-    addDetail(new THREE.BoxGeometry(1.9, 0.14, 0.16), trimMat, 0, 0.2, 2.02);
-    addDetail(new THREE.BoxGeometry(1.9, 0.14, 0.16), trimMat, 0, 0.2, -2.02);
-    addDetail(new THREE.BoxGeometry(0.62, 0.17, 0.045), trimMat, 0, 0.35, 2.02);
-    for (const x of [-0.2, 0, 0.2]) addDetail(new THREE.BoxGeometry(0.025, 0.14, 0.05), trimMat, x, 0.35, 2.05);
+    addDetail(new THREE.CapsuleGeometry(0.07, 1.74, 2, 8), trimMat, 0, 0.14, 2.02);
+    addDetail(new THREE.CapsuleGeometry(0.07, 1.74, 2, 8), trimMat, 0, 0.14, -2.02);
+    addDetail(new THREE.BoxGeometry(0.58, 0.13, 0.045), trimMat, 0, 0.3, 2.04);
+    for (const x of [-0.2, -0.1, 0, 0.1, 0.2]) addDetail(new THREE.BoxGeometry(0.018, 0.11, 0.05), trimMat, x, 0.3, 2.065);
     for (const side of [-1, 1]) {
       addDetail(new THREE.BoxGeometry(0.32, 0.2, 0.1), lightMat, side * 0.62, 0.4, 1.91);
       addDetail(new THREE.BoxGeometry(0.28, 0.17, 0.1), rearLightMat, side * 0.66, 0.42, -1.91);
       addDetail(new THREE.BoxGeometry(0.16, 0.12, 0.22), trimMat, side * 0.82, 0.83, 0.48);
+      for (const z of [-1.32, 1.32]) {
+        const arch = new THREE.Mesh(createWheelArchGeometry(side, z, 0), bodyMat);
+        arch.castShadow = true;
+        this.group.add(arch);
+      }
+      addDetail(new THREE.CapsuleGeometry(0.014, 0.34, 2, 6), trimMat, side * 0.86, 0.4, 0.12);
+      addDetail(new THREE.CapsuleGeometry(0.02, 0.08, 2, 6), trimMat, side * 0.86, 0.6, 0.38);
     }
 
     const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 12);
