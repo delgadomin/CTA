@@ -173,8 +173,7 @@ function debugSnapshot(): DebugSnapshot {
     triangles: renderer.info.render.triangles,
     worldMemoryMiB: chunks?.memoryMiB ?? 0,
     heapMemoryMiB: browserMemory ? browserMemory.usedJSHeapSize / (1024 * 1024) : null,
-    // The current build has no pedestrian simulation or agent LOD scheduler.
-    agentsByLod: [0, 0, 0],
+    agentsByLod: npcs?.lodCounts ?? [0, 0, 0],
     fps: Number(fpsLabel.textContent ?? 0),
     peakFrameMs: maximumFrameMs,
     systemTimesMs: {
@@ -241,7 +240,7 @@ function updateDebug(timestamp: number): void {
   memoryLabel.textContent = `≈ ${chunks.memoryMiB.toFixed(1)} MiB`;
   const browserMemory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
   heapMemoryLabel.textContent = browserMemory ? `≈ ${(browserMemory.usedJSHeapSize / (1024 * 1024)).toFixed(1)} MiB` : 'n/d';
-  agentsLodLabel.textContent = '0 / 0 / 0';
+  agentsLodLabel.textContent = (npcs?.lodCounts ?? [0, 0, 0]).join(' / ');
   systemTimesLabel.textContent = `física ${physicsQueryMs.toFixed(2)} · jugador ${actorUpdateMs.toFixed(2)} · streaming ${streamingUpdateMs.toFixed(2)} · render ${renderUpdateMs.toFixed(2)} ms`;
   statusLabel.textContent = chunks.loadedCount > 0 ? 'Edificios, calles y terreno MDT05 en streaming' : 'Preparando la ciudad desde datos oficiales…';
   if (noticeUntil > 0 && timestamp >= noticeUntil) {

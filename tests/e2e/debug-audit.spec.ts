@@ -76,7 +76,7 @@ function markdownSummary(): string {
     '## Capturas', '', shots, '',
     '## Criterios', '',
     '- Fallo si aparece un error de página/consola, el personaje queda más de 0,5 m por debajo del terreno o se superan frames de más de 50 ms durante 2 s seguidos.',
-    '- Heap del navegador y población por LOD pueden no estar disponibles/no implementados; se muestran como `n/d` y `0 / 0 / 0`, respectivamente.', '',
+    '- El heap puede no estar disponible en todos los navegadores y se muestra como `n/d`; la población LOD cuenta agentes ambientales cercanos, medios y lejanos.', '',
   ].join('\n');
 }
 

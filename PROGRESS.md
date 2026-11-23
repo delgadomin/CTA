@@ -250,7 +250,7 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 ### Hecho hasta ahora
 - `src/world/road-graph.ts`: 41.253 nodos y 46.812 segmentos indexados en celdas de 48 m; A* reutiliza su heap y marca los costes por generación para no asignar memoria por búsqueda.
 - `src/world/npc-models.ts`: peatón y coche low-poly procedurales fusionados en una geometría por tipo; dos llamadas de dibujo para toda la población.
-- `src/world/npc-system.ts`: hasta 150 peatones y 60 coches en calidad alta (escalado por `quality.populationDensity`), spawn/despawn fuera del campo visual, evitación, cesión en intersecciones, re-ruteo tras 3 s y retirada tras dos fallos.
+- `src/world/npc-system.ts`: hasta 150 peatones y 60 coches en calidad alta (escalado por `quality.populationDensity`), spawn/despawn fuera del campo visual, evitación, cesión en intersecciones, re-ruteo tras 3 s y retirada tras dos fallos. La simulación usa tres niveles por distancia (1, 2 o 4 actualizaciones por fotograma) y conserva el tiempo acumulado para mantener la velocidad; la auditoría informa las poblaciones reales de cada nivel.
 - `main.ts` carga la red viaria de forma diferida (≈30 MB) después del primer fotograma y actualiza los agentes en el bucle de 60 Hz; el panel muestra el número de peatones y coches.
 - `tools/validate-road-graph.mjs` y `reports/audit-npcs.md`: 0 nodos aislados, 0 intersecciones sin conexiones, 11 sumideros y 9 fuentes vehiculares, 300 tramos peatonales sobre huellas (el sistema los descarta al moverse).
 - Pruebas unitarias del grafo (sentido único, grafos separados, ruta A*) y del ciclo de vida del pool; lint, typecheck y build pasan.

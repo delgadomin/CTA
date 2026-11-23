@@ -17,4 +17,7 @@ Alcance: bloque 0 de `Caceres_Criminal_Prompts_de_Mejora.pdf`.
 
 1. Hecho: separar `?debug=1`, panel F3 y F4-F9; añadir timings y overlays usando geometría existente. F6 muestra calzadas porque no hay un grafo peatonal que se pueda presentar con fidelidad.
 2. Hecho: preparado el tour Playwright para diez paradas con fuentes identificadas, capturas ignoradas por Git y resumen por parada.
-3. Bloqueado: lint, typecheck, tests y build se intentaron; pnpm se detiene antes de cada script al no poder crear el enlace simbólico del proyecto en Windows (`EPERM`). No hay mediciones runtime hasta que esas dependencias estén accesibles.
+3. Hecho en esta revisión: la auditoría ya informa agentes reales por nivel de simulación. Los cercanos se actualizan cada fotograma, los medios cada dos y los lejanos cada cuatro; los tiempos transcurridos se acumulan para conservar su velocidad.
+4. Pendiente: lint, typecheck, tests, build y recorrido runtime. La instalación local de pnpm se detuvo antes de ejecutar scripts al no poder crear un enlace simbólico del proyecto en Windows (`EPERM`); GitHub tampoco tenía checks mientras la PR estaba cerrada.
+
+El LOD descrito aquí reduce la frecuencia de simulación, no cambia la geometría dibujada de los agentes. El HUD cuenta peatones y tráfico ambiental; las patrullas policiales no se incluyen en esa métrica.
