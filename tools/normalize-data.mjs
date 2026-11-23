@@ -310,6 +310,29 @@ function sampleHeightGrid(elevation, bounds, region) {
       }
     }
   }
+  // Light 3x3 smoothing to reduce MDT05 noise for playability (documented in DECISIONS.md).
+  const smoothed = Array.from(heights);
+  for (let row = 0; row < samples; row += 1) {
+    for (let column = 0; column < samples; column += 1) {
+      const index = row * samples + column;
+      if (heights[index] === NODATA) continue;
+      let sum = 0;
+      let weight = 0;
+      for (let dr = -1; dr <= 1; dr += 1) {
+        for (let dc = -1; dc <= 1; dc += 1) {
+          const r = Math.max(0, Math.min(samples - 1, row + dr));
+          const c = Math.max(0, Math.min(samples - 1, column + dc));
+          const i = r * samples + c;
+          if (heights[i] === NODATA) continue;
+          const w = dr === 0 && dc === 0 ? 4 : (Math.abs(dr) + Math.abs(dc) === 1 ? 2 : 1);
+          sum += heights[i] * w;
+          weight += w;
+        }
+      }
+      if (weight > 0) smoothed[index] = Math.round(heights[index] * 0.5 + (sum / weight) * 0.5);
+    }
+  }
+  for (let i = 0; i < heights.length; i += 1) if (heights[i] !== NODATA) heights[i] = smoothed[i];
   return { heights: Array.from(heights), missingTerrainSamples };
 }
 

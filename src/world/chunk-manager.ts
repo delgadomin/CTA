@@ -282,12 +282,16 @@ export class ChunkManager {
   }
 
   cameraOcclusion(origin: THREE.Vector3, dir: THREE.Vector3, maxDist: number): number {
-    const ray = new RAPIER.Ray(
-      { x: origin.x, y: origin.y, z: origin.z },
-      { x: dir.x, y: dir.y, z: dir.z },
-    );
-    const hit = this.world.castRay(ray, maxDist, true);
-    return hit ? hit.toi : maxDist;
+    let best = maxDist;
+    for (const yOffset of [0, 1.2, 2.4]) {
+      const ray = new RAPIER.Ray(
+        { x: origin.x, y: origin.y + yOffset, z: origin.z },
+        { x: dir.x, y: dir.y, z: dir.z },
+      );
+      const hit = this.world.castRay(ray, maxDist, true);
+      if (hit && hit.toi < best) best = hit.toi;
+    }
+    return best;
   }
 
   groundHeightAt(x: number, z: number): number | undefined {
