@@ -112,7 +112,15 @@ export function createSedanBodyGeometry(): THREE.BufferGeometry {
     [0, section.top], [-section.width * 0.82, section.top - 0.08],
     [-section.width, section.shoulder],
   ];
-  const positions = sections.flatMap((section) => ring(section).flatMap(([x, y]) => [x, y, section.z]));
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  sections.forEach((section, row) => {
+    ring(section).forEach(([x, y], point) => {
+      positions.push(x, y, section.z);
+      // Primitives merged into the car carry uv; keep the attribute set identical.
+      uvs.push(point / 6, row / (sections.length - 1));
+    });
+  });
   const indices: number[] = [];
   const pointsPerRing = 7;
   for (let row = 0; row < sections.length - 1; row += 1) {
@@ -129,6 +137,7 @@ export function createSedanBodyGeometry(): THREE.BufferGeometry {
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   return geometry;
@@ -137,6 +146,7 @@ export function createSedanBodyGeometry(): THREE.BufferGeometry {
 export function createWheelArchGeometry(side: number, centerZ: number, centerY = 0.36): THREE.BufferGeometry {
   const positions: number[] = [];
   const indices: number[] = [];
+  const uvs: number[] = [];
   const segments = 10;
   const inner = 0.37;
   const outer = 0.48;
@@ -144,8 +154,10 @@ export function createWheelArchGeometry(side: number, centerZ: number, centerY =
     const angle = (segment / segments) * Math.PI;
     const zOffset = Math.cos(angle);
     const yOffset = Math.sin(angle);
+    const u = segment / segments;
     positions.push(side * 0.885, centerY + yOffset * inner, centerZ + zOffset * inner);
     positions.push(side * 0.885, centerY + yOffset * outer, centerZ + zOffset * outer);
+    uvs.push(u, 0, u, 1);
   }
   for (let segment = 0; segment < segments; segment += 1) {
     const a = segment * 2;
@@ -153,6 +165,7 @@ export function createWheelArchGeometry(side: number, centerZ: number, centerY =
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   return geometry;

@@ -16,6 +16,15 @@ function seeded(seed: number): number {
   return ((value ^ (value >>> 16)) >>> 0) / 0x1_0000_0000;
 }
 
+/** Flecks need a sequence; seeded() alone only returns one deterministic value. */
+function seededSequence(seed: number): () => number {
+  let step = 0;
+  return () => {
+    step += 1;
+    return seeded(seed + step * 7919);
+  };
+}
+
 function drawArchedWindow(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, style: FacadeStyle): void {
   const stone = style === 'casco' ? '#9f8a6e' : '#77766e';
   context.fillStyle = '#766858';
@@ -85,16 +94,18 @@ function drawFacade(style: FacadeStyle, emissive: boolean): HTMLCanvasElement {
     for (let column = 0; column < columns; column += 1) {
       const x = column * tile;
       const y = row * tile;
-      const random = seeded(row * 31 + column * 137 + style.length * 17);
+      const tileSeed = row * 31 + column * 137 + style.length * 17;
+      const random = seeded(tileSeed);
+      const nextFleck = seededSequence(tileSeed + 1);
       const upper = row === 1 || row === 2;
       const palette = PALETTES[style];
       context.fillStyle = palette[column % palette.length] ?? '#c9b99f';
       context.fillRect(x, y, tile, tile);
       for (let fleck = 0; fleck < 26; fleck += 1) {
-        const shade = random() > 0.52 ? 'rgb(255 250 235 / 16%)' : 'rgb(86 68 51 / 9%)';
+        const shade = nextFleck() > 0.52 ? 'rgb(255 250 235 / 16%)' : 'rgb(86 68 51 / 9%)';
         context.fillStyle = shade;
-        const size = 1 + random() * 3;
-        context.fillRect(x + random() * tile, y + random() * tile, size, size);
+        const size = 1 + nextFleck() * 3;
+        context.fillRect(x + nextFleck() * tile, y + nextFleck() * tile, size, size);
       }
       context.fillStyle = style === 'casco' ? '#b19d7e' : '#8f8d84';
       context.fillRect(x, y + tile - 10, tile, 10);
