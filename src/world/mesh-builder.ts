@@ -62,7 +62,9 @@ function buildLod(chunk: RawTerrainChunk, heights: Float32Array, surfaces: reado
       const normalLength = Math.hypot(dx, dz, 1);
       positions.set([x - (chunk.bounds.minX + chunk.bounds.maxX) / 2, height, z - (chunk.bounds.minZ + chunk.bounds.maxZ) / 2], vertex * 3);
       normals.set([dx === 0 ? 0 : -dx / normalLength, 1 / normalLength, dz === 0 ? 0 : -dz / normalLength], vertex * 3);
-      colors.set(GROUND_COLORS[materialAt(x, z, surfaces)], vertex * 3);
+      const baseColor = GROUND_COLORS[materialAt(x, z, surfaces)];
+      const variation = ((Math.sin(x * 0.37 + z * 0.71) + Math.cos(x * 0.13 - z * 0.41)) * 0.5 + 0.5) * 0.02 - 0.01;
+      colors.set([Math.min(1, Math.max(0, baseColor[0] + variation)), Math.min(1, Math.max(0, baseColor[1] + variation * 0.7)), Math.min(1, Math.max(0, baseColor[2] + variation * 0.4))], vertex * 3);
     }
   }
 

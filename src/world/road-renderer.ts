@@ -45,7 +45,7 @@ function propGeometry(kind: BuiltRoadChunk['props'][number]['kind']): THREE.Buff
 
 export class RoadRenderer {
   private readonly roadMaterials = createRoadMaterials();
-  private readonly propMaterials = new Map(['traffic_signals', 'stop', 'give_way', 'street_lamp'].map((kind) => [kind, createRoadPropMaterial(kind)]));
+  private readonly propMaterials = new Map(['traffic_signals', 'stop', 'give_way', 'street_lamp', 'tree'].map((kind) => [kind, createRoadPropMaterial(kind)]));
   private readonly materials = new Map([...this.roadMaterials, ...this.propMaterials]);
 
   createMeshes(roads: BuiltRoadChunk | undefined, centerX: number, centerZ: number): THREE.Mesh[] {
@@ -68,6 +68,39 @@ export class RoadRenderer {
     const scale = new THREE.Vector3(1, 1, 1);
     for (const batch of roads.props) {
       if (batch.positions.length < 3) continue;
+      if (batch.kind === 'tree') {
+        const count = batch.positions.length / 3;
+        // Trunk.
+        const trunkGeo = new THREE.CylinderGeometry(0.08, 0.12, 1.6, 6);
+        trunkGeo.translate(0, 0.8, 0);
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5a3a22, roughness: 0.9 });
+        const trunkMesh = new THREE.InstancedMesh(trunkGeo, trunkMat, count);
+        // Foliage.
+        const foliageGeo = new THREE.ConeGeometry(1.1, 2.2, 8);
+        foliageGeo.translate(0, 2.7, 0);
+        const foliageMat = new THREE.MeshStandardMaterial({ color: 0x3f6b3a, roughness: 0.8 });
+        const foliageMesh = new THREE.InstancedMesh(foliageGeo, foliageMat, count);
+        for (let index = 0; index < count; index += 1) {
+          const offset = index * 3;
+          const x = batch.positions[offset] ?? 0;
+          const y = batch.positions[offset + 1] ?? 0;
+          const z = batch.positions[offset + 2] ?? 0;
+          const s = 0.8 + ((index * 37) % 5) * 0.12;
+          scale.set(s, s, s);
+          rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), batch.headings[index] ?? 0);
+          matrix.compose(new THREE.Vector3(x, y, z), rotation, scale);
+          trunkMesh.setMatrixAt(index, matrix);
+          foliageMesh.setMatrixAt(index, matrix);
+        }
+        trunkMesh.computeBoundingSphere();
+        foliageMesh.computeBoundingSphere();
+        trunkMesh.position.set(centerX, 0, centerZ);
+        foliageMesh.position.set(centerX, 0, centerZ);
+        trunkMesh.castShadow = true;
+        foliageMesh.castShadow = true;
+        meshes.push(trunkMesh, foliageMesh);
+        continue;
+      }
       const mesh = new THREE.InstancedMesh(propGeometry(batch.kind), this.materials.get(batch.kind), batch.positions.length / 3);
       for (let index = 0; index < batch.positions.length / 3; index += 1) {
         const offset = index * 3;

@@ -78,11 +78,20 @@ function stableHash(value: string): number {
 function colorTint(feature: ChunkFeature): BuildingColor {
   const fallback = WALL_TINT[feature.zone ?? 'ensanche'];
   const hex = /^#?([\da-f]{6})$/i.exec(feature.facadeColour ?? '')?.[1];
-  if (!hex) return fallback;
+  if (hex) {
+    return [
+      Number.parseInt(hex.slice(0, 2), 16) / 255,
+      Number.parseInt(hex.slice(2, 4), 16) / 255,
+      Number.parseInt(hex.slice(4, 6), 16) / 255,
+    ];
+  }
+  // Add subtle, stable variation per building so adjacent facades differ.
+  const seed = stableHash(feature.id ?? '');
+  const variation = (seed % 7) / 40 - 0.075;
   return [
-    Number.parseInt(hex.slice(0, 2), 16) / 255,
-    Number.parseInt(hex.slice(2, 4), 16) / 255,
-    Number.parseInt(hex.slice(4, 6), 16) / 255,
+    Math.min(1, Math.max(0, fallback[0] + variation)),
+    Math.min(1, Math.max(0, fallback[1] + variation * 0.6)),
+    Math.min(1, Math.max(0, fallback[2] - variation * 0.4)),
   ];
 }
 

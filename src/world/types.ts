@@ -171,7 +171,7 @@ export interface RoadSurfaceGeometry {
 }
 
 export interface RoadPropBatch {
-  readonly kind: 'traffic_signals' | 'stop' | 'give_way' | 'street_lamp';
+  readonly kind: 'traffic_signals' | 'stop' | 'give_way' | 'street_lamp' | 'tree';
   readonly positions: Float32Array;
   readonly headings: Float32Array;
 }

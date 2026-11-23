@@ -43,17 +43,17 @@ function visualBuildingFloors(tags, zone) {
   const explicitHeight = Number.parseFloat(String(tags.height ?? '').replace(',', '.'));
   if (Number.isFinite(explicitHeight) && explicitHeight > 0) return Math.min(40, Math.max(1, explicitHeight / 3));
   const type = tags.building ?? '';
-  if (type === 'tower' || /^torre(?:\s|$)/i.test(tags.name ?? '')) return 7;
-  if (['cathedral', 'church', 'chapel', 'tower', 'castle'].includes(type)) return type === 'tower' || type === 'castle' ? 7 : 5;
-  if (zone === 'casco') return 2;
+  if (type === 'tower' || /^torre(?:\s|$)/i.test(tags.name ?? '')) return 8;
+  if (['cathedral', 'church', 'chapel', 'tower', 'castle'].includes(type)) return type === 'tower' || type === 'castle' ? 8 : 6;
+  if (zone === 'casco') return 3;
   if (zone === 'periferia') {
-    if (['apartments', 'residential'].includes(type)) return 5;
-    if (['industrial', 'warehouse', 'garages', 'farm'].includes(type)) return 1;
-    return 2;
+    if (['apartments', 'residential'].includes(type)) return 6;
+    if (['industrial', 'warehouse', 'garages', 'farm'].includes(type)) return 2;
+    return 3;
   }
-  if (['apartments', 'residential'].includes(type)) return 4;
-  if (['industrial', 'warehouse', 'garages'].includes(type)) return 2;
-  return 3;
+  if (['apartments', 'residential'].includes(type)) return 5;
+  if (['industrial', 'warehouse', 'garages'].includes(type)) return 3;
+  return 4;
 }
 
 function buildingZone(tags, points) {

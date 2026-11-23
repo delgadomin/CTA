@@ -237,6 +237,7 @@ function buildPropBatches(props: readonly ChunkFeature[], terrain: BuiltTerrainC
   const supported = new Map<RoadPropBatch['kind'], { positions: number[]; headings: number[] }>([
     ['traffic_signals', { positions: [], headings: [] }], ['stop', { positions: [], headings: [] }],
     ['give_way', { positions: [], headings: [] }], ['street_lamp', { positions: [], headings: [] }],
+  ['tree', { positions: [], headings: [] }],
   ]);
   for (const prop of props) {
     const kind = prop.kind === 'traffic_sign' && (prop.trafficSign ?? '').includes('206') ? 'give_way' : prop.kind as RoadPropBatch['kind'];
