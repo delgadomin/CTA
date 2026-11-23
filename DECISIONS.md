@@ -8,6 +8,13 @@
 - ECS usa capacidad fija, SoA en arreglos tipados y handles con generación para evitar asignaciones por entidad en el bucle caliente.
 - La simulación corre a 60 Hz, limita la recuperación a cinco pasos por fotograma y el render interpola el giro de diagnóstico.
 - GLB se carga con MeshoptDecoder; KTX2 usa el transcodificador Basis servido desde el mismo sitio y se atribuye por separado.
+# Fase 6 - hitos y fidelidad (actualización)
+
+- Los soportales de Plaza Mayor se aproximan con pilares y losa plana sobre el polígono OSM; las medidas (espaciado 4,5 m, altura 3,1 m) son fallback visual pendiente de foto.
+- El campanario de la Concatedral (w385037723) es una torre de piedra 4,2×4,2 m y 16 m añadida sobre la huella OSM, sin altura fuente.
+- La escalinata de San Francisco Javier se modela con 12 gradas de 0,18 m desde el edificio hacia Plaza de San Jorge.
+- Torre de las Cigüeñas (n13723182454) es un punto OSM sin huella: se usa una torre sintética de 7,5 m y 24 m documentada como fallback visual. Se añade ancla de cigüeña sobre ella.
+
 # Fase 2 - datos geográficos
 
 - La región inicial es un rectángulo proyectado de 1 km centrado en Plaza Mayor; EPSG:25829 permite medir chunks y huellas en metros.

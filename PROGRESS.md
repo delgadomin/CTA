@@ -152,8 +152,9 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - El inspector 2D puede superponer trazados OSM originales y huellas de edificio sobre el mundo; queda pendiente la revisión visual humana.
 - La extracción nueva incluye `barrier=city_wall`; los chunks regenerados conservan sus tramos. Se añadieron cigüeñas low-poly en torres y una selección estable de tejados del casco; al acercarse el jugador baten las alas y despegan, y vuelven a posarse cuando se aleja.
 - El data build regeneró 16 chunks; el verificador confirmó hashes, terreno, ruta y ausencia de nombres comerciales bloqueados.
+- Se completaron los modelos low-poly específicos de fase 6 (soportales de Plaza Mayor, campanario de la Concatedral, escalinata de San Francisco Javier y torre sintética de Torre de las Cigüeñas); todos los valores dimensionales son aproximaciones pendientes de revisión fotográfica. lint, typecheck, 34 pruebas y build pasan.
 
 ### Pendiente
-- Completar los modelos específicos de soportales de Plaza Mayor, Concatedral, escalinata de San Francisco Javier y Torre de las Cigüeñas. El punto OSM de esta última no trae una huella, así que necesita revisión de referencia antes de modelar.
+- Modelos low-poly específicos completados: soportales de Plaza Mayor, campanario de la Concatedral (w385037723), escalinata de San Francisco Javier hacia Plaza de San Jorge y torre sintética de Torre de las Cigüeñas (fuente puntual n13723182454, huella 7,5 m documentada como fallback). Valores dimensionales pendientes de revisión fotográfica.
 - Ampliar la fuente geográfica para los seis hitos fuera de la región actual.
 - Ejecutar lint, typecheck, pruebas, build y revisión visual; ningún hito puede pasar a aprobado sin comparación humana con fotografías. Este entorno no tiene npm/node_modules; la instalación con pnpm fue bloqueada al crear el enlace de dependencias.

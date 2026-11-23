@@ -373,6 +373,17 @@ function buildExtras(features: readonly ChunkFeature[], terrain: BuiltTerrainChu
       if (slot) signs.push(slot);
     }
   }
+  // Torre de las Cigueñas is an OSM point without a building footprint, so it is
+  // not covered by the loop above; add its stork anchor here as a visual fallback.
+  const ciguenas = features.find((feature) => feature.featureType === 'poi' && feature.id === 'n13723182454');
+  if (ciguenas?.position) {
+    const [px, pz] = ciguenas.position;
+    const owner = px >= bounds.minX && px < bounds.maxX && pz >= bounds.minZ && pz < bounds.maxZ;
+    if (owner) {
+      const ground = localHeight(terrain, [px, pz] as RoadPoint);
+      storks.push({ buildingId: ciguenas.id ?? '', position: [px, ground + 24 + 0.85 + 0.75, pz] });
+    }
+  }
   return { signs, anchors, models, storks };
 }
 

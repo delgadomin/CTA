@@ -185,9 +185,152 @@ function addHistoricWalls(writer: BuildingGeometryWriter, features: readonly Chu
   }
 }
 
+function addPlazaMayorArcade(writer: BuildingGeometryWriter, features: readonly ChunkFeature[], terrain: BuiltTerrainChunk, bounds: ProjectedBounds, lod: number): void {
+  // Low-poly approximation of the Plaza Mayor porticoes (soportales). The OSM
+  // polygon gives the plaza outline; pillars and a flat roof slab are placed
+  // just inside the perimeter. Measurements are visual fallbacks pending photo review.
+  const plaza = features.find((item) => item.featureType === 'pedestrian' && item.name === 'Plaza Mayor' && (item.points?.length ?? 0) >= 10);
+  const points = plaza?.points;
+  if (!points || points.length < 4) return;
+  let sumX = 0;
+  let sumZ = 0;
+  for (const point of points) {
+    sumX += point[0];
+    sumZ += point[1];
+  }
+  const center: RoadPoint = [sumX / points.length, sumZ / points.length];
+  if (center[0] < bounds.minX || center[0] >= bounds.maxX || center[1] < bounds.minZ || center[1] >= bounds.maxZ) return;
+  const spacing = lod === 0 ? 4.5 : 9;
+  for (let index = 0; index + 1 < points.length; index += 1) {
+    const start = points[index];
+    const end = points[index + 1];
+    if (!start || !end) continue;
+    const dx = end[0] - start[0];
+    const dz = end[1] - start[1];
+    const length = Math.hypot(dx, dz);
+    if (length < 2) continue;
+    const count = Math.max(1, Math.floor(length / spacing));
+    const axis = { x: dx / length, z: dz / length };
+    const normalX = -axis.z;
+    const normalZ = axis.x;
+    for (let pillar = 0; pillar < count; pillar += 1) {
+      const t = (pillar + 0.5) / count;
+      const px = start[0] + dx * t + normalX * 0.9;
+      const pz = start[1] + dz * t + normalZ * 0.9;
+      if (px < bounds.minX || px >= bounds.maxX || pz < bounds.minZ || pz >= bounds.maxZ) continue;
+      const pillarCenter: RoadPoint = [px, pz];
+      const ground = sampleHeight(terrain, pillarCenter[0], pillarCenter[1]);
+      addStoneBox(writer, pillarCenter, axis, 0.42, 0.42, ground, 3.1);
+    }
+    const mid: RoadPoint = [(start[0] + end[0]) / 2 + normalX * 0.9, (start[1] + end[1]) / 2 + normalZ * 0.9];
+    if (mid[0] < bounds.minX || mid[0] >= bounds.maxX || mid[1] < bounds.minZ || mid[1] >= bounds.maxZ) continue;
+    const ground = sampleHeight(terrain, mid[0], mid[1]);
+    addStoneBox(writer, mid, axis, length * 0.92, 1.05, ground + 3.1, 0.22);
+  }
+}
+
+function addConcatedralBellTower(writer: BuildingGeometryWriter, features: readonly ChunkFeature[], terrain: BuiltTerrainChunk, bounds: ProjectedBounds, lod: number): void {
+  // Visual fallback: the OSM footprint has no height; a stone bell tower is added
+  // at a corner of the footprint pending photo comparison.
+  const building = features.find((item) => item.featureType === 'building' && item.id === 'w385037723');
+  if (!building?.points || building.points.length < 4) return;
+  let sumX = 0;
+  let sumZ = 0;
+  for (const point of building.points) {
+    sumX += point[0];
+    sumZ += point[1];
+  }
+  const center: RoadPoint = [sumX / building.points.length, sumZ / building.points.length];
+  const towerCenter: RoadPoint = [center[0] + 6, center[1] + 4];
+  if (towerCenter[0] < bounds.minX || towerCenter[0] >= bounds.maxX || towerCenter[1] < bounds.minZ || towerCenter[1] >= bounds.maxZ) return;
+  const ground = sampleHeight(terrain, towerCenter[0], towerCenter[1]);
+  const height = 16;
+  addStoneBox(writer, towerCenter, { x: 1, z: 0 }, 4.2, 4.2, ground, height);
+  const top = ground + height;
+  const merlonCount = lod === 0 ? 3 : 1;
+  for (const side of [-1, 1]) {
+    for (let index = 0; index < merlonCount; index += 1) {
+      const along = (index + 0.5) / merlonCount * 3.4 - 1.7;
+      const mc: RoadPoint = [towerCenter[0] + side * 2.2, towerCenter[1] + along];
+      if (mc[0] < bounds.minX || mc[0] >= bounds.maxX || mc[1] < bounds.minZ || mc[1] >= bounds.maxZ) continue;
+      addStoneBox(writer, mc, { x: 1, z: 0 }, 0.7, 0.7, top, 0.7);
+    }
+  }
+  addStoneBox(writer, towerCenter, { x: 1, z: 0 }, 1.4, 1.4, top + 0.7, 3.5);
+}
+
+function addSanFranciscoStaircase(writer: BuildingGeometryWriter, features: readonly ChunkFeature[], terrain: BuiltTerrainChunk, bounds: ProjectedBounds, lod: number): void {
+  // Visual fallback: a stone staircase descends from the church toward Plaza de San Jorge.
+  const building = features.find((item) => item.featureType === 'building' && item.id === 'w385037722');
+  if (!building?.points || building.points.length < 4) return;
+  let sumX = 0;
+  let sumZ = 0;
+  for (const point of building.points) {
+    sumX += point[0];
+    sumZ += point[1];
+  }
+  const center: RoadPoint = [sumX / building.points.length, sumZ / building.points.length];
+  const targetX = 116.1;
+  const targetZ = -56.4;
+  const dx = targetX - center[0];
+  const dz = targetZ - center[1];
+  const length = Math.hypot(dx, dz);
+  if (length < 1) return;
+  const ux = dx / length;
+  const uz = dz / length;
+  const stepCount = lod === 0 ? 12 : 6;
+  const stepWidth = 6;
+  const stepDepth = 0.45;
+  const stepHeight = 0.18;
+  for (let index = 0; index < stepCount; index += 1) {
+    const along = 4 + index * stepDepth;
+    const rise = index * stepHeight;
+    const px = center[0] + ux * along;
+    const pz = center[1] + uz * along;
+    if (px < bounds.minX || px >= bounds.maxX || pz < bounds.minZ || pz >= bounds.maxZ) continue;
+    const stepCenter: RoadPoint = [px, pz];
+    const ground = sampleHeight(terrain, stepCenter[0], stepCenter[1]);
+    addStoneBox(writer, stepCenter, { x: ux, z: uz }, stepDepth, stepWidth, ground + rise, stepHeight);
+  }
+}
+
+function addTorreCiguenasTower(writer: BuildingGeometryWriter, features: readonly ChunkFeature[], terrain: BuiltTerrainChunk, bounds: ProjectedBounds, lod: number): void {
+  // The OSM source is a point with no footprint, so a synthetic square tower is used
+  // as a documented visual fallback pending reference review.
+  const poi = features.find((item) => item.featureType === 'poi' && item.id === 'n13723182454');
+  const location = poi?.position;
+  if (!location) return;
+  const center: RoadPoint = [location[0], location[1]];
+  if (center[0] < bounds.minX || center[0] >= bounds.maxX || center[1] < bounds.minZ || center[1] >= bounds.maxZ) return;
+  const ground = sampleHeight(terrain, center[0], center[1]);
+  const size = 7.5;
+  const height = 24;
+  addStoneBox(writer, center, { x: 1, z: 0 }, size, size, ground, height);
+  const top = ground + height;
+  const merlonCount = lod === 0 ? 3 : 1;
+  for (let side = 0; side < 4; side += 1) {
+    const angle = side * (Math.PI / 2);
+    const nx = Math.cos(angle);
+    const nz = Math.sin(angle);
+    const tx = -nz;
+    const tz = nx;
+    for (let index = 0; index < merlonCount; index += 1) {
+      const along = (index + 0.5) / merlonCount * size - size / 2;
+      const mc: RoadPoint = [center[0] + nx * (size / 2) + tx * along, center[1] + nz * (size / 2) + tz * along];
+      if (mc[0] < bounds.minX || mc[0] >= bounds.maxX || mc[1] < bounds.minZ || mc[1] >= bounds.maxZ) continue;
+      addStoneBox(writer, mc, { x: tx, z: tz }, Math.min(0.85, size / merlonCount * 0.7), 0.55, top, 0.75);
+    }
+  }
+  addStoneBox(writer, center, { x: 1, z: 0 }, 1.6, 1.6, top + 0.75, 4);
+}
+
 export function addLandmarkGeometry(writer: BuildingGeometryWriter, features: readonly ChunkFeature[], terrain: BuiltTerrainChunk, bounds: ProjectedBounds, lod: number): void {
   addStarArch(writer, features, terrain, bounds, lod);
   addHistoricWalls(writer, features, terrain, bounds, lod);
+  addPlazaMayorArcade(writer, features, terrain, bounds, lod);
+  addConcatedralBellTower(writer, features, terrain, bounds, lod);
+  addSanFranciscoStaircase(writer, features, terrain, bounds, lod);
+  addTorreCiguenasTower(writer, features, terrain, bounds, lod);
   for (const feature of features) {
     if (!isTowerLandmark(feature) || feature.landmarkModelPath) continue;
     const points = feature.points;
