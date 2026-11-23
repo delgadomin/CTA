@@ -189,8 +189,17 @@ export function addLandmarkGeometry(writer: BuildingGeometryWriter, features: re
   addStarArch(writer, features, terrain, bounds, lod);
   addHistoricWalls(writer, features, terrain, bounds, lod);
   for (const feature of features) {
-    if (!isTowerLandmark(feature) || !feature.points || feature.landmarkModelPath) continue;
-    const center = feature.points.reduce((sum, point) => [sum[0] + point[0] / feature.points.length, sum[1] + point[1] / feature.points.length], [0, 0]);
+    if (!isTowerLandmark(feature) || feature.landmarkModelPath) continue;
+    const points = feature.points;
+    if (!points || points.length === 0) continue;
+    // Centroid via loop: keeps strict-mode narrowing and avoids per-point closure captures.
+    let sumX = 0;
+    let sumZ = 0;
+    for (const point of points) {
+      sumX += point[0];
+      sumZ += point[1];
+    }
+    const center: RoadPoint = [sumX / points.length, sumZ / points.length];
     if (center[0] < bounds.minX || center[0] >= bounds.maxX || center[1] < bounds.minZ || center[1] >= bounds.maxZ) continue;
     addTowerMerlons(writer, feature, terrain, lod);
   }
