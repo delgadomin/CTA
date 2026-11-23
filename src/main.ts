@@ -37,8 +37,23 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.setClearColor('#a9c2c4');
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#a9c2c4');
-scene.fog = new THREE.Fog('#a9c2c4', quality.viewDistance * 0.45, quality.viewDistance);
+scene.background = new THREE.Color('#b7d0d8');
+scene.fog = new THREE.Fog('#b7d0d8', quality.viewDistance * 0.4, quality.viewDistance);
+// Gradient sky sphere.
+const skyGeometry = new THREE.SphereGeometry(quality.viewDistance * 1.2, 32, 16);
+const skyPositions = skyGeometry.attributes.position as THREE.BufferAttribute;
+const skyColors = new Float32Array(skyPositions.count * 3);
+for (let i = 0; i < skyPositions.count; i += 1) {
+  const y = skyPositions.getY(i);
+  const t = Math.max(0, Math.min(1, (y + quality.viewDistance * 0.5) / (quality.viewDistance * 1.2)));
+  skyColors[i * 3] = 0.72 + t * 0.12;
+  skyColors[i * 3 + 1] = 0.82 + t * 0.1;
+  skyColors[i * 3 + 2] = 0.88 + t * 0.08;
+}
+skyGeometry.setAttribute('color', new THREE.BufferAttribute(skyColors, 3));
+const skyMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, depthWrite: false });
+const sky = new THREE.Mesh(skyGeometry, skyMaterial);
+scene.add(sky);
 const camera = new THREE.PerspectiveCamera(54, window.innerWidth / window.innerHeight, 0.5, quality.viewDistance + 50);
 camera.position.set(0, 570, 72);
 const input = new InputManager(canvas);
