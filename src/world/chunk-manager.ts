@@ -5,6 +5,7 @@ import { EventBus } from '../engine/event-bus';
 import { AssetManager } from '../engine/asset-manager';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { buildChunkBorderGeometry } from './chunk-debug';
+import { ChunkDebugOverlays } from './debug-overlays';
 import { BuildingRenderer } from './building-renderer';
 import { sampleHeight } from './road-geometry';
 import { RoadRenderer } from './road-renderer';
@@ -154,6 +155,7 @@ export class ChunkManager {
   private readonly material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.94, side: THREE.DoubleSide });
   private readonly roadRenderer = new RoadRenderer();
   private readonly buildingRenderer = new BuildingRenderer();
+  private readonly debugOverlays: ChunkDebugOverlays;
   private readonly debugBorderMaterial = new THREE.LineBasicMaterial({ color: '#f06d4e', depthTest: true, toneMapped: false });
   private readonly records = new Map<string, ChunkRecord>();
   private readonly completed: CompletedChunk[] = [];
@@ -172,6 +174,7 @@ export class ChunkManager {
   constructor(scene: THREE.Scene, physicsWorld: World, manifestUrl: URL, worldBaseUrl: URL) {
     this.scene = scene;
     this.world = physicsWorld;
+    this.debugOverlays = new ChunkDebugOverlays(scene);
     this.colliders = new TerrainColliders(physicsWorld);
     this.manifestUrl = manifestUrl;
     this.worldBaseUrl = worldBaseUrl;
@@ -232,6 +235,7 @@ export class ChunkManager {
       } else if (!needsCollider && record.hasCollider) {
         this.colliders.remove(entry.id);
         record.hasCollider = false;
+        this.syncDebugOverlays(record);
       }
     }
     nextQueue.sort((left, right) => (this.records.get(left)?.distance ?? Infinity) - (this.records.get(right)?.distance ?? Infinity));
@@ -334,6 +338,18 @@ export class ChunkManager {
     }
   }
 
+  setDebugColliders(visible: boolean): void {
+    this.debugOverlays.setColliders(visible);
+  }
+
+  setDebugRoadSurfaces(visible: boolean): void {
+    this.debugOverlays.setRoadSurfaces(visible);
+  }
+
+  setDebugLodBounds(visible: boolean): void {
+    this.debugOverlays.setLodBounds(visible);
+  }
+
   close(): void {
     if (this.closed) return;
     this.closed = true;
@@ -347,6 +363,7 @@ export class ChunkManager {
     this.buildingRenderer.dispose();
     this.assets?.dispose();
     this.debugBorderMaterial.dispose();
+    this.debugOverlays.dispose();
     this.events.clear();
     this.world.free();
   }
@@ -371,6 +388,7 @@ export class ChunkManager {
       this.scene.add(next);
     }
     for (const mesh of record.buildingMeshes?.[lod] ?? []) { mesh.visible = true; this.scene.add(mesh); }
+    this.syncDebugOverlays(record);
   }
 
   private processCompleted(): void {
@@ -422,6 +440,7 @@ export class ChunkManager {
       record.state = 'loaded';
       this.memoryBytes += record.memoryBytes;
       this.addDebugBorder(record);
+      this.syncDebugOverlays(record);
       this.events.emit('chunkLoaded', { id: item.id, lod: record.lod, memoryBytes: record.memoryBytes });
       this.syncCollider(record);
       this.loadLandmarkModels(record, item.result);
@@ -444,6 +463,18 @@ export class ChunkManager {
     const buildings = record.result.buildings;
     if (buildings) this.colliders.addBuildings(record.entry.id, centerX, centerZ, buildings.colliderPositions, buildings.colliderIndices);
     record.hasCollider = true;
+    this.syncDebugOverlays(record);
+  }
+
+  private syncDebugOverlays(record: ChunkRecord): void {
+    if (!record.result) return;
+    this.debugOverlays.updateChunk({
+      entry: record.entry,
+      result: record.result,
+      terrainGeometry: record.meshes?.[record.lod]?.geometry,
+      lod: record.lod,
+      hasCollider: record.hasCollider,
+    });
   }
 
   private loadLandmarkModels(record: ChunkRecord, result: BuiltTerrainChunk): void {
@@ -536,6 +567,7 @@ export class ChunkManager {
 
   private unload(record: ChunkRecord, emit = true): void {
     this.removeDebugBorder(record);
+    this.debugOverlays.removeChunk(record.entry.id);
     if (record.hasCollider) this.colliders.remove(record.entry.id);
     if (record.meshes) {
       for (const mesh of record.meshes) {

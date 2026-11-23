@@ -2,6 +2,12 @@
 
 ## Fase actual: 6 - Hitos y fidelidad (ampliada); fases 7-9 implementadas, fase 10 pausada
 
+### Bloque 0 - Banco de pruebas de auditoría (en curso)
+- Leído `Caceres_Criminal_Prompts_de_Mejora.pdf` y auditado el banco actual; los hallazgos y el plan están en `reports/audit-debug.md`.
+- Añadido `?debug=1`, panel F3 independiente, overlays F4-F7, toggle de sombras F8, aviso explícito de postprocesado no configurado en F9 y consola con comandos que el juego sí puede ejecutar.
+- Añadido un tour Playwright de diez ubicaciones respaldadas por el catálogo de hitos o por geometría OSM, que guarda capturas ignoradas por Git y genera `reports/audit-summary.md`.
+- Intentados lint, typecheck, tests y build: pnpm no llega a ejecutar ninguno porque Windows deniega el enlace simbólico al registrar el proyecto (`EPERM`). `node_modules` no está disponible, así que no se han podido validar el build ni ejecutar el tour en este entorno.
+
 ### Hecho
 - Repositorio inicializado desde `hhg-ptm/CTA`.
 - Leída la guía de fases: comienza con una base Vite/TypeScript y no añade juego todavía.

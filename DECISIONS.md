@@ -1,5 +1,12 @@
 # Decisiones técnicas
 
+## 2026-11-23 - Banco de pruebas de auditoría
+- El modo de diagnóstico solo aparece con `?debug=1`; F3 alterna el panel y F4-F8 controlan overlays/sombras por separado para no alterar la interfaz normal.
+- F6 muestra la malla de calzadas disponible. No se presenta como grafo peatonal: el proyecto aún no tiene un overlay para ese grafo.
+- Los comandos `time`, `weather`, `god` y `wanted` informan que faltan sus sistemas; el contador de agentes por LOD indica cero porque la fase 10 sigue pausada.
+- La ruta de auditoría usa puntos de `data/landmarks/landmarks.json` y centros geométricos proyectados de las vías OSM 23121493 y 24524709; las capturas generadas se excluyen del control de versiones.
+- El informe estático no inventa mediciones de rendimiento; `reports/audit-summary.md` se crea al ejecutar `npm run audit`.
+
 ## 2026-11-22 - Base de fase 0
 - Usar Vite, TypeScript estricto y Three.js para el esqueleto WebGL 2 solicitado.
 - Mantener la UI de depuración en DOM/CSS, separada del canvas 3D.
