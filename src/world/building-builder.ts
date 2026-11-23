@@ -165,6 +165,10 @@ function onChunkBoundary(a: RoadPoint, b: RoadPoint, bounds: ProjectedBounds): b
 function addWalls(writer: BuildingGeometryWriter, item: Footprint, terrain: BuiltTerrainChunk, bounds: ProjectedBounds, detailed: boolean, makeCollider = false): void {
   const floorCount = Math.max(1, Math.min(20, Math.round(item.feature.visualFloors ?? item.wallHeight / 3)));
   const polygon = item.points;
+  const polygonArea = polygon.reduce((area, point, index) => {
+    const next = polygon[(index + 1) % polygon.length];
+    return next ? area + point[0] * next[1] - next[0] * point[1] : area;
+  }, 0);
   for (let edge = 0; edge < polygon.length; edge += 1) {
     const start = polygon[edge];
     const end = polygon[(edge + 1) % polygon.length];
@@ -172,6 +176,9 @@ function addWalls(writer: BuildingGeometryWriter, item: Footprint, terrain: Buil
     if (onChunkBoundary(start, end, bounds)) continue;
     const length = Math.hypot(end[0] - start[0], end[1] - start[1]);
     if (length < 0.1) continue;
+    const outward: RoadPoint = polygonArea >= 0
+      ? [(end[1] - start[1]) / length, -(end[0] - start[0]) / length]
+      : [-(end[1] - start[1]) / length, (end[0] - start[0]) / length];
     const panels = detailed ? Math.max(1, Math.ceil(length / 3.4)) : 1;
     const floors = detailed ? floorCount : 1;
     const startGround = localHeight(terrain, start);
@@ -192,6 +199,21 @@ function addWalls(writer: BuildingGeometryWriter, item: Footprint, terrain: Buil
         ];
         const uv = detailed ? wallUv(stableHash(item.feature.id ?? ''), floor) : tileUv(stableHash(item.feature.id ?? '') + edge, 1);
         writer.addQuad(item.wallMaterial, points, item.tint, uv as [BuildingUv, BuildingUv, BuildingUv, BuildingUv]);
+        if (detailed && floor < floors - 1) {
+          // A narrow projecting belt course breaks up the flat wall planes and
+          // makes the building read as masonry with distinct storeys.
+          const projection = 0.045;
+          const low = floorTop - 0.1;
+          const high = floorTop - 0.025;
+          const raisedStart: RoadPoint = [panelStart[0] + outward[0] * projection, panelStart[1] + outward[1] * projection];
+          const raisedEnd: RoadPoint = [panelEnd[0] + outward[0] * projection, panelEnd[1] + outward[1] * projection];
+          const trim: [RoadPoint3, RoadPoint3, RoadPoint3, RoadPoint3] = [
+            worldPoint(raisedStart, groundStart + low), worldPoint(raisedEnd, groundEnd + low),
+            worldPoint(raisedEnd, groundEnd + high), worldPoint(raisedStart, groundStart + high),
+          ];
+          const trimColor: BuildingColor = [item.tint[0] * 0.82, item.tint[1] * 0.82, item.tint[2] * 0.82];
+          writer.addQuad(item.wallMaterial, trim, trimColor, [[0, 0], [length / 5, 0], [length / 5, 0.08], [0, 0.08]]);
+        }
       }
     }
     if (makeCollider) {

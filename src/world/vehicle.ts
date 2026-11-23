@@ -62,18 +62,40 @@ export class Vehicle {
     }
 
     // Visual mesh.
-    const bodyGeo = new THREE.BoxGeometry(1.8, 0.7, 4.0);
+    const bodyGeo = new THREE.CapsuleGeometry(0.78, 2.15, 4, 10);
+    bodyGeo.rotateX(Math.PI / 2);
+    bodyGeo.scale(1, 0.5, 1);
     const bodyMat = new THREE.MeshStandardMaterial({ color: CAR_COLOR, roughness: 0.4, metalness: 0.3 });
     const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
-    bodyMesh.position.y = 0.35;
+    bodyMesh.position.y = 0.32;
     bodyMesh.castShadow = true;
     this.group.add(bodyMesh);
 
-    const cabinGeo = new THREE.BoxGeometry(1.5, 0.5, 2.0);
-    const cabinMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.3, metalness: 0.1, transparent: true, opacity: 0.6 });
+    const cabinGeo = taperedCabinGeometry();
+    const cabinMat = new THREE.MeshStandardMaterial({ color: 0x263b47, roughness: 0.28, metalness: 0.18, transparent: true, opacity: 0.84 });
     const cabin = new THREE.Mesh(cabinGeo, cabinMat);
-    cabin.position.set(0, 0.85, -0.2);
+    cabin.position.set(0, 0, -0.18);
+    cabin.castShadow = true;
     this.group.add(cabin);
+
+    const trimMat = new THREE.MeshStandardMaterial({ color: 0x34383b, roughness: 0.62, metalness: 0.22 });
+    const lightMat = new THREE.MeshStandardMaterial({ color: 0xffefbb, emissive: 0x392a0b, roughness: 0.28 });
+    const rearLightMat = new THREE.MeshStandardMaterial({ color: 0xb7352d, emissive: 0x30100c, roughness: 0.35 });
+    const addDetail = (geometry: THREE.BufferGeometry, material: THREE.Material, x: number, y: number, z: number) => {
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      this.group.add(mesh);
+    };
+    addDetail(new THREE.BoxGeometry(1.72, 0.16, 1.05), bodyMat, 0, 0.42, 1.25);
+    addDetail(new THREE.BoxGeometry(1.72, 0.16, 0.78), bodyMat, 0, 0.42, -1.45);
+    addDetail(new THREE.BoxGeometry(1.9, 0.14, 0.16), trimMat, 0, 0.2, 2.02);
+    addDetail(new THREE.BoxGeometry(1.9, 0.14, 0.16), trimMat, 0, 0.2, -2.02);
+    for (const side of [-1, 1]) {
+      addDetail(new THREE.BoxGeometry(0.32, 0.2, 0.1), lightMat, side * 0.62, 0.4, 1.91);
+      addDetail(new THREE.BoxGeometry(0.28, 0.17, 0.1), rearLightMat, side * 0.66, 0.42, -1.91);
+      addDetail(new THREE.BoxGeometry(0.16, 0.12, 0.22), trimMat, side * 0.82, 0.83, 0.48);
+    }
 
     const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 12);
     wheelGeo.rotateZ(Math.PI / 2);
@@ -137,4 +159,16 @@ export class Vehicle {
   dispose(): void {
     this.world.removeRigidBody(this.chassisBody);
   }
+}
+
+function taperedCabinGeometry(): THREE.BufferGeometry {
+  const positions = new Float32Array([
+    -0.75, 0.56, 0.82,  0.75, 0.56, 0.82,  0.75, 0.56, -0.78, -0.75, 0.56, -0.78,
+    -0.53, 1.1, 0.42,   0.53, 1.1, 0.42,   0.53, 1.1, -0.48,  -0.53, 1.1, -0.48,
+  ]);
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setIndex([0, 1, 4, 1, 5, 4, 1, 2, 5, 2, 6, 5, 2, 3, 6, 3, 7, 6, 3, 0, 7, 0, 4, 7, 4, 5, 6, 4, 6, 7]);
+  geometry.computeVertexNormals();
+  return geometry;
 }
