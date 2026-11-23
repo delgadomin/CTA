@@ -211,7 +211,12 @@ export function sampleHeight(terrain: BuiltTerrainChunk, x: number, z: number): 
   const h10 = terrain.heights[z0 * terrain.samples + x1] ?? h00;
   const h01 = terrain.heights[z1 * terrain.samples + x0] ?? h00;
   const h11 = terrain.heights[z1 * terrain.samples + x1] ?? h01;
-  return (h00 + (h10 - h00) * tx) * (1 - tz) + (h01 + (h11 - h01) * tx) * tz;
+
+  // Match buildLod's SW-NW-SE / SE-NW-NE diagonal. Bilinear interpolation
+  // creates a different curved surface inside each cell, which let the
+  // character sink below steep terrain triangles while walking.
+  if (tx + tz <= 1) return h00 + tx * (h10 - h00) + tz * (h01 - h00);
+  return h11 + (1 - tx) * (h01 - h11) + (1 - tz) * (h10 - h11);
 }
 
 export function sampleNormal(terrain: BuiltTerrainChunk, x: number, z: number): readonly [number, number, number] {

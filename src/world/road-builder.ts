@@ -2,8 +2,8 @@ import type { BuiltRoadChunk, BuiltTerrainChunk, ChunkFeature, ProjectedBounds, 
 import { RoadGeometryBuilder, roadStyle, roadWidth, sampleHeight, smoothRoadCenterline, sidewalkSides, type RoadPoint } from './road-geometry';
 import { addCrossingAndControlMarkings, addLaneMarkings } from './road-markings';
 
-const CURB_WIDTH = 0.14;
-const SIDEWALK_WIDTH = 1.5;
+const CURB_WIDTH = 0.2;
+const SIDEWALK_WIDTH = 1.65;
 const ROAD_LIFT = 0.055;
 
 export function buildRoadChunk(features: readonly ChunkFeature[], terrain: BuiltTerrainChunk, bounds: ProjectedBounds): BuiltRoadChunk {
@@ -36,11 +36,11 @@ export function buildRoadChunk(features: readonly ChunkFeature[], terrain: Built
       const sidewalk = side > 0
         ? [width / 2 + CURB_WIDTH, width / 2 + CURB_WIDTH + SIDEWALK_WIDTH] as const
         : [-width / 2 - CURB_WIDTH - SIDEWALK_WIDTH, -width / 2 - CURB_WIDTH] as const;
-      addCorridor(builderFor('sidewalk'), centerline, SIDEWALK_WIDTH, bounds, lift + 0.09, `${road.id ?? 'road'}:sidewalk:${side}`, offsetAt, sidewalk);
+      addCorridor(builderFor('sidewalk'), centerline, SIDEWALK_WIDTH, bounds, lift + 0.15, `${road.id ?? 'road'}:sidewalk:${side}`, offsetAt, sidewalk);
       const curb = side > 0
         ? [width / 2, width / 2 + CURB_WIDTH] as const
         : [-width / 2 - CURB_WIDTH, -width / 2] as const;
-      addCorridor(builderFor('concrete'), centerline, CURB_WIDTH, bounds, lift + 0.035, `${road.id ?? 'road'}:curb:${side}`, offsetAt, curb);
+      addCorridor(builderFor('concrete'), centerline, CURB_WIDTH, bounds, lift + 0.075, `${road.id ?? 'road'}:curb:${side}`, offsetAt, curb);
     }
     if (road.highway === 'steps') addStairTreads(builderFor(roadStyle(road)), centerline, width, terrain, bounds, road);
   }

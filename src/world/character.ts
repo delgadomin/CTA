@@ -25,12 +25,20 @@ export class Character {
     const material = (color: number, roughness = 0.6, metalness = 0.05) =>
       new THREE.MeshStandardMaterial({ color, roughness, metalness });
 
-    // Torso (rounded cylinder).
-    const torsoGeo = new THREE.CylinderGeometry(0.28, 0.3, 0.75, 16);
+    // Softly tailored jacket, with a visible collar and hem to read as a
+    // person at the game's normal third-person camera distance.
+    const torsoGeo = new THREE.CapsuleGeometry(0.27, 0.34, 5, 12);
     this.body = new THREE.Mesh(torsoGeo, material(BODY_COLOR));
     this.body.position.y = 1.15;
     this.body.castShadow = true;
     this.group.add(this.body);
+    const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 0.1, 12), material(0x233f43));
+    collar.position.y = 1.47;
+    collar.castShadow = true;
+    this.group.add(collar);
+    const hem = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.28, 0.1, 12), material(0x2a5054));
+    hem.position.y = 0.85;
+    this.group.add(hem);
 
     // Head (sphere).
     const headGeo = new THREE.SphereGeometry(0.18, 24, 16);
@@ -45,9 +53,23 @@ export class Character {
     hair.position.y = 1.72;
     hair.castShadow = true;
     this.group.add(hair);
+    const fringe = new THREE.Mesh(new THREE.SphereGeometry(0.105, 10, 8), material(HAIR_COLOR));
+    fringe.scale.set(1.25, 0.62, 0.52);
+    fringe.position.set(0, 1.72, 0.13);
+    this.group.add(fringe);
+    const eyeMaterial = material(0x292522, 0.45);
+    for (const side of [-1, 1]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 6), eyeMaterial);
+      eye.position.set(side * 0.055, 1.685, 0.169);
+      this.group.add(eye);
+    }
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), material(SKIN_COLOR, 0.5));
+    nose.scale.set(0.68, 0.8, 1.15);
+    nose.position.set(0, 1.65, 0.18);
+    this.group.add(nose);
 
     // Arms (cylinders).
-    const armGeo = new THREE.CylinderGeometry(0.07, 0.08, 0.6, 12);
+    const armGeo = new THREE.CapsuleGeometry(0.075, 0.35, 4, 10);
     this.leftArm = new THREE.Group();
     const la = new THREE.Mesh(armGeo, material(BODY_COLOR));
     la.position.y = -0.3;
@@ -72,15 +94,14 @@ export class Character {
     this.rightArm.add(rh);
 
     // Legs (cylinders).
-    const legGeo = new THREE.CylinderGeometry(0.09, 0.1, 0.7, 12);
-    const footGeo = new THREE.SphereGeometry(0.1, 12, 8);
-    footGeo.scale(1.1, 0.5, 1.4);
+    const legGeo = new THREE.CapsuleGeometry(0.09, 0.43, 4, 10);
+    const footGeo = new THREE.BoxGeometry(0.18, 0.13, 0.32);
     this.leftLeg = new THREE.Group();
     const ll = new THREE.Mesh(legGeo, material(PANTS_COLOR));
     ll.position.y = -0.35;
     this.leftLeg.add(ll);
     const lf = new THREE.Mesh(footGeo, material(SHOE_COLOR, 0.4, 0.1));
-    lf.position.set(0, -0.72, 0.05);
+    lf.position.set(0, -0.69, 0.09);
     this.leftLeg.add(lf);
     this.leftLeg.position.set(-0.14, 0.75, 0);
     this.group.add(this.leftLeg);
@@ -90,7 +111,7 @@ export class Character {
     rl.position.y = -0.35;
     this.rightLeg.add(rl);
     const rf = new THREE.Mesh(footGeo, material(SHOE_COLOR, 0.4, 0.1));
-    rf.position.set(0, -0.72, 0.05);
+    rf.position.set(0, -0.69, 0.09);
     this.rightLeg.add(rf);
     this.rightLeg.position.set(0.14, 0.75, 0);
     this.group.add(this.rightLeg);
@@ -114,11 +135,11 @@ export class Character {
       const stepX = (dirX / length) * speed * deltaSeconds;
       const stepZ = (dirZ / length) * speed * deltaSeconds;
       const nextX = this.group.position.x + stepX;
-      if (!chunks || !chunks.collidesWithBuilding(nextX, this.group.position.z, 0.4)) {
+      if (!chunks || (chunks.groundHeightAt(nextX, this.group.position.z) !== undefined && !chunks.collidesWithBuilding(nextX, this.group.position.z, 0.4))) {
         this.group.position.x = nextX;
       }
       const nextZ = this.group.position.z + stepZ;
-      if (!chunks || !chunks.collidesWithBuilding(this.group.position.x, nextZ, 0.4)) {
+      if (!chunks || (chunks.groundHeightAt(this.group.position.x, nextZ) !== undefined && !chunks.collidesWithBuilding(this.group.position.x, nextZ, 0.4))) {
         this.group.position.z = nextZ;
       }
       const targetYaw = Math.atan2(dirX, dirZ);
@@ -131,17 +152,29 @@ export class Character {
       this.walkPhase *= 0.85;
     }
 
-    this.vy -= 18 * deltaSeconds;
-    this.group.position.y += this.vy * deltaSeconds;
     if (chunks) {
       const ground = chunks.groundHeightAt(this.group.position.x, this.group.position.z);
-      if (ground !== undefined && this.group.position.y <= ground + 0.05) {
-        this.group.position.y = ground;
+      if (ground === undefined) {
+        // Chunks can unload while the player is near a streaming boundary.
+        // Keep the last safe height until collision data becomes available.
         this.vy = 0;
         this.onGround = true;
-      } else if (ground !== undefined && this.group.position.y > ground + 0.05) {
-        this.onGround = false;
+      } else {
+        this.vy -= 18 * deltaSeconds;
+        this.group.position.y += this.vy * deltaSeconds;
+        // Snap to rising slopes while grounded and catch the floor in the same
+        // frame when falling, instead of waiting for the next render frame.
+        if ((this.onGround && this.vy <= 0) || this.group.position.y <= ground + 0.08) {
+          this.group.position.y = ground;
+          this.vy = 0;
+          this.onGround = true;
+        } else {
+          this.onGround = false;
+        }
       }
+    } else {
+      this.vy -= 18 * deltaSeconds;
+      this.group.position.y += this.vy * deltaSeconds;
     }
 
     const swing = moving ? Math.sin(this.walkPhase) * 0.45 : 0;
