@@ -312,3 +312,28 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - Camina hacia un peatón: el personaje queda fuera de su hueco en lugar de superponerse.
 - Mira una calle del casco antiguo: la acera clara y el bordillo se distinguen de la calzada de piedra.
 
+## Integración del PR #4 - herramientas de auditoría (completada)
+
+### Plan
+- Resolver el conflicto entre la rama del PR y `main` conservando las fases 10/11 y la corrección de agentes.
+- Incorporar el modo de depuración, overlays, consola y tour Playwright sin cambiar la experiencia normal de juego.
+- Corregir las incompatibilidades del PR con el código actual y documentar las limitaciones reales.
+
+### Hecho hasta ahora
+- Rama de resolución basada en `origin/main` con el HEAD del PR#4 superpuesto; el HUD y la documentación se conservan de `main` y se añaden solo las herramientas nuevas.
+- `?debug=1`: F3 panel, F4 bordes, F5 colisionadores, F6 calzadas, F7 LOD, F8 sombras, F9 aviso y ` consola. Sin el parámetro, F4 mantiene su comportamiento anterior.
+- `src/engine/debug-console.ts`, `src/world/debug-overlays.ts`, `playwright.audit.config.ts`, `tests/e2e/debug-audit.spec.ts`, `tests/e2e/audit-destinations.json` y `reports/audit-debug.md` incorporados.
+- Corregidos `minimumHeight`/`maximumHeight` en el overlay de LOD, la ruta del catálogo de hitos (copiado a `public/data/landmarks/`), el navegador del tour (Chromium) y la exclusión de los specs E2E de Vitest.
+- `npm run audit` genera capturas en `reports/screens/audit-<fecha>/` y el resumen en `reports/audit-summary.md`; las capturas están ignoradas por Git.
+- `lint`, `typecheck`, `test` (42/42), `build`, `data:verify` y `audit:npcs` pasan tras la integración.
+
+### Pendiente
+- Ejecutar el tour completo una vez publicada la región urbana ampliada: el despliegue actual solo sirve `cc-monumental` y varias paradas caen fuera de su manifiesto.
+- Implementar el planificador de LOD de agentes para sustituir el marcador `0 / 0 / 0` del HUD de depuración.
+- Conectar comandos de consola `time`, `weather`, `god` y `wanted` cuando existan esos sistemas (el nivel de búsqueda ya existe en el HUD, pero no se expone aún como comando).
+
+### Cómo probarlo
+- Abre `/?debug=1` y pulsa ` para abrir la consola; escribe `help`, `tp Plaza Mayor`, `spawn vehicle` o `noclip`.
+- Prueba F5/F6/F7 para ver colisionadores, calzadas y límites de LOD; F8 alterna sombras.
+- Ejecuta `npm run audit` con el servidor de desarrollo disponible para generar el informe de las diez paradas.
+

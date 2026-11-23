@@ -29,6 +29,7 @@ body { min-width: 320px; min-height: 100vh; margin: 0; }
   transition: opacity 160ms ease, transform 160ms ease;
 }
 .debug-panel.is-hidden { opacity: 0; transform: translateY(-8px); pointer-events: none; }
+.debug-console.is-hidden { display: none; }
 .eyebrow, .phase-tag, dt, .hint { font-family: 'Cascadia Mono', 'Consolas', monospace; letter-spacing: 0.1em; }
 .eyebrow { margin: 0 0 18px; color: #d3ac78; font-size: 9px; font-weight: 500; }
 .eyebrow span { padding: 0 5px; color: #87928b; }
@@ -37,6 +38,8 @@ h1 { margin: 0; font-size: clamp(23px, 4vw, 30px); font-weight: 600; letter-spac
 .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #a9c783; box-shadow: 0 0 10px #a9c783; }
 dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0; padding: 15px 0 13px; border-top: 1px solid rgb(255 255 255 / 13%); border-bottom: 1px solid rgb(255 255 255 / 13%); }
 dl div { display: grid; gap: 6px; }
+dl .wide { grid-column: 1 / -1; }
+dl .wide dd { font-size: 11px; line-height: 1.5; }
 dt { color: #aab0a6; font-size: 8px; text-transform: uppercase; }
 dd { margin: 0; font-family: 'Cascadia Mono', 'Consolas', monospace; font-size: 17px; }
 .hint { margin: 14px 0 0; color: #aab0a6; font-size: 9px; letter-spacing: 0; }
@@ -45,3 +48,22 @@ kbd { padding: 3px 6px; color: #f4f1e7; background: #343b36; border-radius: 3px;
 .phase-tag span { padding: 0 5px; color: #d3ac78; }
 .notice { position: absolute; top: 8%; left: 50%; z-index: 2; max-width: min(520px, 90vw); margin: 0; padding: 12px 18px; transform: translateX(-50%); color: #fff5df; background: rgb(23 26 25 / 90%); border-left: 3px solid #d3ac78; border-radius: 3px; font: 11px 'Cascadia Mono', 'Consolas', monospace; text-align: center; }
 #wanted { color: #e6c382; letter-spacing: 0.12em; }
+.debug-console {
+  position: absolute;
+  left: 24px;
+  bottom: 24px;
+  z-index: 3;
+  width: min(560px, calc(100vw - 48px));
+  padding: 14px;
+  color: #e9ece8;
+  background: rgb(17 20 19 / 94%);
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 5px;
+  font: 12px/1.5 'Cascadia Mono', 'Consolas', monospace;
+  box-shadow: 0 12px 40px rgb(0 0 0 / 35%);
+}
+.debug-console p { margin: 0 0 8px; color: #d3ac78; }
+.debug-console code { color: #f4f1e7; }
+.debug-console pre { min-height: 36px; max-height: 150px; overflow: auto; margin: 0 0 8px; white-space: pre-wrap; }
+.debug-console form { display: flex; gap: 8px; align-items: center; }
+.debug-console input { flex: 1; min-width: 0; padding: 6px 8px; color: inherit; background: #252b28; border: 1px solid #47504a; border-radius: 3px; font: inherit; }

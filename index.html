@@ -10,7 +10,7 @@
   <body>
     <main id="game" aria-label="Cáceres Criminal">
       <canvas id="world" aria-label="Terreno 3D de Cáceres"></canvas>
-      <section class="debug-panel" aria-live="polite">
+      <section class="debug-panel" aria-live="polite" aria-label="Panel de depuración">
         <p class="eyebrow">CÁCERES CRIMINAL <span>·</span> CIUDAD EDIFICADA</p>
         <h1>Cáceres</h1>
         <p class="status"><span class="status-dot"></span><span id="world-status">Iniciando motor físico…</span></p>
@@ -22,11 +22,23 @@
           <div><dt>Llamadas de dibujo</dt><dd id="draw-calls">0</dd></div>
           <div><dt>Triángulos</dt><dd id="triangles">0</dd></div>
           <div><dt>Memoria geométrica</dt><dd id="memory">0 MiB</dd></div>
+          <div><dt>Heap navegador</dt><dd id="heap-memory">n/d</dd></div>
           <div><dt>Agentes</dt><dd id="agents">0</dd></div>
+          <div><dt>Agentes por LOD</dt><dd id="agents-lod">0 / 0 / 0</dd></div>
           <div><dt id="wanted-label">Búsqueda</dt><dd id="wanted">—</dd></div>
+          <div class="wide"><dt>Tiempo por sistema</dt><dd id="system-times">física 0 · jugador 0 · streaming 0 · render 0 ms</dd></div>
         </dl>
+        <p id="debug-modes" class="hint">F5 colisiones · F6 calzadas · F7 LOD · F8 sombras · F9 postprocesado no configurado</p>
         <p class="hint" id="controls-hint">WASD camina · Mayús corre · E roba/sale · clic captura el ratón</p>
-        <p class="hint">Pulsa <kbd>F4</kbd> para mostrar u ocultar los contadores y bordes de chunk</p>
+        <p class="hint"><kbd>F4</kbd> panel y bordes · con <kbd>?debug=1</kbd>: <kbd>F3</kbd> panel, <kbd>F4</kbd> bordes, <kbd>`</kbd> consola</p>
+      </section>
+      <section id="debug-console" class="debug-console is-hidden" aria-label="Consola de depuración">
+        <p>Consola de depuración · escribe <code>help</code> para ver comandos · Esc para cerrar</p>
+        <pre id="debug-console-output" role="log" aria-live="polite">Consola lista.</pre>
+        <form id="debug-console-form">
+          <label for="debug-console-input">&gt;</label>
+          <input id="debug-console-input" autocomplete="off" spellcheck="false" aria-label="Comando de depuración" />
+        </form>
       </section>
       <p id="notice" class="notice" role="status" hidden></p>
       <p class="phase-tag">FASE 11 <span>/</span> DELITOS Y POLICÍA</p>

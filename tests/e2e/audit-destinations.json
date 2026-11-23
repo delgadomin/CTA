@@ -1,0 +1,12 @@
+[
+  { "name": "Plaza Mayor", "x": -4.2, "z": 72.6, "source": "landmarks.json: plaza-mayor" },
+  { "name": "Arco de la Estrella", "x": 48.3, "z": 56.8, "source": "landmarks.json: arco-de-la-estrella" },
+  { "name": "Plaza de San Jorge", "x": 116.1, "z": -56.4, "source": "landmarks.json: plaza-de-san-jorge" },
+  { "name": "Torre de Bujaco", "x": 48.7, "z": 87.7, "source": "landmarks.json: torre-de-bujaco" },
+  { "name": "Concatedral de Santa María", "x": 129.1, "z": 19.1, "source": "landmarks.json: concatedral-de-santa-maria" },
+  { "name": "Avenida Hernán Cortés", "x": -386.6, "z": 566.2, "source": "OSM way 23121493; centro geométrico proyectado" },
+  { "name": "Plaza de los Conquistadores", "x": -180.1, "z": -562.7, "source": "OSM way 24524709; centro geométrico proyectado" },
+  { "name": "Paseo de Cánovas", "x": -574, "z": -492.7, "source": "landmarks.json: paseo-de-canovas" },
+  { "name": "Avenida de España", "x": -484.7, "z": -309, "source": "landmarks.json: avenida-de-espana" },
+  { "name": "Parque del Príncipe", "x": -1011.9, "z": -15.3, "source": "landmarks.json: parque-del-principe" }
+]

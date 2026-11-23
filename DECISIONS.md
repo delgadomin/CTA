@@ -115,3 +115,14 @@
 - Las colisiones de agentes usan cuerpos cinemáticos de Rapier en un adaptador (`agent-colliders.ts`) para no acoplar los sistemas de tráfico a la física. El jugador a pie, que es scriptado, se resuelve por empuje circular; el coche del jugador sí usa contactos Rapier.
 - Se descubrió que `DynamicRayCastVehicleController.updateVehicle()` solo modifica velocidades: `Vehicle.update()` llama a `world.step()` para integrar y resolver contactos. Sin ese paso los coches ambientales y las patrullas eran puramente visuales para la física.
 - La acera deja de compartir el material `stone` de la calzada del casco antiguo: se añade el estilo `sidewalk` (losa clara), se oscurece el asfalto y se mantiene `concrete` para el bordillo. Es una decisión visual sin añadir datos geográficos ni assets externos.
+
+# Integración del PR #4 - herramientas de auditoría (post Fase 11)
+
+- El PR #4 nace de un commit anterior a las fases 10/11 y tocaba HUD, estilos y documentación. El conflicto se resuelve conservando `main` como base y superponiendo solo las herramientas nuevas; así no se pierden los agentes, el sistema policial ni las correcciones de colisiones y aceras.
+- `?debug=1` activa un modo de depuración independiente: F3 panel, F4 bordes de chunk, F5 colisionadores, F6 calzadas, F7 límites de LOD, F8 sombras, F9 aviso y ` consola. Sin el parámetro, F4 sigue alternando a la vez panel y bordes como en versiones anteriores.
+- Los overlays se generan en `debug-overlays.ts` a partir de geometría ya existente (heightfield, colisionadores de vía y edificio, huella de LOD). No introducen dibujos ni sistemas nuevos cuando el modo de depuración está apagado.
+- El código del PR referenciaba `minHeight`/`maxHeight` en `BuiltTerrainChunk`; el tipo real expone `minimumHeight`/`maximumHeight`. Se corrigió esa incompatibilidad al integrar, en lugar de ampliar el tipo con alias.
+- El catálogo de hitos se publica copiando `data/landmarks/landmarks.json` a `public/data/landmarks/landmarks.json` (231 KB) para que Vite lo sirva también en GitHub Pages. No se modifica `public/world`: sus hashes están registrados en el manifiesto.
+- `tests/e2e/debug-audit.spec.ts` pertenece a Playwright (`npm run audit`) y se excluye de Vitest en `vite.config.ts`. El navegador del tour es Chromium estándar, no `msedge`, para que la auditoría pueda ejecutarse en CI.
+- `agentsByLod` se informa como `0 / 0 / 0` porque todavía no existe un planificador de LOD de agentes; la población real se muestra en `agents`. No se inventa un desglose para rellenar la métrica.
+- No se añaden dependencias: Playwright ya figuraba en `devDependencies` y los overlays usan Three.js.

@@ -11,6 +11,7 @@
     "typecheck": "tsc -b --pretty",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "audit": "playwright test --config=playwright.audit.config.ts",
     "verify:streaming": "node tools/verify-streaming.mjs",
     "data:build": "node tools/data-build.mjs",
     "data:build:fresh": "node tools/data-build.mjs --fresh",
