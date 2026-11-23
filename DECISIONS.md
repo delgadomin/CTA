@@ -124,7 +124,7 @@
 - El código del PR referenciaba `minHeight`/`maxHeight` en `BuiltTerrainChunk`; el tipo real expone `minimumHeight`/`maximumHeight`. Se corrigió esa incompatibilidad al integrar, en lugar de ampliar el tipo con alias.
 - El catálogo de hitos se publica copiando `data/landmarks/landmarks.json` a `public/data/landmarks/landmarks.json` (231 KB) para que Vite lo sirva también en GitHub Pages. No se modifica `public/world`: sus hashes están registrados en el manifiesto.
 - `tests/e2e/debug-audit.spec.ts` pertenece a Playwright (`npm run audit`) y se excluye de Vitest en `vite.config.ts`. El navegador del tour es Chromium estándar, no `msedge`, para que la auditoría pueda ejecutarse en CI.
-- `agentsByLod` se informa como `0 / 0 / 0` porque todavía no existe un planificador de LOD de agentes; la población real se muestra en `agents`. No se inventa un desglose para rellenar la métrica.
+- `agentsByLod` cuenta agentes ambientales cercanos, intermedios y lejanos; no incluye patrullas. La población total de peatones y coches se muestra aparte en `agents`.
 - No se añaden dependencias: Playwright ya figuraba en `devDependencies` y los overlays usan Three.js.
 
 # LOD de simulación de agentes (post integración del PR #4)

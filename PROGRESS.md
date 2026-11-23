@@ -355,4 +355,3 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 ### Cómo probarlo
 - Abre `/?debug=1` y observa `Agentes por LOD`: los tres números suman el total de `Agentes`.
 - Al caminar, el nivel cercano cambia mientras los agentes lejanos siguen visibles y conservan sus colisionadores.
-

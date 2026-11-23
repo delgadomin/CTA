@@ -33,4 +33,3 @@ Fecha: 2026-11-23
 - Las aceras inferidas del phase 4 son geometría visual; el grafo peatonal usa únicamente `highway` y `walkable` de OSM.
 - Los modelos son procedurales y se comparten por instancias; no hay animación de extremidades por agente en esta fase.
 - No se comprueba la distancia al bordillo ni la altura de paso de peatones: los agentes siguen la cota MDT05 muestreada en cada paso.
-
