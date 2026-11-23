@@ -363,3 +363,19 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - El LOD lejano de edificios conserva la huella de calle original y la forma de cubierta, en lugar de usar rectángulos alineados al mapa.
 - Integrado desde el PR #8 y corregido: `paneGeometry()` y `cabinGeometry()` generan `uv` para que `mergeGeometries()` no descarte el coche instanciado, y las pruebas de LOD de edificios y de colores de agentes reflejan el comportamiento real.
 - Validado con `lint`, `typecheck`, `test` (43/43) y `build`; sin advertencias de geometría. Pendiente únicamente la comprobación visual en ejecución local.
+
+## Pasada visual de era PS2 (integrada en el PR #10)
+
+### Hecho
+- Integrado el trabajo del PR #9 de `delgadomin`: personaje y peatones con ropa por capas y rasgos más legibles, coches con carrocería esculpida, cristales, asientos, ruedas y molduras, fachadas con ventanas arqueadas y contraventanas, y guardabarros del coche conducible alineados con las ruedas.
+- El PR #9 no se podía mergear directamente (draft, conflicto en `npc-models.ts` y sin permisos sobre el fork), así que se integró como PR #10 conservando los commits originales.
+- Corregidos los 4 errores de TypeScript del moteado de fachada con `seededSequence()` y restablecido el atributo `uv` en las dos geometrías nuevas de vehículo.
+
+### Verificación
+- `npm run lint`, `npm run typecheck`, `npm test` (43/43) y `npm run build`: correctos, sin advertencias de `mergeGeometries()`.
+
+### Pendiente
+- Revisar en ejecución local que las nuevas siluetas y fachadas se lean bien a distancia y que el coste de triángulos siga dentro del objetivo.
+
+### Cómo probarlo
+- Abre `/?debug=1`, camina por el casco antiguo y conduce un coche; compara fachadas, peatones y vehículos con la versión anterior.

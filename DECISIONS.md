@@ -148,3 +148,10 @@
 - Umbrales: 90 m para el nivel cercano, 210 m para el intermedio y el resto como lejano. Cadencias de actualización 1/2/4 frames respectivamente; los tres niveles siguen dibujándose y conservando su colisionador cinemático, así que el mundo no cambia de aspecto ni de physicalidad con la distancia.
 - El tiempo de simulación se acumula por agente y se reparte entre frames (`slot % cadence`) para no concentrar el trabajo en un solo fotograma. Cada paso se limita a 0,05 s para que un agente lejano no salte una arista corta; el coste es que avanza más despacio fuera del nivel cercano. `lodCounts` expone los tres recuentos al HUD de depuración; antes se mostraba un `0 / 0 / 0` fijo porque no existía el planificador.
 - El despawn usa distancia al cuadrado y se comprueba solo cada 0,25 s, igual que el spawn, para reducir raíces cuadradas en el bucle caliente. Sin fuentes geográficas ni assets nuevos.
+
+# Pasada visual de era PS2 (integración del PR #9)
+
+- Se integra el trabajo de `delgadomin` del PR #9 mediante el PR #10: el original estaba en draft, tenía un conflicto en `npc-models.ts` contra el arreglo de `uv` del PR #8 y la rama del fork no se puede actualizar desde esta cuenta. El PR #10 conserva la autoría original y añade solo las correcciones.
+- `seededSequence()` genera los moteados del estuco. El PR #9 trataba `random` (un número devuelto por `seeded()`) como función, lo que rompía `typecheck` y `build`; la nueva secuencia mantiene la apariencia determinista sin llamadas aleatorias por fotograma.
+- `createSedanBodyGeometry()` y `createWheelArchGeometry()` generan `uv`. Sin ese atributo, `mergeGeometries()` volvía a descartar el coche instanciado y caía en la malla de reserva.
+- Las siluetas, prendas, ventanas arqueadas, contraventanas y detalles de coches siguen siendo geometría procedural original; no se añaden assets con copyright ni se modifica `public/world`.
