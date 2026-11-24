@@ -8,14 +8,15 @@
 
 ## Fase 0 - Repositorio, herramientas y despliegue (completada)
 
-### Revisión de fase 2 (en curso)
+### Revisión adicional de fase 2 (completada)
 - Se corrigió el parseo de `--region` para aceptar tanto `--region=cc-monumental` como `--region cc-monumental`, según la guía.
 - Overpass y el WCS de elevación comparten reintentos acotados, respetan `Retry-After`, limitan la respuesta y no descargan teselas de elevación demasiado deprisa.
 - Las salidas se escriben atómicamente solo cuando cambian; el constructor elimina chunks obsoletos y el verificador detecta chunks huérfanos.
 - Regenerada la región desde cachés locales: 900 chunks y 41.527 registros de elementos; los 15.024 tramos OSM incluidos en el informe de fidelidad coinciden con la geometría fuente con desviación máxima de 0 m. No se detectaron nombres de negocios bloqueados y la repetición produjo los mismos hashes.
-- Catastro INSPIRE aún no está integrado: una consulta de prueba de 100 × 100 m sí respondió en GML, pero una de 500 × 500 m agotó el tiempo de espera. Falta una descarga regional acotada, su transformación y el registro de atribución/licencia; la respuesta WFS original no se añadirá a `public/`.
+- Catastro INSPIRE integrado como referencia de contraste en un núcleo de 1 km centrado en Plaza Mayor, sin cambiar los 7,6 km del mundo del juego. Las 2.502 huellas se consultan en teselas de hasta 250 m, con reintentos, límite de tamaño, subdivisión adaptativa y caché local. En 2.324 casos (92,9 %) los centroides quedan a 10 m o menos de un centroide OSM; es una métrica aproximada, no una afirmación de equivalencia geométrica.
+- El GML original se queda en `data/raw/catastro/`, ignorado por Git. El manifiesto y el informe publican solo fuente, licencia, hash y métricas agregadas; no se exportan referencias catastrales, nombres ni geometrías Catastro a `public/`. La atribución quedó registrada en `ATTRIBUTION.md`.
 - El inspector 2D se abrió y se verificó visualmente: representa las huellas y calles del extracto sobre la capa de comparación OSM. Muestra 7.148 edificios, 7.894 calles y 41.527 elementos en EPSG:25829.
-- La fase permanece abierta hasta integrar una fuente Catastro descargable de forma compatible con su licencia; no se declara completada solo por pasar los checks automatizados.
+- Verificación de cierre: formato, ESLint, TypeScript, build y 58 pruebas pasan; `verify-world` valida 900 chunks y `fidelity-check` confirma 15.024 tramos con desviación máxima de 0 m. Una segunda reconstrucción desde caché mantuvo los hashes del manifiesto e informes.
 
 ### Hecho
 - Repositorio inicializado desde `hhg-ptm/CTA`.
@@ -40,7 +41,7 @@
 - `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`
 - Despliegue en GitHub Actions a Pages tras habilitar Pages desde Actions en la configuración del repositorio.
 
-## Fase 2 - Pipeline de datos geográficos (estado previo; revisión actual en curso)
+## Fase 2 - Pipeline de datos geográficos (completada; revisión adicional)
 
 ### Plan
 - Definir `cc-monumental` alrededor de Plaza Mayor en EPSG:25829 y documentar OpenStreetMap ODbL y CNIG MDT05 CC BY 4.0.

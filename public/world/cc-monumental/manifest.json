@@ -42,6 +42,15 @@
         "max": 639,
         "tiles": 16
       }
+    },
+    "catastroBuildings": {
+      "attribution": "© Dirección General del Catastro; INSPIRE BU, geometría transformada para contraste agregado.",
+      "url": "https://ovc.catastro.meh.es/INSPIRE/wfsBU.aspx",
+      "licenseUrl": "https://www.catastro.hacienda.gob.es/webinspire/documentos/Licencia.pdf",
+      "referenceExtentMeters": 1000,
+      "tileCount": 43,
+      "buildingCount": 2502,
+      "sha256": "d7508638681c4ff61b39e97dc2fd6cc7516b1e16498e2e4d6d4096b959bf10fd"
     }
   },
   "counts": {

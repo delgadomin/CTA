@@ -9,6 +9,11 @@ import { makeOverpassQuery } from '../tools/fetch-osm.mjs';
 import { optionValue } from '../tools/cli-args.mjs';
 import { requestWithRetry } from '../tools/request-retry.mjs';
 import { writeIfChanged } from '../tools/write-if-changed.mjs';
+import {
+  compareBuildingCentroids,
+  createCatastroTiles,
+  parseCatastroBuildings,
+} from '../tools/catastro-reference.mjs';
 
 const region = {
   origin: { lat: 39.474414, lon: -6.371556 },
@@ -70,6 +75,72 @@ describe('pipeline command and request helpers', () => {
     expect(await writeIfChanged(filePath, 'stable output')).toBe(true);
     expect(await writeIfChanged(filePath, 'stable output')).toBe(false);
     expect(await readFile(filePath, 'utf8')).toBe('stable output');
+  });
+});
+
+describe('Catastro INSPIRE building reference', () => {
+  it('tiles a region below the WFS four-square-kilometre limit', () => {
+    const origin = projectEtrs89Utm29(region.origin.lon, region.origin.lat);
+    const tiles = createCatastroTiles({ extentMeters: 1000 }, origin);
+
+    expect(tiles).toHaveLength(16);
+    expect(
+      Math.max(...tiles.map((tile) => (tile.maxX - tile.minX) * (tile.maxY - tile.minY))),
+    ).toBeLessThan(4_000_000);
+    expect(tiles.some((tile) => tile.minX === origin.easting - 500)).toBe(true);
+  });
+
+  it('projects GML footprints into local coordinates and deduplicates source ids', () => {
+    const origin = projectEtrs89Utm29(region.origin.lon, region.origin.lat);
+    const xml = `<gml:FeatureCollection xmlns:gml="http://www.opengis.net/gml/3.2">
+      <gml:featureMember><bu:Building gml:id="ES.SDGC.BU.private-id">
+        <gml:exterior><gml:LinearRing><gml:posList srsDimension="2">726089 4372723 726099 4372723 726099 4372733 726089 4372733 726089 4372723</gml:posList></gml:LinearRing></gml:exterior>
+      </bu:Building></gml:featureMember>
+      <gml:featureMember><bu:Building gml:id="ES.SDGC.BU.private-id">
+        <gml:exterior><gml:LinearRing><gml:posList srsDimension="2">726089 4372723 726099 4372723 726099 4372733 726089 4372733 726089 4372723</gml:posList></gml:LinearRing></gml:exterior>
+      </bu:Building></gml:featureMember>
+    </gml:FeatureCollection>`;
+    const buildings = parseCatastroBuildings(xml, origin);
+    const audit = compareBuildingCentroids(
+      buildings,
+      [
+        { points: buildings[0]!.points },
+        {
+          points: [
+            [500, 500],
+            [510, 500],
+            [510, 510],
+            [500, 510],
+          ],
+        },
+        {
+          points: [
+            [2000, 2000],
+            [2010, 2000],
+            [2010, 2010],
+            [2000, 2010],
+          ],
+        },
+      ],
+      10,
+      1000,
+    );
+
+    expect(buildings).toHaveLength(1);
+    expect(buildings[0]!.points[0]?.[0]).toBeCloseTo(-0.228, 2);
+    expect(audit).toEqual({ referenceCount: 1, osmCount: 1, matched: 1, toleranceMeters: 10 });
+    expect(JSON.stringify(audit)).not.toContain('private-id');
+  });
+
+  it('rejects WFS exception documents and malformed rings', () => {
+    const origin = projectEtrs89Utm29(region.origin.lon, region.origin.lat);
+    expect(() => parseCatastroBuildings('<ows:ExceptionReport/>', origin)).toThrow(/exception/i);
+    expect(
+      parseCatastroBuildings(
+        '<gml:featureMember><bu:Building gml:id="x"><gml:exterior><gml:posList>0 1 2</gml:posList></gml:exterior></bu:Building></gml:featureMember>',
+        origin,
+      ),
+    ).toEqual([]);
   });
 });
 

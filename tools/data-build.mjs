@@ -14,6 +14,7 @@ import { auditLandmarks, formatLandmarkAudit } from './landmark-audit.mjs';
 import { buildLandmarkDataset, writeLandmarkDataset } from './landmark-catalog.mjs';
 import { optionValue } from './cli-args.mjs';
 import { writeIfChanged } from './write-if-changed.mjs';
+import { compareBuildingCentroids, getCatastroBuildingReference } from './catastro-reference.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const regionName = optionValue(process.argv.slice(2), '--region', 'cc-monumental');
@@ -56,6 +57,12 @@ if (osm.elements.length === 0)
 const osmRaw = await readFile(path.join(ROOT, 'data/raw/osm', `${regionName}.json`));
 const osmSha256 = createHash('sha256').update(osmRaw).digest('hex');
 const resolvedRegion = resolveRegion(regionDefinition);
+const catastroReference = await getCatastroBuildingReference(
+  regionName,
+  regionDefinition,
+  resolvedRegion.origin,
+  { fresh: forceDownload },
+);
 const elevation = await loadAsciiElevation(
   elevationPath,
   resolvedRegion.origin,
@@ -72,6 +79,12 @@ const region = {
   lat: regionDefinition.origin.lat,
 };
 const data = normalizeOsm(osm, region, brandBlocklist, elevation, landmarkModelIds);
+const catastroBuildingAudit = compareBuildingCentroids(
+  catastroReference.buildings,
+  data.buildings,
+  10,
+  catastroReference.extentMeters,
+);
 const landmarkCatalog = JSON.parse(
   await readFile(path.join(ROOT, 'data/landmarks/targets.json'), 'utf8'),
 );
@@ -223,6 +236,16 @@ const manifest = {
       sha256: elevationMetadata.sha256,
       grid: elevationMetadata.grid,
     },
+    catastroBuildings: {
+      attribution:
+        '© Dirección General del Catastro; INSPIRE BU, geometría transformada para contraste agregado.',
+      url: catastroReference.source,
+      licenseUrl: catastroReference.licenseUrl,
+      referenceExtentMeters: catastroReference.extentMeters,
+      tileCount: catastroReference.tileCount,
+      buildingCount: catastroBuildingAudit.referenceCount,
+      sha256: catastroReference.sha256,
+    },
   },
   counts: {
     roads: data.roads.length,
@@ -293,6 +316,8 @@ const fidelityLines = [
   `| Vías con superficie OSM explícita | ${data.roads.filter((road) => road.surface !== 'unknown').length} |`,
   `| Vías con dirección OSM explícita | ${data.roads.filter((road) => road.oneway !== 0).length} |`,
   `| Huellas de edificios | ${data.buildings.length} |`,
+  `| Edificios Catastro INSPIRE en núcleo de ${catastroReference.extentMeters} m | ${catastroBuildingAudit.referenceCount} |`,
+  `| Centroides Catastro a ≤ ${catastroBuildingAudit.toleranceMeters} m de una huella OSM | ${catastroBuildingAudit.matched} (${catastroBuildingAudit.referenceCount === 0 ? '0' : ((100 * catastroBuildingAudit.matched) / catastroBuildingAudit.referenceCount).toFixed(1)}%) |`,
   `| Edificios por zona (casco / ensanche / periferia) | ${data.buildingZoneCounts.casco} / ${data.buildingZoneCounts.ensanche} / ${data.buildingZoneCounts.periferia} |`,
   `| Huellas incluidas en chunks del mundo | ${worldBuildings.size} |`,
   `| Plantas OSM explícitas | ${data.buildings.filter((building) => building.floors !== null).length} |`,
@@ -307,6 +332,7 @@ const fidelityLines = [
   `| Muestras MDT05 ausentes | ${data.issues.missingTerrainSamples} |`,
   `| Comercios pendientes de revisión de marca | ${data.issues.pendingBrands} |`,
   '',
+  `El contraste Catastro INSPIRE cubre un cuadrado central de ${catastroReference.extentMeters} m y transforma las huellas a coordenadas locales EPSG:25829. El porcentaje de cobertura es una aproximación por centroides a ${catastroBuildingAudit.toleranceMeters} m; las geometrías, referencias y atributos catastrales originales no se copian a public/.`,
   'Los atributos de altura y plantas ausentes permanecen nulos en los datos fuente. La altura visual usa height=* → building:levels × 3 m → planta visual por zona/tipo; las fachadas conservan el número fuente y el valor inferido por separado.',
   'El inspector 2D ofrece una superposición cian/magenta de la geometría OSM original frente a los chunks procesados. La herramienta `npm run fidelity` compara cada vértice de las vías y huellas fuente que intersectan el mundo con una tolerancia máxima de 1 m.',
   'Las torres sin altura ni plantas explícitas reciben 7 plantas visuales (21 m) para lectura de silueta; es un fallback artístico, no una medición. El Arco de la Estrella usa la posición OSM del POI y una orientación perpendicular a la vía más cercana; sus dimensiones y el almenado de torres son aproximaciones visuales, no datos de levantamiento.',

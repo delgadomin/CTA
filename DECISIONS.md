@@ -54,9 +54,12 @@
 ## 2026-11-24 - Auditoría reiniciada de fase 2
 - Overpass y WCS usan una política común de reintentos con `Retry-After`, límite de intentos y espera incremental. La descarga WCS serializa las teselas y limita el tamaño de la respuesta.
 - Los artefactos se reemplazan atómicamente solo si cambian. El manifiesto se escribe antes de retirar chunks antiguos; el verificador falla si encuentra archivos binarios sin referencia.
-- La salida regenerada corrige el desfase con los filtros y el catálogo actuales. El Catastro INSPIRE queda pendiente: antes de distribuir cualquier derivado debe transformarse conforme a sus términos y conservarse la atribución; no se publica la respuesta original del WFS.
+- Catastro INSPIRE BU se consulta solo durante `data:build`, en el núcleo de 1 km de Plaza Mayor. Cada tesela base mide hasta 250 m; las cajas rechazadas o que exceden el límite de respuesta se subdividen. El intervalo mínimo entre peticiones es 350 ms y el timeout conduce a subdivisión, con profundidad limitada.
+- Las respuestas GML originales se cachean en `data/raw/catastro/` y permanecen fuera de Git. El parser extrae solo anillos exteriores, elimina cierres duplicados, proyecta a metros locales y descarta IDs antes de devolver las geometrías al constructor. El informe publica conteos y comparación aproximada de centroides a 10 m; no publica GML, geometrías Catastro, referencias ni nombres.
+- El caché usa el origen local y el tamaño en el nombre de cada tesela para evitar colisiones entre extensiones. Las subdivisiones adaptativas se guardan como marcadores; reconstruir desde caché no vuelve a consultar los cuadros padre. El hash del manifest usa huellas transformadas ordenadas por su geometría, sin IDs de Catastro.
+- El manifest también registra WFS, alcance, hash, licencia y atribución. Las huellas OSM siguen siendo las únicas que alimentan chunks del juego.
+- La salida regenerada corrige el desfase con los filtros y el catálogo actuales. La región completa se conserva en 7,6 km para no romper el mundo existente; el contraste Catastro usa el núcleo de 1 km indicado por la guía.
 - El inspector 2D se verificó visualmente con la geometría reconstruida y la superposición de comparación OSM.
-- El WFS BU del Catastro respondió en GML para una caja de 100 × 100 m; una consulta de 500 × 500 m agotó el tiempo de espera. No se guardó ninguna respuesta: hace falta una descarga regional por teselas y transformación antes de integrar datos derivados.
 
 # Fase 3 - terreno y streaming
 
