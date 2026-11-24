@@ -235,3 +235,12 @@ Siguiendo las metodologías y directrices del repositorio `gamedev-skills` (`sou
 - El sedán CC0 se agrupa por material al cargarlo para limitar las llamadas de dibujo. El chasis, el colisionador y la cota de spawn (`y + 0.82`) siguen siendo los de `main`; el modelo no altera la física.
 - La cúpula procedural del PR #11 (`atmosphere.ts`) se descarta: `main` ya aporta gradiente ibérico, disco solar y corona con exposición ACES 1.14. Dos cielos simultáneos duplicarían dibujo y romperían la paleta actual.
 - Coste: ~7,52 MB de GLB con texturas embebidas, cargados de forma diferida tras `prepareRenderer()`; dentro del objetivo de <25 MB de carga inicial y sin URIs externos en tiempo de ejecución.
+
+# Adopción de la estrategia inspirada en «Badajoz: El Juego» y «gamedev-skills» (noviembre de 2026)
+
+- Tras el análisis del videojuego extremeño «Badajoz: El Juego» (desarrollado por Alfredo Narváez con Godot 4, Catastro, OSM e IGN) y la integración de patrones de «gamedev-skills», se establece un cambio de paradigma para agilizar el desarrollo y elevar drásticamente la calidad visual y jugable:
+  1. **Abandono de la construcción procedural geométrica en código:** Dejar de ensamblar coches, monumentos y mobiliario mediante primitivas (`BoxGeometry`, `CylinderGeometry`) en TypeScript. Se autoriza y prioriza la importación de modelos GLB optimizados (CC0/CC-BY de Kenney, Quaternius, Poly Haven y Blender) cargados mediante `AssetManager`.
+  2. **Pipeline de datos abiertos oficiales (Catastro + OSM + IGN):** Cruzar OpenStreetMap con las capas vectoriales abiertas del Catastro de España para extraer alturas reales, nombres de vías y números de portal exactos, habilitando interacción residencial e inmobiliaria.
+  3. **Desarrollo Gameplay-First con sabor cacereño:** En lugar de sobrecargar el motor con cinemáticas o sistemas complejos, se diseña un bucle de oficios locales (Autobús Urbano Líneas 1 y 8, Repartidor en la Judería, Guía Turístico patrimonial y Carreras urbanas) con economía en euros (€).
+  4. **Presentación comercial:** Ocultar el panel de depuración F3 por defecto (activable solo con `?debug=1` o tecla F3), manteniendo en pantalla un HUD limpio con radar circular táctico, velocímetro y notificaciones.
+- La estrategia al completo queda documentada de forma canónica en la carpeta `strategy/` (`NEW_STRATEGY.md`, `GAMEPLAY_AND_MISSIONS.md`, `ASSET_AND_DATA_PIPELINE.md` y `README.md`) y referenciada en `AGENTS.md`.

@@ -506,3 +506,18 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - `npm test`: 47/47 pruebas unitarias pasando (13/13 suites).
 - `npm run build`: compilación de producción exitosa; solo el aviso preexistente de tamaño de chunks de Rapier/Three.
 - Pendiente de inspección visual en navegador: escala del sedán, orientación del personaje y ausencia de avisos de `mergeGeometries()`.
+
+## Nueva estrategia de desarrollo inspirada en «Badajoz: El Juego» y «gamedev-skills» (completada)
+
+### Hecho
+- **Investigación profunda de *Badajoz: El Juego*:** Análisis de los factores de éxito del juego de Alfredo Narváez (Godot 4, integración de Catastro de España para 12.000 portales y alturas reales, OpenStreetMap, IGN MDT05, oficios locales pacenses como autobús urbano línea 18, camalote en el Guadiana y paquetería).
+- **Creación de la carpeta estratégica canónica (`strategy/`):**
+  - `strategy/NEW_STRATEGY.md`: Manifiesto con los 5 grandes pilares (abandono de la geometría procedural en código, cruce Catastro+OSM+IGN, desarrollo gameplay-first, HUD comercial limpio, y audio Web Audio con feedback háptico/cámara).
+  - `strategy/GAMEPLAY_AND_MISSIONS.md`: Especificación de 4 oficios cacereños auténticos (Autobús Urbano Líneas 1 y 8, Repartidor en la Judería y Casco Antiguo, Guía Turístico por la Ciudad Monumental y Carreras urbanas en Cánovas/Ronda Norte), con economía en € y tipado declarativo TypeScript.
+  - `strategy/ASSET_AND_DATA_PIPELINE.md`: Pipeline de assets 3D GLB optimizados (CC0/CC-BY de Kenney, Quaternius, Poly Haven y Blender), presupuestos técnicos de triángulos/texturas, y flujo de datos geográficos oficiales.
+  - `strategy/README.md`: Índice general de la estrategia.
+- **Actualización de `AGENTS.md` y `DECISIONS.md`:** Incorporadas directrices estratégicas de obligado cumplimiento para todos los agentes y desarrolladores del proyecto.
+
+### Verificación
+- Documentación técnica y estratégica revisada y enlazada.
+- No se ha tocado código de producción conforme a la instrucción directa del usuario ("No toques código").
