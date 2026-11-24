@@ -1,4 +1,4 @@
-import { rm, writeFile } from 'node:fs/promises';
+import { readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -6,6 +6,14 @@ import { loadAsciiElevation } from '../tools/elevation.mjs';
 import { normalizeOsm } from '../tools/normalize-data.mjs';
 import { projectEtrs89Utm29, unprojectEtrs89Utm29 } from '../tools/projection.mjs';
 import { makeOverpassQuery } from '../tools/fetch-osm.mjs';
+import { optionValue } from '../tools/cli-args.mjs';
+import { requestWithRetry } from '../tools/request-retry.mjs';
+import { writeIfChanged } from '../tools/write-if-changed.mjs';
+import {
+  compareBuildingCentroids,
+  createCatastroTiles,
+  parseCatastroBuildings,
+} from '../tools/catastro-reference.mjs';
 
 const region = {
   origin: { lat: 39.474414, lon: -6.371556 },
@@ -30,6 +38,109 @@ describe('EPSG:25829 projection helpers', () => {
     expect(restored.lat).toBeCloseTo(region.origin.lat, 7);
     expect(projected.easting).toBeGreaterThan(500000);
     expect(projected.northing).toBeGreaterThan(4000000);
+  });
+});
+
+describe('pipeline command and request helpers', () => {
+  it('accepts both documented region argument forms', () => {
+    expect(optionValue(['--region', 'cc-monumental'], '--region', 'fallback')).toBe(
+      'cc-monumental',
+    );
+    expect(optionValue(['--region=centro'], '--region', 'fallback')).toBe('centro');
+    expect(optionValue(['--region'], '--region', 'fallback')).toBe('fallback');
+  });
+
+  it('honors Retry-After when a service temporarily rejects a request', async () => {
+    const delays: number[] = [];
+    let calls = 0;
+    const response = await requestWithRetry(
+      async () => {
+        calls += 1;
+        return calls === 1
+          ? new Response('busy', { status: 503, headers: { 'retry-after': '2' } })
+          : new Response('ready', { status: 200 });
+      },
+      { wait: async (milliseconds) => delays.push(milliseconds) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(calls).toBe(2);
+    expect(delays).toEqual([2000]);
+  });
+
+  it('writes generated files atomically and skips identical content', async () => {
+    const filePath = path.join(os.tmpdir(), `caceres-output-${Date.now()}.txt`);
+    temporaryFiles.push(filePath);
+
+    expect(await writeIfChanged(filePath, 'stable output')).toBe(true);
+    expect(await writeIfChanged(filePath, 'stable output')).toBe(false);
+    expect(await readFile(filePath, 'utf8')).toBe('stable output');
+  });
+});
+
+describe('Catastro INSPIRE building reference', () => {
+  it('tiles a region below the WFS four-square-kilometre limit', () => {
+    const origin = projectEtrs89Utm29(region.origin.lon, region.origin.lat);
+    const tiles = createCatastroTiles({ extentMeters: 1000 }, origin);
+
+    expect(tiles).toHaveLength(16);
+    expect(
+      Math.max(...tiles.map((tile) => (tile.maxX - tile.minX) * (tile.maxY - tile.minY))),
+    ).toBeLessThan(4_000_000);
+    expect(tiles.some((tile) => tile.minX === origin.easting - 500)).toBe(true);
+  });
+
+  it('projects GML footprints into local coordinates and deduplicates source ids', () => {
+    const origin = projectEtrs89Utm29(region.origin.lon, region.origin.lat);
+    const xml = `<gml:FeatureCollection xmlns:gml="http://www.opengis.net/gml/3.2">
+      <gml:featureMember><bu:Building gml:id="ES.SDGC.BU.private-id">
+        <gml:exterior><gml:LinearRing><gml:posList srsDimension="2">726089 4372723 726099 4372723 726099 4372733 726089 4372733 726089 4372723</gml:posList></gml:LinearRing></gml:exterior>
+      </bu:Building></gml:featureMember>
+      <gml:featureMember><bu:Building gml:id="ES.SDGC.BU.private-id">
+        <gml:exterior><gml:LinearRing><gml:posList srsDimension="2">726089 4372723 726099 4372723 726099 4372733 726089 4372733 726089 4372723</gml:posList></gml:LinearRing></gml:exterior>
+      </bu:Building></gml:featureMember>
+    </gml:FeatureCollection>`;
+    const buildings = parseCatastroBuildings(xml, origin);
+    const audit = compareBuildingCentroids(
+      buildings,
+      [
+        { points: buildings[0]!.points },
+        {
+          points: [
+            [500, 500],
+            [510, 500],
+            [510, 510],
+            [500, 510],
+          ],
+        },
+        {
+          points: [
+            [2000, 2000],
+            [2010, 2000],
+            [2010, 2010],
+            [2000, 2010],
+          ],
+        },
+      ],
+      10,
+      1000,
+    );
+
+    expect(buildings).toHaveLength(1);
+    expect(buildings[0]!.points[0]?.[0]).toBeCloseTo(-0.228, 2);
+    expect(audit).toEqual({ referenceCount: 1, osmCount: 1, matched: 1, toleranceMeters: 10 });
+    expect(JSON.stringify(audit)).not.toContain('private-id');
+  });
+
+  it('rejects WFS exception documents and malformed rings', () => {
+    const origin = projectEtrs89Utm29(region.origin.lon, region.origin.lat);
+    expect(() => parseCatastroBuildings('<ows:ExceptionReport/>', origin)).toThrow(/exception/i);
+    expect(
+      parseCatastroBuildings(
+        '<gml:featureMember><bu:Building gml:id="x"><gml:exterior><gml:posList>0 1 2</gml:posList></gml:exterior></bu:Building></gml:featureMember>',
+        origin,
+      ),
+    ).toEqual([]);
   });
 });
 

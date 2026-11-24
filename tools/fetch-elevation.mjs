@@ -1,8 +1,11 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { projectEtrs89Utm29 } from './projection.mjs';
+import { optionValue } from './cli-args.mjs';
+import { requestWithRetry } from './request-retry.mjs';
+import { writeIfChanged } from './write-if-changed.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const IGN_WCS_ENDPOINT = 'https://servicios.idee.es/wcs-inspire/mdt';
@@ -10,6 +13,7 @@ const CRS_25829 = 'http://www.opengis.net/def/crs/EPSG/0/25829';
 const MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 const MAX_TILE_CHUNKS = 12;
 const TERRAIN_EDGE_MARGIN_CHUNKS = 1;
+const MIN_TILE_INTERVAL_MS = 250;
 
 function parseMultipart(buffer, contentType) {
   const boundary = contentType
@@ -111,10 +115,12 @@ async function fetchTile(bounds, fetchImpl) {
   params.append('subset', `x(${bounds.left},${bounds.right})`);
   params.append('subset', `y(${bounds.bottom},${bounds.top})`);
   const sourceUrl = `${IGN_WCS_ENDPOINT}?${params}`;
-  const response = await fetchImpl(sourceUrl, {
-    headers: { 'user-agent': 'CaceresCriminalDataBuilder/0.1' },
-    signal: AbortSignal.timeout(120000),
-  });
+  const response = await requestWithRetry(() =>
+    fetchImpl(sourceUrl, {
+      headers: { 'user-agent': 'CaceresCriminalDataBuilder/0.1' },
+      signal: AbortSignal.timeout(120000),
+    }),
+  );
   if (!response.ok) throw new Error(`IGN WCS replied with HTTP ${response.status}.`);
   const contentType = response.headers.get('content-type') ?? '';
   const declaredLength = Number(response.headers.get('content-length') ?? 0);
@@ -193,7 +199,7 @@ function mosaicTiles(tiles, tilesPerAxis, tileBounds) {
   };
 }
 
-export async function fetchElevation(regionName, region, { fetchImpl = fetch } = {}) {
+export async function fetchElevation(regionName, region, { fetchImpl = fetch, wait } = {}) {
   const center = projectEtrs89Utm29(region.origin.lon, region.origin.lat);
   const { chunksPerAxis, tilesPerAxis, halfExtent } = tileCountFor(region);
   const tileChunks = chunksPerAxis / tilesPerAxis;
@@ -206,6 +212,7 @@ export async function fetchElevation(regionName, region, { fetchImpl = fetch } =
   };
   const tiles = [];
   const sourceUrls = [];
+  let hasRequestedTile = false;
   for (let row = 0; row < tilesPerAxis; row += 1) {
     for (let column = 0; column < tilesPerAxis; column += 1) {
       const bounds = {
@@ -214,7 +221,13 @@ export async function fetchElevation(regionName, region, { fetchImpl = fetch } =
         bottom: tileBounds.bottom + row * tileSize,
         top: tileBounds.bottom + (row + 1) * tileSize,
       };
+      if (hasRequestedTile) {
+        await (
+          wait ?? ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)))
+        )(MIN_TILE_INTERVAL_MS);
+      }
       const tile = await fetchTile(bounds, fetchImpl);
+      hasRequestedTile = true;
       sourceUrls.push(tile.sourceUrl);
       tiles.push({ column, row, grid: tile.grid });
     }
@@ -234,9 +247,9 @@ export async function fetchElevation(regionName, region, { fetchImpl = fetch } =
   };
   const directory = path.join(ROOT, 'data/raw/elevation');
   await mkdir(directory, { recursive: true });
-  await writeFile(path.join(directory, `${regionName}.asc`), mosaic.text, 'utf8');
-  await writeFile(path.join(directory, `${regionName}.prj`), `${CRS_25829}\n`, 'utf8');
-  await writeFile(
+  await writeIfChanged(path.join(directory, `${regionName}.asc`), mosaic.text);
+  await writeIfChanged(path.join(directory, `${regionName}.prj`), `${CRS_25829}\n`);
+  await writeIfChanged(
     path.join(directory, `${regionName}.meta.json`),
     `${JSON.stringify(
       {
@@ -259,9 +272,7 @@ export async function fetchElevation(regionName, region, { fetchImpl = fetch } =
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const regionName =
-    process.argv.find((argument) => argument.startsWith('--region='))?.split('=')[1] ??
-    'cc-monumental';
+  const regionName = optionValue(process.argv.slice(2), '--region', 'cc-monumental');
   const config = JSON.parse(await readFile(path.join(ROOT, 'tools/config/regions.json'), 'utf8'));
   const region = config[regionName];
   if (!region) throw new Error(`Unknown region: ${regionName}`);

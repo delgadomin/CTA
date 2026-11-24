@@ -17,46 +17,46 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n344499812 | amenity:car_rental | Local de la Ciudad 45 | pending-review |
 | n360465024 | amenity:pharmacy | Local de la Ciudad 27 | pending-review |
 | n368309520 | amenity:restaurant | Mesón de la Estrella 36 | pending-review |
-| n369690677 | amenity:bank | Local de la Ciudad 10 | pending-review |
+| n369690677 | amenity:bank | Banco de la Ciudad | mapped |
 | n370689078 | amenity:pharmacy | Local de la Ciudad 87 | pending-review |
-| n380545473 | amenity:bank | Local de la Ciudad 21 | pending-review |
+| n380545473 | amenity:bank | Banco de la Ciudad | mapped |
 | n380545474 | amenity:restaurant | Mesón de la Estrella 22 | pending-review |
 | n420090745 | amenity:nightclub | Tigrus | pending-review |
 | n420137317 | amenity:restaurant | Mesón de la Estrella 54 | pending-review |
 | n430945068 | tourism:hotel | Posada del Arco 65 | pending-review |
-| n443650696 | amenity:bank | Local de la Ciudad 51 | pending-review |
+| n443650696 | amenity:bank | Banco de la Ciudad | mapped |
 | n443653456 | amenity:bar | El Farol 95 | pending-review |
 | n447854965 | amenity:cafe | Mesón de la Estrella 49 | pending-review |
 | n448017516 | amenity:bar | El Farol 28 | pending-review |
 | n450674138 | tourism:hostel | Local de la Ciudad 14 | pending-review |
 | n450674139 | amenity:restaurant | Mesón de la Estrella 15 | pending-review |
 | n451024384 | amenity:bar | El Farol 90 | pending-review |
-| n452580404 | amenity:post_office | Local de la Ciudad 36 | pending-review |
-| n452580407 | amenity:post_box | Local de la Ciudad 39 | pending-review |
-| n452580412 | amenity:bank | Local de la Ciudad 44 | pending-review |
+| n452580404 | amenity:post_office | Mensajería del Arco | mapped |
+| n452580407 | amenity:post_box | Mensajería del Arco | mapped |
+| n452580412 | amenity:bank | Banco de la Ciudad | mapped |
 | n455231003 | amenity:pub | El Farol 13 | generated |
-| n463543761 | amenity:bank | Local de la Ciudad 65 | pending-review |
-| n472148823 | amenity:bank | Local de la Ciudad 63 | pending-review |
+| n463543761 | amenity:bank | Banco de la Ciudad | mapped |
+| n472148823 | amenity:bank | Banco de la Ciudad | mapped |
 | n598260194 | amenity:restaurant | Mesón de la Estrella 85 | pending-review |
 | n603087025 | amenity:restaurant | Mesón de la Estrella 02 | pending-review |
 | n640288443 | tourism:hotel | Posada del Arco 77 | pending-review |
 | n653314697 | amenity:pharmacy | Local de la Ciudad 07 | pending-review |
 | n654432961 | shop:computer | Tienda de la Plaza 55 | pending-review |
 | n668006898 | amenity:telephone | Local de la Ciudad 06 | pending-review |
-| n668006899 | amenity:post_box | Local de la Ciudad 07 | pending-review |
+| n668006899 | amenity:post_box | Mensajería del Arco | mapped |
 | n673776310 | amenity:car_rental | Local de la Ciudad 52 | pending-review |
 | n673776336 | amenity:car_rental | Local de la Ciudad 78 | pending-review |
-| n673780407 | amenity:atm | Local de la Ciudad 75 | pending-review |
+| n673780407 | amenity:atm | Banco de la Ciudad | mapped |
 | n675984982 | amenity:bar | El Farol 34 | pending-review |
-| n675984997 | amenity:bank | Local de la Ciudad 49 | pending-review |
+| n675984997 | amenity:bank | Banco de la Ciudad | mapped |
 | n676867823 | amenity:bank | Local de la Ciudad 78 | pending-review |
 | n676867824 | amenity:bar | El Farol 79 | pending-review |
 | n676867839 | amenity:bank | Local de la Ciudad 94 | pending-review |
 | n687495165 | shop:books | Tienda de la Plaza 03 | pending-review |
-| n687495170 | amenity:bank | Local de la Ciudad 08 | pending-review |
+| n687495170 | amenity:bank | Banco de la Ciudad | mapped |
 | n687495174 | amenity:pharmacy | Local de la Ciudad 12 | pending-review |
-| n687501539 | amenity:post_box | Local de la Ciudad 72 | pending-review |
-| n687501540 | amenity:post_box | Local de la Ciudad 73 | pending-review |
+| n687501539 | amenity:post_box | Mensajería del Arco | mapped |
+| n687501540 | amenity:post_box | Mensajería del Arco | mapped |
 | n702742927 | tourism:hotel | Posada del Arco 44 | pending-review |
 | n702742959 | shop:bicycle | Tienda de la Plaza 76 | pending-review |
 | n702743046 | shop:car_repair | Tienda de la Plaza 66 | pending-review |
@@ -82,7 +82,7 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n713695483 | amenity:bar | El Farol 39 | pending-review |
 | n713695702 | shop:supermarket | MercaRoba | pending-review |
 | n719154504 | shop:convenience | MercaRoba | pending-review |
-| n721915061 | amenity:bank | Local de la Ciudad 31 | pending-review |
+| n721915061 | amenity:bank | Banco de la Ciudad | mapped |
 | n721915066 | shop:convenience | MercaRoba | pending-review |
 | n724058817 | amenity:pharmacy | Local de la Ciudad 87 | generated |
 | n726730850 | amenity:atm | Local de la Ciudad 61 | pending-review |
@@ -100,7 +100,7 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n729132330 | amenity:cafe | Mesón de la Estrella 15 | pending-review |
 | n729600018 | amenity:bar | El Farol 66 | pending-review |
 | n730765637 | shop:bicycle | Tienda de la Plaza 36 | pending-review |
-| n733674337 | amenity:bank | Local de la Ciudad 94 | pending-review |
+| n733674337 | amenity:bank | Banco de la Ciudad | mapped |
 | n734515531 | shop:convenience | MercaRoba | pending-review |
 | n734515559 | shop:convenience | MercaRoba | pending-review |
 | n734515566 | shop:convenience | MercaRoba | pending-review |
@@ -113,18 +113,18 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n745956276 | shop:hardware | Tienda de la Plaza 87 | pending-review |
 | n745956277 | shop:hardware | Tienda de la Plaza 88 | pending-review |
 | n757083251 | amenity:bar | El Farol 95 | pending-review |
-| n757277964 | amenity:post_box | Local de la Ciudad 32 | pending-review |
+| n757277964 | amenity:post_box | Mensajería del Arco | mapped |
 | n757277980 | amenity:bar | El Farol 48 | pending-review |
 | n757278003 | amenity:restaurant | Mesón de la Estrella 71 | pending-review |
 | n772848497 | amenity:cafe | Mesón de la Estrella 28 | pending-review |
 | n777365156 | amenity:restaurant | Mesón de la Estrella 76 | pending-review |
-| n777401990 | amenity:bank | Local de la Ciudad 50 | pending-review |
+| n777401990 | amenity:bank | Banco de la Ciudad | mapped |
 | n792333383 | tourism:hostel | Local de la Ciudad 39 | pending-review |
 | n837777189 | amenity:bank | Local de la Ciudad 24 | pending-review |
 | n837777209 | shop:video | Tienda de la Plaza 44 | pending-review |
-| n837777228 | amenity:bank | Local de la Ciudad 63 | pending-review |
-| n837777251 | amenity:post_box | Local de la Ciudad 86 | pending-review |
-| n936343761 | amenity:atm | Local de la Ciudad 46 | pending-review |
+| n837777228 | amenity:bank | Banco de la Ciudad | mapped |
+| n837777251 | amenity:post_box | Mensajería del Arco | mapped |
+| n936343761 | amenity:atm | Banco de la Ciudad | mapped |
 | n1200629264 | amenity:pharmacy | Local de la Ciudad 28 | generated |
 | n1214980545 | amenity:pharmacy | Local de la Ciudad 62 | generated |
 | n1235187554 | amenity:restaurant | Mesón de la Estrella 31 | pending-review |
@@ -134,14 +134,14 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n1237103563 | amenity:pharmacy | Local de la Ciudad 96 | generated |
 | n1277494889 | amenity:fast_food | Local de la Ciudad 40 | pending-review |
 | n1292154582 | amenity:restaurant | Mesón de la Estrella 26 | pending-review |
-| n1292154583 | amenity:fast_food | Local de la Ciudad 27 | pending-review |
+| n1292154583 | amenity:fast_food | Mesón de la Estrella | mapped |
 | n1292154585 | tourism:hotel | Posada del Arco 29 | pending-review |
 | n1292154591 | amenity:restaurant | Mesón de la Estrella 35 | pending-review |
 | n1292154594 | amenity:restaurant | Mesón de la Estrella 38 | pending-review |
 | n1292157205 | amenity:cafe | Mesón de la Estrella 30 | pending-review |
 | n1292158822 | amenity:bar | El Farol 95 | pending-review |
 | n1292158824 | amenity:restaurant | Mesón de la Estrella 97 | pending-review |
-| n1292158827 | amenity:restaurant | Mesón de la Estrella 03 | pending-review |
+| n1292158827 | amenity:restaurant | Mesón de la Estrella | mapped |
 | n1292168310 | amenity:bar | El Farol 77 | pending-review |
 | n1292168322 | amenity:pub | El Farol 89 | pending-review |
 | n1292168328 | amenity:bar | El Farol 95 | pending-review |
@@ -153,7 +153,7 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n1293388396 | amenity:restaurant | Mesón de la Estrella 97 | pending-review |
 | n1293388397 | amenity:restaurant | Mesón de la Estrella 01 | pending-review |
 | n1293388518 | amenity:restaurant | Mesón de la Estrella 25 | pending-review |
-| n1293412996 | shop:supermarket | MercaRoba | pending-review |
+| n1293412996 | shop:supermarket | MercaRoba | mapped |
 | n1293963380 | amenity:bar | El Farol 65 | pending-review |
 | n1293967457 | tourism:hotel | Posada del Arco 68 | pending-review |
 | n1403524165 | amenity:restaurant | Mesón de la Estrella 29 | pending-review |
@@ -191,19 +191,19 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n2453190944 | shop:convenience | MercaRoba | pending-review |
 | n2453194611 | amenity:bar | El Farol 10 | pending-review |
 | n2453759692 | amenity:bar | El Farol 66 | pending-review |
-| n2463984223 | amenity:post_box | Local de la Ciudad 21 | pending-review |
+| n2463984223 | amenity:post_box | Mensajería del Arco | mapped |
 | n2465034211 | amenity:restaurant | Mesón de la Estrella 81 | pending-review |
 | n2498659066 | amenity:cafe | Mesón de la Estrella 80 | pending-review |
 | n2530719331 | amenity:bar | El Farol 02 | pending-review |
 | n2609199912 | shop:pet | Tienda de la Plaza 17 | pending-review |
-| n2615969578 | shop:supermarket | MercaRoba | pending-review |
+| n2615969578 | shop:supermarket | MercaRoba | mapped |
 | n2684535175 | shop:car_repair | Tienda de la Plaza 36 | pending-review |
 | n2684550526 | amenity:bar | El Farol 61 | pending-review |
 | n2684559127 | amenity:nightclub | Tigrus | mapped |
-| n2694595493 | amenity:bank | Local de la Ciudad 96 | pending-review |
+| n2694595493 | amenity:bank | Banco de la Ciudad | mapped |
 | n2694595501 | shop:hairdresser | Tienda de la Plaza 07 | pending-review |
 | n2694627345 | shop:hairdresser | Tienda de la Plaza 35 | pending-review |
-| n2694639524 | amenity:post_office | Local de la Ciudad 89 | pending-review |
+| n2694639524 | amenity:post_office | Mensajería del Arco | mapped |
 | n2707226668 | amenity:restaurant | Mesón de la Estrella 28 | pending-review |
 | n2717302276 | amenity:restaurant | Mesón de la Estrella 52 | pending-review |
 | n2883844703 | amenity:restaurant | Mesón de la Estrella 75 | pending-review |
@@ -219,8 +219,8 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n3166313111 | amenity:bar | El Farol 21 | pending-review |
 | n3170470139 | amenity:bar | El Farol 17 | pending-review |
 | n3170501290 | amenity:bar | El Farol 31 | pending-review |
-| n3170501291 | shop:supermarket | MercaRoba | pending-review |
-| n3170501292 | shop:supermarket | MercaRoba | pending-review |
+| n3170501291 | shop:supermarket | MercaRoba | mapped |
+| n3170501292 | shop:supermarket | MercaRoba | mapped |
 | n3170501293 | amenity:bar | El Farol 34 | pending-review |
 | n3170501294 | amenity:restaurant | Mesón de la Estrella 35 | pending-review |
 | n3170501295 | amenity:restaurant | Mesón de la Estrella 36 | pending-review |
@@ -231,7 +231,7 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n3232939314 | office:Delegación | Local de la Ciudad 28 | pending-review |
 | n3372910763 | office:diplomatic | Local de la Ciudad 89 | pending-review |
 | n3413078223 | amenity:bar | El Farol 43 | pending-review |
-| n3665619820 | amenity:atm | Local de la Ciudad 06 | pending-review |
+| n3665619820 | amenity:atm | Banco de la Ciudad | mapped |
 | n3695191087 | shop:bicycle | Tienda de la Plaza 47 | pending-review |
 | n3822586205 | amenity:restaurant | Mesón de la Estrella 21 | pending-review |
 | n3882466720 | amenity:restaurant | Mesón de la Estrella 11 | pending-review |
@@ -240,7 +240,7 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n3882475789 | amenity:restaurant | Mesón de la Estrella 59 | pending-review |
 | n3882478721 | amenity:restaurant | Mesón de la Estrella 81 | pending-review |
 | n3883819533 | amenity:restaurant | Mesón de la Estrella 62 | pending-review |
-| n3883936373 | tourism:hotel | Posada del Arco 17 | pending-review |
+| n3883936373 | tourism:hotel | Posada del Arco | mapped |
 | n3909531392 | shop:lottery | Tienda de la Plaza 34 | pending-review |
 | n3910397013 | shop:hairdresser | Tienda de la Plaza 27 | pending-review |
 | n3910397858 | shop:convenience | MercaRoba | pending-review |
@@ -255,20 +255,20 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n4040074770 | amenity:bank | Local de la Ciudad 36 | pending-review |
 | n4053628790 | amenity:bank | Local de la Ciudad 52 | pending-review |
 | n4138123294 | shop:supermarket | MercaRoba | generated |
-| n4231974695 | amenity:post_box | Local de la Ciudad 11 | pending-review |
-| n4231974696 | amenity:post_box | Local de la Ciudad 12 | pending-review |
-| n4231974697 | amenity:post_box | Local de la Ciudad 13 | pending-review |
-| n4231974698 | amenity:post_box | Local de la Ciudad 14 | pending-review |
-| n4231974699 | amenity:post_box | Local de la Ciudad 15 | pending-review |
-| n4231974700 | amenity:post_box | Local de la Ciudad 16 | pending-review |
-| n4231974701 | amenity:post_box | Local de la Ciudad 17 | pending-review |
-| n4231974702 | amenity:post_box | Local de la Ciudad 18 | pending-review |
-| n4231974703 | amenity:post_box | Local de la Ciudad 19 | pending-review |
-| n4231974704 | amenity:post_box | Local de la Ciudad 20 | pending-review |
-| n4231974705 | amenity:post_box | Local de la Ciudad 21 | pending-review |
-| n4231974706 | amenity:post_box | Local de la Ciudad 22 | pending-review |
-| n4231974707 | amenity:post_box | Local de la Ciudad 23 | pending-review |
-| n4231974708 | amenity:post_box | Local de la Ciudad 24 | pending-review |
+| n4231974695 | amenity:post_box | Mensajería del Arco | mapped |
+| n4231974696 | amenity:post_box | Mensajería del Arco | mapped |
+| n4231974697 | amenity:post_box | Mensajería del Arco | mapped |
+| n4231974698 | amenity:post_box | Mensajería del Arco | mapped |
+| n4231974699 | amenity:post_box | Mensajería del Arco | mapped |
+| n4231974700 | amenity:post_box | Mensajería del Arco | mapped |
+| n4231974701 | amenity:post_box | Mensajería del Arco | mapped |
+| n4231974702 | amenity:post_box | Mensajería del Arco | mapped |
+| n4231974703 | amenity:post_box | Mensajería del Arco | mapped |
+| n4231974704 | amenity:post_box | Mensajería del Arco | mapped |
+| n4231974705 | amenity:post_box | Mensajería del Arco | mapped |
+| n4231974706 | amenity:post_box | Mensajería del Arco | mapped |
+| n4231974707 | amenity:post_box | Mensajería del Arco | mapped |
+| n4231974708 | amenity:post_box | Mensajería del Arco | mapped |
 | n4233775228 | office:physician | Local de la Ciudad 30 | pending-review |
 | n4233909296 | shop:computer | Tienda de la Plaza 44 | pending-review |
 | n4233909297 | shop:hardware | Tienda de la Plaza 45 | pending-review |
@@ -289,8 +289,8 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n4235492054 | shop:optician | Tienda de la Plaza 53 | pending-review |
 | n4235749952 | tourism:hotel | Posada del Arco 28 | pending-review |
 | n4236073889 | amenity:pharmacy | Local de la Ciudad 82 | pending-review |
-| n4237012904 | amenity:post_box | Local de la Ciudad 40 | pending-review |
-| n4238104283 | amenity:post_box | Local de la Ciudad 72 | pending-review |
+| n4237012904 | amenity:post_box | Mensajería del Arco | mapped |
+| n4238104283 | amenity:post_box | Mensajería del Arco | mapped |
 | n4238905794 | office:company | Local de la Ciudad 72 | pending-review |
 | n4238905802 | office:company | Local de la Ciudad 80 | pending-review |
 | n4238980489 | craft:photographer | Local de la Ciudad 77 | pending-review |
@@ -329,7 +329,7 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n4498041401 | shop:bakery | Tienda de la Plaza 82 | pending-review |
 | n4498041403 | amenity:cafe | Mesón de la Estrella 84 | pending-review |
 | n4498180238 | shop:newsagent | Tienda de la Plaza 15 | pending-review |
-| n4498180239 | shop:supermarket | MercaRoba | pending-review |
+| n4498180239 | shop:supermarket | MercaRoba | mapped |
 | n4498180242 | shop:florist | Tienda de la Plaza 19 | pending-review |
 | n4524318190 | tourism:hotel | Posada del Arco 56 | pending-review |
 | n4540354095 | shop:perfumery | Tienda de la Plaza 18 | pending-review |
@@ -344,7 +344,7 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n4857927618 | tourism:apartment | Local de la Ciudad 03 | pending-review |
 | n4947460249 | shop:butcher | Tienda de la Plaza 82 | pending-review |
 | n5013678825 | amenity:restaurant | Mesón de la Estrella 56 | pending-review |
-| n5027197957 | amenity:fast_food | Local de la Ciudad 07 | pending-review |
+| n5027197957 | amenity:fast_food | Mesón de la Estrella | mapped |
 | n5198761991 | amenity:restaurant | Mesón de la Estrella 44 | pending-review |
 | n5198761992 | amenity:restaurant | Mesón de la Estrella 45 | pending-review |
 | n5198761993 | amenity:restaurant | Mesón de la Estrella 46 | pending-review |
@@ -355,8 +355,8 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n5224999623 | amenity:restaurant | Mesón de la Estrella 49 | pending-review |
 | n5225045833 | shop:gift | Tienda de la Plaza 87 | pending-review |
 | n5225046327 | amenity:restaurant | Mesón de la Estrella 96 | pending-review |
-| n5226094522 | shop:bakery | Tienda de la Plaza 12 | pending-review |
-| n5226110321 | shop:supermarket | MercaRoba | pending-review |
+| n5226094522 | shop:bakery | Panadería del Arco | mapped |
+| n5226110321 | shop:supermarket | MercaRoba | mapped |
 | n5226118121 | amenity:cafe | Mesón de la Estrella 40 | pending-review |
 | n5226520721 | amenity:restaurant | Mesón de la Estrella 90 | pending-review |
 | n5226575022 | amenity:pharmacy | Local de la Ciudad 71 | pending-review |
@@ -386,7 +386,7 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n6099351927 | amenity:bar | El Farol 76 | pending-review |
 | n6111177415 | amenity:restaurant | Mesón de la Estrella 03 | pending-review |
 | n6111177416 | amenity:restaurant | Mesón de la Estrella 04 | pending-review |
-| n6111177417 | shop:supermarket | MercaRoba | pending-review |
+| n6111177417 | shop:supermarket | MercaRoba | mapped |
 | n6111177420 | office:it | Local de la Ciudad 08 | pending-review |
 | n6124805006 | shop:appliance | Tienda de la Plaza 64 | pending-review |
 | n6124805007 | shop:convenience | MercaRoba | pending-review |
@@ -406,7 +406,7 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n6179065118 | amenity:restaurant | Mesón de la Estrella 25 | pending-review |
 | n6179065119 | amenity:restaurant | Mesón de la Estrella 26 | pending-review |
 | n6179065120 | shop:music | Tienda de la Plaza 27 | pending-review |
-| n6179065121 | shop:telecommunication | Tienda de la Plaza 28 | pending-review |
+| n6179065121 | shop:telecommunication | Telefonía del Casco | mapped |
 | n6179065122 | amenity:bar | El Farol 29 | pending-review |
 | n6295549344 | tourism:attraction | Local de la Ciudad 55 | pending-review |
 | n6309055484 | shop:bakery | Tienda de la Plaza 12 | pending-review |
@@ -437,22 +437,22 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n7115360886 | shop:hairdresser | Tienda de la Plaza 92 | pending-review |
 | n7115360887 | shop:greengrocer | Tienda de la Plaza 93 | pending-review |
 | n7147113952 | amenity:bank | Local de la Ciudad 14 | pending-review |
-| n7147113953 | amenity:bank | Local de la Ciudad 15 | pending-review |
-| n7147113964 | amenity:bank | Local de la Ciudad 26 | pending-review |
-| n7147113965 | amenity:bank | Local de la Ciudad 27 | pending-review |
+| n7147113953 | amenity:bank | Banco de la Ciudad | mapped |
+| n7147113964 | amenity:bank | Banco de la Ciudad | mapped |
+| n7147113965 | amenity:bank | Banco de la Ciudad | mapped |
 | n7147113966 | amenity:atm | Local de la Ciudad 28 | pending-review |
-| n7147113967 | amenity:bank | Local de la Ciudad 29 | pending-review |
-| n7147113968 | amenity:bank | Local de la Ciudad 30 | pending-review |
-| n7147113970 | amenity:bank | Local de la Ciudad 32 | pending-review |
-| n7147113971 | amenity:bank | Local de la Ciudad 33 | pending-review |
-| n7147113972 | amenity:bank | Local de la Ciudad 34 | pending-review |
-| n7147113973 | amenity:bank | Local de la Ciudad 35 | pending-review |
-| n7147113974 | amenity:bank | Local de la Ciudad 36 | pending-review |
+| n7147113967 | amenity:bank | Banco de la Ciudad | mapped |
+| n7147113968 | amenity:bank | Banco de la Ciudad | mapped |
+| n7147113970 | amenity:bank | Banco de la Ciudad | mapped |
+| n7147113971 | amenity:bank | Banco de la Ciudad | mapped |
+| n7147113972 | amenity:bank | Banco de la Ciudad | mapped |
+| n7147113973 | amenity:bank | Banco de la Ciudad | mapped |
+| n7147113974 | amenity:bank | Banco de la Ciudad | mapped |
 | n7147113975 | amenity:bank | Local de la Ciudad 37 | pending-review |
-| n7147113976 | amenity:bank | Local de la Ciudad 38 | pending-review |
-| n7147113977 | amenity:bank | Local de la Ciudad 39 | pending-review |
-| n7147113980 | amenity:bank | Local de la Ciudad 42 | pending-review |
-| n7147113982 | amenity:bank | Local de la Ciudad 44 | pending-review |
+| n7147113976 | amenity:bank | Banco de la Ciudad | mapped |
+| n7147113977 | amenity:bank | Banco de la Ciudad | mapped |
+| n7147113980 | amenity:bank | Banco de la Ciudad | mapped |
+| n7147113982 | amenity:bank | Banco de la Ciudad | mapped |
 | n7183995071 | amenity:bank | Local de la Ciudad 84 | pending-review |
 | n7644609839 | amenity:telephone | Local de la Ciudad 70 | pending-review |
 | n7644609967 | office:association | Local de la Ciudad 04 | pending-review |
@@ -482,8 +482,8 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n9583705349 | amenity:charging_station | Local de la Ciudad 08 | pending-review |
 | n9583705350 | office:company | Local de la Ciudad 09 | pending-review |
 | n9583705351 | office:company | Local de la Ciudad 10 | pending-review |
-| n9589430750 | shop:convenience | MercaRoba | pending-review |
-| n9589430751 | amenity:atm | Local de la Ciudad 82 | pending-review |
+| n9589430750 | shop:convenience | MercaRoba | mapped |
+| n9589430751 | amenity:atm | Banco de la Ciudad | mapped |
 | n9625684148 | tourism:hotel | Posada del Arco 20 | pending-review |
 | n9625710797 | shop:supermarket | MercaRoba | generated |
 | n9706009462 | shop:bicycle | Tienda de la Plaza 22 | pending-review |
@@ -493,7 +493,7 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n9837247473 | shop:supermarket | MercaRoba | pending-review |
 | n9837247474 | shop:supermarket | MercaRoba | pending-review |
 | n9837247475 | shop:supermarket | MercaRoba | pending-review |
-| n10051121174 | amenity:fast_food | Local de la Ciudad 90 | pending-review |
+| n10051121174 | amenity:fast_food | Mesón de la Estrella | mapped |
 | n10055843318 | tourism:apartment | Local de la Ciudad 80 | pending-review |
 | n10080658984 | shop:gas | Tienda de la Plaza 42 | pending-review |
 | n10114872044 | amenity:cafe | Mesón de la Estrella 38 | pending-review |
@@ -509,12 +509,12 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n10552592124 | shop:optician | Tienda de la Plaza 52 | pending-review |
 | n10552592125 | shop:bag | Tienda de la Plaza 53 | pending-review |
 | n10552592126 | shop:confectionery | Tienda de la Plaza 54 | pending-review |
-| n10552592128 | shop:supermarket | MercaRoba | pending-review |
+| n10552592128 | shop:supermarket | MercaRoba | mapped |
 | n10552592130 | amenity:cafe | Mesón de la Estrella 58 | pending-review |
 | n10552592131 | amenity:restaurant | Mesón de la Estrella 59 | pending-review |
 | n10552592132 | shop:lottery | Tienda de la Plaza 60 | pending-review |
 | n10552592136 | shop:telecommunication | Tienda de la Plaza 64 | pending-review |
-| n10552592137 | shop:telecommunication | Tienda de la Plaza 65 | pending-review |
+| n10552592137 | shop:telecommunication | Telefonía del Casco | mapped |
 | n10552592138 | shop:pet | Tienda de la Plaza 66 | pending-review |
 | n10552592139 | shop:bed | Tienda de la Plaza 67 | pending-review |
 | n10552824096 | shop:garden_centre | Tienda de la Plaza 97 | pending-review |
@@ -545,7 +545,7 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n11898327127 | amenity:charging_station | Local de la Ciudad 26 | pending-review |
 | n11935545269 | amenity:restaurant | Mesón de la Estrella 44 | pending-review |
 | n11940316969 | amenity:pub | El Farol 23 | pending-review |
-| n12140534639 | amenity:atm | Local de la Ciudad 90 | pending-review |
+| n12140534639 | amenity:atm | Banco de la Ciudad | mapped |
 | n12150483508 | amenity:charging_station | Local de la Ciudad 57 | pending-review |
 | n12156222926 | amenity:restaurant | Mesón de la Estrella 82 | pending-review |
 | n12156222931 | amenity:charging_station | Local de la Ciudad 87 | pending-review |
@@ -556,7 +556,7 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n12380379188 | office:consulting | Local de la Ciudad 14 | pending-review |
 | n12387970359 | office:lawyer | Local de la Ciudad 62 | pending-review |
 | n12554739195 | amenity:restaurant | Mesón de la Estrella 96 | pending-review |
-| n12640112732 | amenity:charging_station | Local de la Ciudad 53 | pending-review |
+| n12640112732 | amenity:charging_station | MercaRoba | mapped |
 | n12778282801 | tourism:hostel | Local de la Ciudad 24 | pending-review |
 | n12820785063 | amenity:restaurant | Mesón de la Estrella 87 | pending-review |
 | n12828911101 | shop:books | Tienda de la Plaza 47 | pending-review |
@@ -588,14 +588,14 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | n14076521996 | shop:books | Tienda de la Plaza 46 | pending-review |
 | n14136925801 | amenity:restaurant | Mesón de la Estrella 11 | pending-review |
 | n14144331801 | shop:supermarket | MercaRoba | pending-review |
-| n14163007064 | shop:supermarket | MercaRoba | pending-review |
-| n14163007065 | shop:supermarket | MercaRoba | pending-review |
-| n14163007066 | shop:supermarket | MercaRoba | pending-review |
+| n14163007064 | shop:supermarket | MercaRoba | mapped |
+| n14163007065 | shop:supermarket | MercaRoba | mapped |
+| n14163007066 | shop:supermarket | MercaRoba | mapped |
 | n14258616101 | shop:computer | Tienda de la Plaza 28 | pending-review |
 | n14342225572 | shop:car_repair | Tienda de la Plaza 58 | pending-review |
 | n14366608421 | office:government | Local de la Ciudad 17 | pending-review |
 | w26975034 | tourism:hotel | Posada del Arco 14 | pending-review |
-| w29390738 | shop:mall | Tienda de la Plaza 30 | pending-review |
+| w29390738 | shop:mall | MercaRoba | mapped |
 | w30254014 | shop:department_store | Tienda de la Plaza 06 | pending-review |
 | w30254231 | shop:supermarket | MercaRoba | mapped |
 | w30824312 | shop:mall | Tienda de la Plaza 41 | pending-review |
@@ -603,13 +603,13 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | w32388238 | tourism:hotel | Posada del Arco 36 | pending-review |
 | w32562122 | tourism:camp_site | Local de la Ciudad 96 | pending-review |
 | w34916542 | amenity:clinic | Local de la Ciudad 35 | pending-review |
-| w37945848 | amenity:parking | Local de la Ciudad 31 | pending-review |
+| w37945848 | amenity:parking | MercaRoba | mapped |
 | w38329388 | amenity:hospital | Local de la Ciudad 33 | pending-review |
 | w38871808 | leisure:sports_centre | Local de la Ciudad 29 | pending-review |
 | w48625800 | amenity:hospital | Local de la Ciudad 89 | pending-review |
 | w53246386 | amenity:police | Local de la Ciudad 80 | pending-review |
-| w59216237 | tourism:hotel | Posada del Arco 66 | pending-review |
-| w153048734 | shop:supermarket | MercaRoba | pending-review |
+| w59216237 | tourism:hotel | Posada del Arco | mapped |
+| w153048734 | shop:supermarket | MercaRoba | mapped |
 | w224730776 | leisure:sports_centre | Local de la Ciudad 13 | pending-review |
 | w224730778 | amenity:parking | Local de la Ciudad 15 | pending-review |
 | w242383200 | office:government | Local de la Ciudad 86 | pending-review |
@@ -635,9 +635,9 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | w381580252 | amenity:restaurant | Mesón de la Estrella 04 | pending-review |
 | w381580254 | amenity:restaurant | Mesón de la Estrella 06 | pending-review |
 | w383029268 | shop:doityourself | Tienda de la Plaza 34 | pending-review |
-| w385032856 | tourism:hotel | Posada del Arco 87 | pending-review |
+| w385032856 | tourism:hotel | Posada del Arco | mapped |
 | w385037726 | tourism:hotel | Posada del Arco 10 | pending-review |
-| w385039502 | tourism:hotel | Posada del Arco 40 | pending-review |
+| w385039502 | tourism:hotel | Posada del Arco | mapped |
 | w389010854 | amenity:restaurant | Mesón de la Estrella 18 | generated |
 | w421610810 | office:association | Local de la Ciudad 20 | pending-review |
 | w426482225 | shop:mall | Tienda de la Plaza 95 | pending-review |
@@ -655,10 +655,10 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | w650043563 | shop:wholesale | Tienda de la Plaza 04 | pending-review |
 | w661119970 | office:government | Local de la Ciudad 78 | pending-review |
 | w672019396 | amenity:fuel | Local de la Ciudad 02 | pending-review |
-| w732148771 | tourism:hotel | Posada del Arco 47 | pending-review |
+| w732148771 | tourism:hotel | Posada del Arco | mapped |
 | w732148782 | tourism:apartment | Local de la Ciudad 58 | pending-review |
 | w732148785 | tourism:apartment | Local de la Ciudad 61 | pending-review |
-| w732767752 | tourism:hotel | Posada del Arco 71 | pending-review |
+| w732767752 | tourism:hotel | Posada del Arco | mapped |
 | w733416035 | office:government | Local de la Ciudad 06 | pending-review |
 | w749772088 | amenity:parking | MercaRoba | mapped |
 | w759705444 | tourism:gallery | Local de la Ciudad 87 | pending-review |
@@ -667,7 +667,7 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | w775713214 | amenity:restaurant | Mesón de la Estrella 44 | pending-review |
 | w775713218 | shop:kiosk | Tienda de la Plaza 48 | pending-review |
 | w775713222 | shop:florist | Tienda de la Plaza 52 | generated |
-| w791317247 | shop:supermarket | MercaRoba | pending-review |
+| w791317247 | shop:supermarket | MercaRoba | mapped |
 | w814907837 | shop:variety_store | Tienda de la Plaza 71 | pending-review |
 | w866224686 | tourism:picnic_site | Local de la Ciudad 40 | generated |
 | w896454054 | amenity:parking | Local de la Ciudad 37 | pending-review |
@@ -678,7 +678,7 @@ Los nombres originales se descartan después de aplicar `tools/brand-blocklist.j
 | w1072104008 | shop:supermarket | MercaRoba | pending-review |
 | w1101565354 | shop:supermarket | MercaRoba | mapped |
 | w1102224141 | tourism:attraction | Local de la Ciudad 47 | pending-review |
-| w1131775090 | amenity:fuel | Local de la Ciudad 43 | pending-review |
+| w1131775090 | amenity:fuel | MercaRoba | mapped |
 | w1131810096 | shop:funeral_directors | Tienda de la Plaza 32 | pending-review |
 | w1195276455 | tourism:viewpoint | Local de la Ciudad 67 | pending-review |
 | w1207269779 | shop:car_parts | Tienda de la Plaza 20 | pending-review |

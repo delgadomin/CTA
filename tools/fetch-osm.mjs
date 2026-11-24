@@ -1,8 +1,11 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { projectEtrs89Utm29, projectedRegionBounds } from './projection.mjs';
+import { optionValue } from './cli-args.mjs';
+import { requestWithRetry } from './request-retry.mjs';
+import { writeIfChanged } from './write-if-changed.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const OVERPASS_ENDPOINT = 'https://overpass-api.de/api/interpreter';
@@ -14,49 +17,35 @@ export function makeOverpassQuery(bounds) {
 }
 
 async function fetchWithRetry(query, fetchImpl = fetch) {
-  let lastError;
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    try {
-      const response = await fetchImpl(OVERPASS_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/x-www-form-urlencoded',
-          'user-agent': 'CaceresCriminalDataBuilder/0.1',
-        },
-        body: new URLSearchParams({ data: query }),
-        signal: AbortSignal.timeout(150000),
-      });
-      if (!response.ok) {
-        const error = new Error(`Overpass replied with HTTP ${response.status}.`);
-        error.retryDelayMs = [429, 406].includes(response.status) ? 30000 : 1000 * 2 ** attempt;
-        throw error;
-      }
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('Overpass returned no response body.');
-      const parts = [];
-      let byteLength = 0;
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        byteLength += value.length;
-        if (byteLength > MAX_OSM_BYTES) {
-          await reader.cancel();
-          throw new Error(`Overpass response exceeds ${MAX_OSM_BYTES} bytes.`);
-        }
-        parts.push(Buffer.from(value));
-      }
-      const data = JSON.parse(Buffer.concat(parts).toString('utf8'));
-      if (!Array.isArray(data.elements)) throw new Error('Overpass returned no OSM element list.');
-      return data;
-    } catch (error) {
-      lastError = error;
-      if (attempt < 3)
-        await new Promise((resolve) =>
-          setTimeout(resolve, error.retryDelayMs ?? 1000 * 2 ** attempt),
-        );
+  const response = await requestWithRetry(() =>
+    fetchImpl(OVERPASS_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+        'user-agent': 'CaceresCriminalDataBuilder/0.1',
+      },
+      body: new URLSearchParams({ data: query }),
+      signal: AbortSignal.timeout(150000),
+    }),
+  );
+  if (!response.ok) throw new Error(`Overpass replied with HTTP ${response.status}.`);
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('Overpass returned no response body.');
+  const parts = [];
+  let byteLength = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    byteLength += value.length;
+    if (byteLength > MAX_OSM_BYTES) {
+      await reader.cancel();
+      throw new Error(`Overpass response exceeds ${MAX_OSM_BYTES} bytes.`);
     }
+    parts.push(Buffer.from(value));
   }
-  throw lastError;
+  const data = JSON.parse(Buffer.concat(parts).toString('utf8'));
+  if (!Array.isArray(data.elements)) throw new Error('Overpass returned no OSM element list.');
+  return data;
 }
 
 export async function getOsmData(regionName, region, { fresh = false, fetchImpl = fetch } = {}) {
@@ -74,8 +63,8 @@ export async function getOsmData(regionName, region, { fresh = false, fetchImpl 
   const data = await fetchWithRetry(query, fetchImpl);
   const serialized = JSON.stringify(data);
   await mkdir(path.dirname(rawPath), { recursive: true });
-  await writeFile(rawPath, serialized, 'utf8');
-  await writeFile(
+  await writeIfChanged(rawPath, serialized);
+  await writeIfChanged(
     `${rawPath}.meta.json`,
     `${JSON.stringify(
       {
@@ -90,15 +79,12 @@ export async function getOsmData(regionName, region, { fresh = false, fetchImpl 
       null,
       2,
     )}\n`,
-    'utf8',
   );
   return data;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const regionName =
-    process.argv.find((argument) => argument.startsWith('--region='))?.split('=')[1] ??
-    'cc-monumental';
+  const regionName = optionValue(process.argv.slice(2), '--region', 'cc-monumental');
   const config = JSON.parse(await readFile(path.join(ROOT, 'tools/config/regions.json'), 'utf8'));
   const region = config[regionName];
   if (!region) throw new Error(`Unknown region: ${regionName}`);

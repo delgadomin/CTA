@@ -16,6 +16,8 @@ Origen UTM fijado en Plaza Mayor: E 726089.228 m, N 4372723.106 m.
 | Vías con superficie OSM explícita | 4533 |
 | Vías con dirección OSM explícita | 2320 |
 | Huellas de edificios | 7152 |
+| Edificios Catastro INSPIRE en núcleo de 1000 m | 2502 |
+| Centroides Catastro a ≤ 10 m de una huella OSM | 2324 (92.9%) |
 | Edificios por zona (casco / ensanche / periferia) | 465 / 1904 / 4783 |
 | Huellas incluidas en chunks del mundo | 7148 |
 | Plantas OSM explícitas | 55 |
@@ -28,8 +30,9 @@ Origen UTM fijado en Plaza Mayor: E 726089.228 m, N 4372723.106 m.
 | Geometrías en superposición OSM | 7876 vías · 7148 huellas |
 | Edificios sin altura/planta OSM | 7096 |
 | Muestras MDT05 ausentes | 0 |
-| Comercios pendientes de revisión de marca | 657 |
+| Comercios pendientes de revisión de marca | 569 |
 
+El contraste Catastro INSPIRE cubre un cuadrado central de 1000 m y transforma las huellas a coordenadas locales EPSG:25829. El porcentaje de cobertura es una aproximación por centroides a 10 m; las geometrías, referencias y atributos catastrales originales no se copian a public/.
 Los atributos de altura y plantas ausentes permanecen nulos en los datos fuente. La altura visual usa height=* → building:levels × 3 m → planta visual por zona/tipo; las fachadas conservan el número fuente y el valor inferido por separado.
 El inspector 2D ofrece una superposición cian/magenta de la geometría OSM original frente a los chunks procesados. La herramienta `npm run fidelity` compara cada vértice de las vías y huellas fuente que intersectan el mundo con una tolerancia máxima de 1 m.
 Las torres sin altura ni plantas explícitas reciben 7 plantas visuales (21 m) para lectura de silueta; es un fallback artístico, no una medición. El Arco de la Estrella usa la posición OSM del POI y una orientación perpendicular a la vía más cercana; sus dimensiones y el almenado de torres son aproximaciones visuales, no datos de levantamiento.

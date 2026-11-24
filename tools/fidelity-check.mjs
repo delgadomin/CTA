@@ -3,11 +3,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inflateSync } from 'node:zlib';
 import { projectEtrs89Utm29 } from './projection.mjs';
+import { optionValue } from './cli-args.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const regionName =
-  process.argv.find((argument) => argument.startsWith('--region='))?.split('=')[1] ??
-  'cc-monumental';
+const regionName = optionValue(process.argv.slice(2), '--region', 'cc-monumental');
 const tolerance = Number.parseFloat(
   process.argv.find((argument) => argument.startsWith('--tolerance='))?.split('=')[1] ?? '1',
 );

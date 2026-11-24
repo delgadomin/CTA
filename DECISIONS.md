@@ -51,6 +51,16 @@
 - El WCS oficial IGN/CNIG sirve `Elevacion25830_5` recortada y reproyectada a EPSG:25829 como ASCII Grid; se conserva su hash, tamaño de celda y fecha en metadatos locales.
 - El proveedor WCS entrega `dx` y `dy` independientes sin siempre incluir `NODATA_value`; el lector admite ambos formatos y clampa al centro de celda en el borde para cubrir la malla solicitada sin huecos.
 
+## 2026-11-24 - Auditoría reiniciada de fase 2
+- Overpass y WCS usan una política común de reintentos con `Retry-After`, límite de intentos y espera incremental. La descarga WCS serializa las teselas y limita el tamaño de la respuesta.
+- Los artefactos se reemplazan atómicamente solo si cambian. El manifiesto se escribe antes de retirar chunks antiguos; el verificador falla si encuentra archivos binarios sin referencia.
+- Catastro INSPIRE BU se consulta solo durante `data:build`, en el núcleo de 1 km de Plaza Mayor. Cada tesela base mide hasta 250 m; las cajas rechazadas o que exceden el límite de respuesta se subdividen. El intervalo mínimo entre peticiones es 350 ms y el timeout conduce a subdivisión, con profundidad limitada.
+- Las respuestas GML originales se cachean en `data/raw/catastro/` y permanecen fuera de Git. El parser extrae solo anillos exteriores, elimina cierres duplicados, proyecta a metros locales y descarta IDs antes de devolver las geometrías al constructor. El informe publica conteos y comparación aproximada de centroides a 10 m; no publica GML, geometrías Catastro, referencias ni nombres.
+- El caché usa el origen local y el tamaño en el nombre de cada tesela para evitar colisiones entre extensiones. Las subdivisiones adaptativas se guardan como marcadores; reconstruir desde caché no vuelve a consultar los cuadros padre. El hash del manifest usa huellas transformadas ordenadas por su geometría, sin IDs de Catastro.
+- El manifest también registra WFS, alcance, hash, licencia y atribución. Las huellas OSM siguen siendo las únicas que alimentan chunks del juego.
+- La salida regenerada corrige el desfase con los filtros y el catálogo actuales. La región completa se conserva en 7,6 km para no romper el mundo existente; el contraste Catastro usa el núcleo de 1 km indicado por la guía.
+- El inspector 2D se verificó visualmente con la geometría reconstruida y la superposición de comparación OSM.
+
 # Fase 3 - terreno y streaming
 
 - `@dimforge/rapier3d-compat` 0.12.0 se declara como dependencia de ejecución para crear heightfields; su licencia Apache-2.0 se revisó en los metadatos oficiales del paquete.

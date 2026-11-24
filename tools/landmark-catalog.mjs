@@ -1,6 +1,7 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { projectEtrs89Utm29 } from './projection.mjs';
+import { writeIfChanged } from './write-if-changed.mjs';
 
 function normalizeName(value) {
   return value
@@ -199,13 +200,13 @@ function markdownFor(landmark) {
 export async function writeLandmarkDataset(root, dataset) {
   const directory = path.join(root, 'data/landmarks');
   await mkdir(directory, { recursive: true });
-  await writeFile(
+  await writeIfChanged(
     path.join(directory, 'landmarks.json'),
     `${JSON.stringify(dataset, null, 2)}\n`,
     'utf8',
   );
   for (const landmark of dataset.landmarks)
-    await writeFile(path.join(directory, `${landmark.id}.md`), markdownFor(landmark), 'utf8');
+    await writeIfChanged(path.join(directory, `${landmark.id}.md`), markdownFor(landmark));
   const statusPath = path.join(directory, 'status.json');
   let existing = { schemaVersion: 1, landmarks: {} };
   try {
@@ -219,9 +220,8 @@ export async function writeLandmarkDataset(root, dataset) {
       return [landmark.id, current?.status === 'approved' ? current : { status: 'pending' }];
     }),
   );
-  await writeFile(
+  await writeIfChanged(
     statusPath,
     `${JSON.stringify({ schemaVersion: 1, approvalRule: 'Only a human may mark a landmark approved after photo comparison.', landmarks: statuses }, null, 2)}\n`,
-    'utf8',
   );
 }

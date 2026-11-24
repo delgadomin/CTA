@@ -2,10 +2,10 @@
 
 - Estado: pendiente de aprobación humana.
 - Alcance: cc-monumental.
-- Fuentes OSM: Sin entidad OSM en el extracto actual.
-- Posición fuente: Sin posición en esta región..
+- Fuentes OSM: [r5728957](https://www.openstreetmap.org/relation/5728957)
+- Posición fuente: 39.4740679, -6.3699395.
 - Altura fuente: Sin altura fuente.
-- Huella local EPSG:25829: no disponible
+- Huella local EPSG:25829: incluida en landmarks.json
 
 ## Rasgos de referencia
 
