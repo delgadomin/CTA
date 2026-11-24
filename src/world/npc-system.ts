@@ -20,6 +20,7 @@ export interface ClaimedVehicle {
   readonly y: number;
   readonly z: number;
   readonly heading: number;
+  readonly color: number;
 }
 
 const MAX_ROUTE = 24;
@@ -169,11 +170,14 @@ export class NpcSystem {
       chosen = slot;
     }
     if (chosen < 0) return undefined;
+    const colorObj = this.vehicleColors[this.colorIndex[chosen] ?? 0] ?? this.vehicleColors[0];
+    const color = colorObj ? colorObj.getHex() : 0xc94a3a;
     const claimed: ClaimedVehicle = {
       x: this.x[chosen] ?? 0,
       y: this.y[chosen] ?? 0,
       z: this.z[chosen] ?? 0,
       heading: this.heading[chosen] ?? 0,
+      color,
     };
     this.release(chosen);
     return claimed;
@@ -536,7 +540,18 @@ export class NpcSystem {
     const colliderId = this.colliderIds[slot] ?? -1;
     if (colliderId >= 0) this.colliders?.remove(colliderId);
     this.colliderIds[slot] = -1;
-    if (this.kind[slot] === 0) {
+
+    // Immediately remove/hide the released agent instance matrix so no ghost stays behind.
+    const isPedestrian = this.kind[slot] === 0;
+    const instance = isPedestrian ? slot : slot - this.pedestrianCapacity;
+    const mesh = isPedestrian ? this.pedestrianMesh : this.vehicleMesh;
+    this.dummy.position.set(0, -9999, 0);
+    this.dummy.scale.set(0, 0, 0);
+    this.dummy.updateMatrix();
+    mesh.setMatrixAt(instance, this.dummy.matrix);
+    mesh.instanceMatrix.needsUpdate = true;
+
+    if (isPedestrian) {
       this.activePedestrians -= 1;
       this.freePedestrians.push(slot);
     } else {

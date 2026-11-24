@@ -417,3 +417,14 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
   - Observar las sombras proyectadas sobre el asfalto y el suelo.
   - Acelerar en coche para apreciar la apertura dinámica del campo de visión (FOV) y la cámara suave.
   - Observar cómo los peatones y el tráfico giran de manera natural y suave en las esquinas.
+
+## Corrección de física y robo de vehículos (completada)
+
+### Hecho
+- El vehículo conducible ahora conserva el color procedural y el ángulo de marcha (`heading`) del coche ambiental requisado.
+- Corregida la cota del chasis a `y + 0.82` para equilibrar la suspensión y erradicar el impulso elástico de descompresión violenta contra el suelo.
+- Las instancias de agentes liberadas en `NpcSystem` se limpian de inmediato en el `InstancedMesh` para evitar artefactos visuales superpuestos.
+- Salida inteligente de vehículos evitando solapes con fachadas y edificios.
+
+### Verificación
+- `npm run lint`, `npm run typecheck`, `npm test` (43/43) y `npm run build` pasando correctamente.

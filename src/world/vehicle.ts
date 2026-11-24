@@ -14,18 +14,25 @@ export class Vehicle {
   private readonly wheels: THREE.Mesh[] = [];
   private readonly world: World;
 
-  constructor(world: World, x: number, y: number, z: number) {
+  constructor(world: World, x: number, y: number, z: number, heading = 0, color = CAR_COLOR) {
     this.world = world;
     this.group = new THREE.Group();
 
-    // Chassis rigid body.
+    // Chassis rigid body: placed at y + 0.82 so wheels rest gently on the ground
+    // without compressing the suspension into the floor on frame 0. Heading rotates
+    // the chassis along the street direction to prevent trimesh wall penetration.
+    const half = heading * 0.5;
     const chassisDesc = RAPIER.RigidBodyDesc.dynamic()
-      .setTranslation(x, y + 0.6, z)
-      .setLinearDamping(0.3)
-      .setAngularDamping(2.5);
+      .setTranslation(x, y + 0.82, z)
+      .setRotation({ x: 0, y: Math.sin(half), z: 0, w: Math.cos(half) })
+      .setLinearDamping(0.8)
+      .setAngularDamping(4.0);
     this.chassisBody = world.createRigidBody(chassisDesc);
     const colliderDesc = RAPIER.ColliderDesc.cuboid(0.9, 0.35, 2.0).setMass(1200).setFriction(0.7);
     world.createCollider(colliderDesc, this.chassisBody);
+
+    this.group.position.set(x, y + 0.82, z);
+    this.group.quaternion.set(0, Math.sin(half), 0, Math.cos(half));
 
     this.controller = new RAPIER.DynamicRayCastVehicleController(
       this.chassisBody,
@@ -52,25 +59,25 @@ export class Vehicle {
       );
     }
     for (let i = 0; i < 4; i += 1) {
-      this.controller.setWheelSuspensionStiffness(i, 30);
-      this.controller.setWheelMaxSuspensionTravel(i, 0.3);
+      this.controller.setWheelSuspensionStiffness(i, 28);
+      this.controller.setWheelMaxSuspensionTravel(i, 0.28);
       this.controller.setWheelSuspensionCompression(i, 4.4);
       this.controller.setWheelSuspensionRelaxation(i, 2.3);
-      this.controller.setWheelFrictionSlip(i, 5);
+      this.controller.setWheelFrictionSlip(i, 4.5);
       this.controller.setWheelSideFrictionStiffness(i, 2.0);
       this.controller.setWheelMaxSuspensionForce(i, 6000);
       this.controller.setWheelRadius(i, 0.35);
     }
 
-    // Visual mesh with realistic automotive paint highlights.
+    // Visual mesh with matching color.
     const bodyGeo = createSedanBodyGeometry();
-    const bodyMat = new THREE.MeshStandardMaterial({ color: CAR_COLOR, roughness: 0.28, metalness: 0.55 });
+    const bodyMat = new THREE.MeshStandardMaterial({ color, roughness: 0.28, metalness: 0.55 });
     const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
     bodyMesh.castShadow = true;
     this.group.add(bodyMesh);
 
     const cabinGeo = taperedCabinGeometry();
-    const cabinMat = new THREE.MeshStandardMaterial({ color: CAR_COLOR, roughness: 0.26, metalness: 0.45 });
+    const cabinMat = new THREE.MeshStandardMaterial({ color, roughness: 0.26, metalness: 0.45 });
     const cabin = new THREE.Mesh(cabinGeo, cabinMat);
     cabin.position.set(0, 0, -0.18);
     cabin.castShadow = true;

@@ -240,7 +240,7 @@ function spawnDebugVehicle(): string {
   const x = position.x + 4;
   const z = position.z;
   const height = chunks.groundHeightAt(x, z) ?? position.y;
-  const vehicle = new Vehicle(world, x, height, z);
+  const vehicle = new Vehicle(world, x, height, z, cameraRig.getYaw());
   vehicles.push(vehicle);
   scene.add(vehicle.group);
   world.updateSceneQueries();
@@ -485,8 +485,12 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
   if (event.code === 'Space') { spacePressed = true; event.preventDefault(); }
   if (event.code === 'KeyE') {
     if (inVehicle && activeVehicle) {
-      character.position.copy(activeVehicle.position);
-      character.position.x += 2;
+      const side = new THREE.Vector3(1.8, 0, 0).applyQuaternion(activeVehicle.group.quaternion);
+      let exitPos = activeVehicle.position.clone().add(side);
+      if (chunks?.collidesWithBuilding(exitPos.x, exitPos.z, 0.4)) {
+        exitPos = activeVehicle.position.clone().sub(side);
+      }
+      character.position.copy(exitPos);
       const h = chunks?.groundHeightAt(character.position.x, character.position.z);
       if (h !== undefined) character.position.y = h;
       inVehicle = false;
@@ -504,7 +508,7 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
       if (!nearest && npcs && world) {
         const claimed = npcs.claimVehicle(character.position, 4.5);
         if (claimed) {
-          const stolen = new Vehicle(world, claimed.x, claimed.y, claimed.z);
+          const stolen = new Vehicle(world, claimed.x, claimed.y, claimed.z, claimed.heading, claimed.color);
           vehicles.push(stolen);
           scene.add(stolen.group);
           world.updateSceneQueries();
@@ -553,7 +557,7 @@ async function initializeWorld(): Promise<void> {
   if (startHeight !== undefined) character.position.y = startHeight;
   if (world) {
     const spawnH = chunks.groundHeightAt(8, 8) ?? 0;
-    const vehicle = new Vehicle(world, 8, spawnH, 8);
+    const vehicle = new Vehicle(world, 8, spawnH, 8, 0);
     vehicles.push(vehicle);
     scene.add(vehicle.group);
     // The chassis collider was created outside TerrainColliders.
