@@ -12,6 +12,7 @@ export class Vehicle {
   readonly chassisBody: RAPIER.RigidBody;
   readonly controller: RAPIER.DynamicRayCastVehicleController;
   private readonly wheels: THREE.Mesh[] = [];
+  private readonly brakeLightMaterials: THREE.MeshStandardMaterial[] = [];
   private readonly world: World;
 
   constructor(world: World, x: number, y: number, z: number, heading = 0, color = CAR_COLOR) {
@@ -85,7 +86,8 @@ export class Vehicle {
 
     const trimMat = new THREE.MeshStandardMaterial({ color: 0x34383b, roughness: 0.62, metalness: 0.22 });
     const lightMat = new THREE.MeshStandardMaterial({ color: 0xfffae8, emissive: 0xffefb8, emissiveIntensity: 1.2, roughness: 0.15 });
-    const rearLightMat = new THREE.MeshStandardMaterial({ color: 0xe62218, emissive: 0xcc1810, emissiveIntensity: 1.0, roughness: 0.15 });
+    const rearLightMat = new THREE.MeshStandardMaterial({ color: 0x8f211c, roughness: 0.26, metalness: 0.08 });
+    const brakeLightMat = new THREE.MeshStandardMaterial({ color: 0xf13327, emissive: 0xc91c12, emissiveIntensity: 0.12, roughness: 0.18 });
     const plateMat = new THREE.MeshStandardMaterial({ color: 0xf4f4f4, roughness: 0.6 });
     const euMat = new THREE.MeshStandardMaterial({ color: 0x154ca0, roughness: 0.5 });
     const chromeMat = new THREE.MeshStandardMaterial({ color: 0xd8dcd0, roughness: 0.18, metalness: 0.9 });
@@ -117,6 +119,10 @@ export class Vehicle {
     for (const side of [-1, 1]) {
       addDetail(new THREE.BoxGeometry(0.32, 0.2, 0.1), lightMat, side * 0.62, 0.4, 1.91);
       addDetail(new THREE.BoxGeometry(0.28, 0.17, 0.1), rearLightMat, side * 0.66, 0.42, -1.91);
+      const brake = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.08, 0.035), brakeLightMat);
+      brake.position.set(side * 0.66, 0.42, -1.97);
+      this.group.add(brake);
+      this.brakeLightMaterials.push(brakeLightMat);
       addDetail(new THREE.BoxGeometry(0.16, 0.12, 0.22), trimMat, side * 0.82, 0.83, 0.48);
       for (const z of [-1.32, 1.32]) {
         const arch = new THREE.Mesh(createWheelArchGeometry(side, z, 0), bodyMat);
@@ -126,6 +132,27 @@ export class Vehicle {
       addDetail(new THREE.CapsuleGeometry(0.014, 0.34, 2, 6), trimMat, side * 0.86, 0.4, 0.12);
       addDetail(new THREE.CapsuleGeometry(0.02, 0.08, 2, 6), trimMat, side * 0.86, 0.6, 0.38);
     }
+
+    // Cabin forms add a visible interior through the glass at close range.
+    addDetail(new THREE.BoxGeometry(1.16, 0.12, 0.3), trimMat, 0, 0.69, 0.61);
+    const steeringWheel = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.018, 6, 16), trimMat);
+    steeringWheel.position.set(-0.28, 0.84, 0.53);
+    this.group.add(steeringWheel);
+    for (const seatX of [-0.3, 0.3]) {
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.38, 0.28), trimMat);
+      seat.position.set(seatX, 0.75, -0.22);
+      seat.castShadow = true;
+      this.group.add(seat);
+    }
+
+    // Door shut lines clarify the car body silhouette without adding many draw calls.
+    const seamGeometry = new THREE.BufferGeometry();
+    seamGeometry.setAttribute('position', new THREE.Float32BufferAttribute([
+      -0.87, 0.58, 0.02, -0.87, 0.58, -0.7, -0.87, 0.58, -0.7, -0.68, 1.02, -0.48,
+      0.87, 0.58, 0.02, 0.87, 0.58, -0.7, 0.87, 0.58, -0.7, 0.68, 1.02, -0.48,
+    ], 3));
+    const seamMaterial = new THREE.LineBasicMaterial({ color: 0x652b25, transparent: true, opacity: 0.58 });
+    this.group.add(new THREE.LineSegments(seamGeometry, seamMaterial));
 
     // Spanish / European format license plates
     addDetail(new THREE.BoxGeometry(0.42, 0.11, 0.03), plateMat, 0, 0.05, 2.06);
@@ -194,6 +221,8 @@ export class Vehicle {
     for (let i = 0; i < 4; i += 1) this.controller.setWheelBrake(i, brake);
 
     this.controller.updateVehicle(deltaSeconds);
+    const braking = input.handbrake || (input.backward && !input.forward);
+    for (const material of this.brakeLightMaterials) material.emissiveIntensity = braking ? 2.2 : 0.12;
     // Rapier's vehicle controller only changes velocities; stepping the world is
     // what integrates the chassis and resolves contacts with terrain, buildings
     // and the kinematic agent colliders.
