@@ -29,8 +29,7 @@ export class Character {
 
     // A broad shoulder line and tapered waist create a readable human silhouette
     // at the fixed third-person camera distance.
-    const torsoGeo = new THREE.CylinderGeometry(0.22, 0.28, 0.58, 10, 1);
-    torsoGeo.scale(1, 1, 0.76);
+    const torsoGeo = createTorsoGeometry();
     this.body = new THREE.Mesh(torsoGeo, material(BODY_COLOR));
     this.body.position.y = 1.16;
     this.body.castShadow = true;
@@ -295,4 +294,36 @@ export class Character {
   }
 
   get position(): THREE.Vector3 { return this.group.position; }
+}
+
+function createTorsoGeometry(): THREE.BufferGeometry {
+  const rings = [
+    { y: -0.29, x: 0.2, z: 0.14 },
+    { y: -0.12, x: 0.23, z: 0.16 },
+    { y: 0.12, x: 0.29, z: 0.19 },
+    { y: 0.29, x: 0.22, z: 0.16 },
+  ];
+  const segments = 12;
+  const positions: number[] = [];
+  const indices: number[] = [];
+  for (const ring of rings) {
+    for (let segment = 0; segment < segments; segment += 1) {
+      const angle = (segment / segments) * Math.PI * 2;
+      positions.push(Math.sin(angle) * ring.x, ring.y, Math.cos(angle) * ring.z);
+    }
+  }
+  for (let ring = 0; ring < rings.length - 1; ring += 1) {
+    for (let segment = 0; segment < segments; segment += 1) {
+      const current = ring * segments + segment;
+      const next = ring * segments + ((segment + 1) % segments);
+      const upper = current + segments;
+      const upperNext = next + segments;
+      indices.push(current, next, upper, next, upperNext, upper);
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return geometry;
 }
