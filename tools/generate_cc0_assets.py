@@ -14,8 +14,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import struct
 import sys
+from collections import defaultdict
 from pathlib import Path
 
 import bpy
@@ -31,6 +33,67 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cars", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     return parser.parse_args(BLENDER_ARGS)
+
+
+def action_fcurves(action: bpy.types.Action):
+    for layer in action.layers:
+        for strip in layer.strips:
+            for channelbag in strip.channelbags:
+                yield from channelbag.fcurves
+
+
+def soften_walk(action: bpy.types.Action, amount: float = 0.35, time_scale: float = 1.4) -> None:
+    """Turn Kenney's fast run cycle into a calmer, slower walk cycle.
+
+    FBX actions store pose deltas. Scaling location deltas and slerping rotation
+    deltas towards identity keeps the rig stable while reducing the exaggerated
+    stride; stretching keyframe times lowers the cadence to a walking pace.
+    """
+    curves = list(action_fcurves(action))
+    quaternion_groups: dict[str, dict[int, bpy.types.FCurve]] = defaultdict(dict)
+    for curve in curves:
+        if curve.data_path.endswith(".rotation_quaternion"):
+            quaternion_groups[curve.data_path][curve.array_index] = curve
+
+    for path, by_index in quaternion_groups.items():
+        points = {
+            index: {round(key.co.x, 6): key for key in curve.keyframe_points}
+            for index, curve in by_index.items()
+        }
+        times = sorted({time for index in points for time in points[index]})
+        for time in times:
+            quaternion = [
+                points[index][time].co.y if time in points[index] else (1.0 if index == 0 else 0.0)
+                for index in range(4)
+            ]
+            norm = math.sqrt(sum(component * component for component in quaternion)) or 1.0
+            quaternion = [component / norm for component in quaternion]
+            dot = max(-1.0, min(1.0, quaternion[0]))
+            if dot < 0.0:
+                quaternion = [-component for component in quaternion]
+                dot = -dot
+            theta = math.acos(dot)
+            if theta < 1e-6:
+                blended = [1.0, *(component * amount for component in quaternion[1:])]
+            else:
+                first = math.sin((1.0 - amount) * theta) / math.sin(theta)
+                second = math.sin(amount * theta) / math.sin(theta)
+                blended = [first + second * quaternion[0], *(second * c for c in quaternion[1:])]
+            norm = math.sqrt(sum(component * component for component in blended)) or 1.0
+            blended = [component / norm for component in blended]
+            for index in range(4):
+                if time in points[index]:
+                    points[index][time].co.y = blended[index]
+
+    for curve in curves:
+        if curve.data_path.endswith(".location"):
+            for key in curve.keyframe_points:
+                key.co.y *= amount
+        for key in curve.keyframe_points:
+            key.co.x *= time_scale
+            key.handle_left.x *= time_scale
+            key.handle_right.x *= time_scale
+        curve.update()
 
 
 def scale_glb_root(path: Path, factor: float) -> None:
@@ -106,6 +169,8 @@ def build_character(source: Path, output: Path) -> None:
     for action in list(bpy.data.actions):
         if action not in (idle, walk):
             bpy.data.actions.remove(action)
+    # Kenney only ships idle/jump/run; derive a gentle walk from the run cycle.
+    soften_walk(walk)
 
     material = bpy.data.materials.get("skin")
     if material is None:
