@@ -13,3 +13,5 @@
 - Las texturas repetibles de calzada se generan proceduralmente desde Canvas y los modelos simples instanciados de señalización son geometría original del proyecto; no proceden de assets externos.
 - Los atlas de fachadas por zona, cubiertas de teja/modernas y ventanas emisivas se generan proceduralmente desde Canvas; las mallas de edificios se extruyen desde huellas OSM. No se descargan texturas ni modelos de terceros. El cargador opcional de hitos solo admite GLB locales con nombre OSM estable, tamaño limitado y recursos embebidos.
 - Los peatones, coches ambientales y patrullas de las fases 10 y 11 son geometría original del proyecto (cajas/esferas fusionadas) con colores generados por semilla; no incorporan modelos, libreas ni marcas externas.
+
+- El cielo, las nubes y el resplandor solar se generan proceduralmente. La geometría de las prendas y su paleta son originales. Se consultó https://github.com/jhanva/gamedev-skills como guía de dirección artística; no se copió código ni se incorporaron assets de ese repositorio.
