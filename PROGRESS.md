@@ -4,7 +4,29 @@
 
 - **Fases completadas:** 0 a 11 implementadas, auditadas y fusionadas en `main`.
 - **Nuevas directrices estratégicas:** Implementadas en [`strategy/`](strategy/README.md) y [`AGENTS.md`](AGENTS.md) (modelos GLB CC0/CC-BY, Catastro de España para 12.000 portales, oficios cacereños, minimapa táctico de radar y audio procedural Web Audio).
-- **Próxima fase:** Fase 12 — Combate ligero estilizado e inicio de los oficios urbanos (Línea 1/8 autobús, paquetería en Judería).
+- **Rama de trabajo:** `feat/assets-citykit` contiene el primer kit GLB procedural (edificios/props) detrás de `?citykit=1`. No está fusionada en `main` pendiente de revisión visual y de la sustitución de personajes/coches.
+- **Próxima fase:** Fase 12 — Combate ligero estilizado e inicio de los oficios urbanos (Línea 1/8 autobús, paquetería en Judería). La tanda de assets continuará con personajes y coches antes de tocar esa fase.
+
+## City Kit GLB procedural (rama `feat/assets-citykit`)
+
+### Hecho
+- `tools/generate_citykit.py` genera 14 GLB CC0 propios (farola, árbol, semáforo, señales, chimenea y balcón; LOD0/LOD1) en `public/models/citykit/` (~159 KB en total). Se ejecuta con Blender 5.2 en modo headless.
+- `src/world/city-kit.ts` precarga los GLB con `AssetManager`, los convierte a mallas instanciadas y sustituye el mobiliario de `RoadRenderer` cuando `?citykit=1`. Añade chimeneas en `roofAnchors` y balcones en `signSlots`, siempre anclados a datos OSM ya presentes.
+- Si falla algún GLB, se mantiene el mobiliario procedural anterior. Sin el parámetro `?citykit=1`, el comportamiento es idéntico a `main`.
+- Inventario y licencias en `ASSETS_LICENSES.md`; pendientes en `ASSETS_NEEDED.md`; decisión registrada en `DECISIONS.md` y `ATTRIBUTION.md`.
+- Validación local: `lint`, `typecheck`, `test` (47/47) y `build` en verde. Los 15 archivos del kit se copian a `dist/models/citykit`.
+
+### Pendiente
+- Revisión visual humana de escala/orientación de farolas, árboles, chimeneas y balcones.
+- Sustituir los GLB CC0 de caminante y sedán por modelos nuevos (tanda de personajes y coches).
+- Reconstruir el mobiliario al cambiar de LOD dentro de un chunk ya cargado (ahora se elige el LOD al crear el chunk).
+- No fusionar en `main` hasta completar la comparación y la documentación.
+
+### Cómo probar
+- `npm run dev` y abrir `http://localhost:5173/?debug=1` para la versión baseline.
+- Abrir `http://localhost:5173/?debug=1&citykit=1` para la versión con GLB. F9 muestra qué variante está activa.
+- Comparar `#draw-calls`, `#triangles`, `#fps` y el aspecto visual en Plaza Mayor y en una calle arbolada.
+- Regenerar los GLB con Blender 5.2: `blender.exe --background --factory-startup --python tools/generate_citykit.py`.
 
 ## Fase 0 - Repositorio, herramientas y despliegue (completada)
 
