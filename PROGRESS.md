@@ -428,3 +428,31 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 
 ### Verificación
 - `npm run lint`, `npm run typecheck`, `npm test` (43/43) y `npm run build` pasando correctamente.
+
+## Renovación visual drástica, modelos 3D y atmósfera cinematográfica (completada)
+
+### Hecho
+- **Relieve y texturas del terreno y calzadas:**
+  - Micro-relieve procedural de 512×512 píxeles (`createTerrainDetailTexture()`) con grava, tierra y motas minerales integrado con coordenadas UV planares en `ChunkManager`.
+  - Calzadas con adoquines de granito biselados y llagas de mortero (`stone`), aceras con losas serradas con relieve (`sidewalk`) y asfalto granular.
+  - Tejas árabes curvas con sombreado cilíndrico tridimensional en tejados y sillería de granito en hiladas regulares con juntas rehundidas para monumentos y muros.
+  - Ventanas con brillo diagonal de reflejo celeste y repisas de granito biseladas.
+- **Vegetación y mobiliario urbano:**
+  - Árboles mediterráneos orgánicos (estilo encina / pino piñonero) con troncos ramificados y 5 racimos de follaje dodecaédrico.
+  - Farolas históricas de forja con pedestal octogonal, poste estriado, jaula de linterna de 4 caras y remate, proyectando sombras reales.
+- **Vehículos y personajes:**
+  - Colores automotrices realistas (14 acabados metalizados elegantes).
+  - Llantas de aleación plateadas de 5 radios con discos de freno, tubos de escape dobles cromados, ópticas de xenón de alta emisión y matrículas europeas/españolas.
+  - Patrullas policiales con libreas verde/azul y puente de luces aerodinámico estroboscópico.
+  - Protagonista con gafas de sol polarizadas, cremallera metálica, cinturón, reloj de pulsera dorado y zapatillas con entresuela blanca.
+  - Peatones con accesorios urbanos (bandoleras, gafas de sol, calzado estilizado).
+- **Atmósfera y cielo:**
+  - Sol bajo de hora dorada (~33° de elevación, `#fff0d6`, intensidad 3.6) generando sombras largas espectaculares.
+  - Disco solar brillante y corona cálida visibles en el cielo, siguiendo al jugador.
+  - Gradiente de cielo cálido ibérico (melocotón en horizonte a azul profundo en cenit) con niebla atmosférica y tone mapping ACESFilmic a 1.14.
+
+### Verificación
+- `npm run lint`: sin errores.
+- `npm run typecheck`: sin errores de TypeScript.
+- `npm test`: 43/43 pruebas unitarias pasando.
+- `npm run build`: compilación de producción exitosa en 2.18s.

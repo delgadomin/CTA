@@ -69,23 +69,27 @@ export class Vehicle {
       this.controller.setWheelRadius(i, 0.35);
     }
 
-    // Visual mesh with matching color.
+    // Visual mesh with matching color and glossy clearcoat automotive finish.
     const bodyGeo = createSedanBodyGeometry();
-    const bodyMat = new THREE.MeshStandardMaterial({ color, roughness: 0.28, metalness: 0.55 });
+    const bodyMat = new THREE.MeshStandardMaterial({ color, roughness: 0.16, metalness: 0.65 });
     const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
     bodyMesh.castShadow = true;
     this.group.add(bodyMesh);
 
     const cabinGeo = taperedCabinGeometry();
-    const cabinMat = new THREE.MeshStandardMaterial({ color, roughness: 0.26, metalness: 0.45 });
+    const cabinMat = new THREE.MeshStandardMaterial({ color, roughness: 0.18, metalness: 0.55 });
     const cabin = new THREE.Mesh(cabinGeo, cabinMat);
     cabin.position.set(0, 0, -0.18);
     cabin.castShadow = true;
     this.group.add(cabin);
 
     const trimMat = new THREE.MeshStandardMaterial({ color: 0x34383b, roughness: 0.62, metalness: 0.22 });
-    const lightMat = new THREE.MeshStandardMaterial({ color: 0xffefbb, emissive: 0x392a0b, roughness: 0.28 });
-    const rearLightMat = new THREE.MeshStandardMaterial({ color: 0xb7352d, emissive: 0x30100c, roughness: 0.35 });
+    const lightMat = new THREE.MeshStandardMaterial({ color: 0xfffae8, emissive: 0xffefb8, emissiveIntensity: 1.2, roughness: 0.15 });
+    const rearLightMat = new THREE.MeshStandardMaterial({ color: 0xe62218, emissive: 0xcc1810, emissiveIntensity: 1.0, roughness: 0.15 });
+    const plateMat = new THREE.MeshStandardMaterial({ color: 0xf4f4f4, roughness: 0.6 });
+    const euMat = new THREE.MeshStandardMaterial({ color: 0x154ca0, roughness: 0.5 });
+    const chromeMat = new THREE.MeshStandardMaterial({ color: 0xd8dcd0, roughness: 0.18, metalness: 0.9 });
+
     const addDetail = (geometry: THREE.BufferGeometry, material: THREE.Material, x: number, y: number, z: number) => {
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(x, y, z);
@@ -123,20 +127,56 @@ export class Vehicle {
       addDetail(new THREE.CapsuleGeometry(0.02, 0.08, 2, 6), trimMat, side * 0.86, 0.6, 0.38);
     }
 
+    // Spanish / European format license plates
+    addDetail(new THREE.BoxGeometry(0.42, 0.11, 0.03), plateMat, 0, 0.05, 2.06);
+    addDetail(new THREE.BoxGeometry(0.06, 0.11, 0.032), euMat, -0.18, 0.05, 2.062);
+    addDetail(new THREE.BoxGeometry(0.42, 0.11, 0.03), plateMat, 0, 0.07, -2.06);
+    addDetail(new THREE.BoxGeometry(0.06, 0.11, 0.032), euMat, -0.18, 0.07, -2.062);
+
+    // Dual chrome exhaust pipes at rear
+    for (const exX of [-0.52, -0.42]) {
+      const pipeGeo = new THREE.CylinderGeometry(0.036, 0.036, 0.16, 8);
+      pipeGeo.rotateX(Math.PI / 2);
+      addDetail(pipeGeo, chromeMat, exX, 0.02, -2.08);
+    }
+
     const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 12);
     wheelGeo.rotateZ(Math.PI / 2);
-    const wheelMat = new THREE.MeshStandardMaterial({ color: WHEEL_COLOR, roughness: 0.8 });
-    const hubGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.27, 10);
+    const wheelMat = new THREE.MeshStandardMaterial({ color: WHEEL_COLOR, roughness: 0.85 });
+    const rimGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.258, 12);
+    rimGeo.rotateZ(Math.PI / 2);
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0xd0d4d8, roughness: 0.25, metalness: 0.85 });
+    const discGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.252, 8);
+    discGeo.rotateZ(Math.PI / 2);
+    const discMat = new THREE.MeshStandardMaterial({ color: 0x2a2b2d, roughness: 0.65 });
+    const hubGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.264, 8);
     hubGeo.rotateZ(Math.PI / 2);
-    const hubMat = new THREE.MeshStandardMaterial({ color: 0xa7a9a5, roughness: 0.35, metalness: 0.65 });
+    const spokeGeo = new THREE.BoxGeometry(0.02, 0.23, 0.028);
+
     for (const wp of wheelPositions) {
       const w = new THREE.Mesh(wheelGeo, wheelMat);
       w.position.set(wp.x, 0.0, wp.z);
       this.group.add(w);
       this.wheels.push(w);
-      const hub = new THREE.Mesh(hubGeo, hubMat);
-      hub.position.x = 0.02;
+
+      const rim = new THREE.Mesh(rimGeo, rimMat);
+      rim.position.x = 0.01;
+      w.add(rim);
+
+      const disc = new THREE.Mesh(discGeo, discMat);
+      disc.position.x = 0.005;
+      w.add(disc);
+
+      const hub = new THREE.Mesh(hubGeo, rimMat);
+      hub.position.x = 0.015;
       w.add(hub);
+
+      for (let s = 0; s < 5; s += 1) {
+        const spoke = new THREE.Mesh(spokeGeo, rimMat);
+        spoke.rotation.x = (s * Math.PI * 2) / 5;
+        spoke.position.x = 0.015;
+        w.add(spoke);
+      }
     }
   }
 

@@ -120,9 +120,19 @@ export class NpcSystem {
     this.fleeZ = new Float32Array(capacity);
     for (let slot = this.pedestrianCapacity - 1; slot >= 0; slot -= 1) this.freePedestrians.push(slot);
     for (let slot = capacity - 1; slot >= this.pedestrianCapacity; slot -= 1) this.freeVehicles.push(slot);
-    // Wider palette so the crowd reads as individual people, not copies.
-    for (let i = 0; i < 20; i += 1) this.pedestrianColors.push(new THREE.Color().setHSL((i * 0.05) % 1, 0.22 + (i % 5) * 0.08, 0.32 + (i % 4) * 0.1));
-    for (let i = 0; i < 14; i += 1) this.vehicleColors.push(new THREE.Color().setHSL((i * 0.071) % 1, 0.38 + (i % 3) * 0.14, 0.3 + (i % 4) * 0.1));
+    // Curated European pedestrian palettes: earthy tones, denims, leathers and jackets
+    const PEDESTRIAN_COLORS = [
+      0x384a5c, 0x5a4638, 0x2d3439, 0x6a7568, 0x85684e, 0x423b4e, 0x314241, 0x68584a,
+      0x2c3138, 0x763f38, 0x485869, 0x505050, 0x866e51, 0x3a483e, 0x5e4758, 0x494e55,
+      0x755e44, 0x243036, 0x7d4f3e, 0x3a4650,
+    ];
+    for (const hex of PEDESTRIAN_COLORS) this.pedestrianColors.push(new THREE.Color(hex));
+    // Curated realistic automotive paint finishes (metallic pearl, graphite, navy, burgundy, champagne)
+    const AUTOMOTIVE_PAINTS = [
+      0xf0f3f6, 0x1c1d20, 0x383c42, 0x9da3a8, 0x8b1e22, 0x1c3258, 0x274332,
+      0xb29b7c, 0x325a88, 0x592332, 0x4a463d, 0xd94432, 0x5c6970, 0x252a30,
+    ];
+    for (const hex of AUTOMOTIVE_PAINTS) this.vehicleColors.push(new THREE.Color(hex));
   }
 
   get counts(): NpcCounts {

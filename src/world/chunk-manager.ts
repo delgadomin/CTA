@@ -11,6 +11,7 @@ import { sampleHeight } from './road-geometry';
 import { RoadRenderer } from './road-renderer';
 import { RoadHeightIndex } from './road-height-index';
 import { createStork, updateStork } from './stork';
+import { createTerrainDetailTexture } from './materials';
 import { TerrainColliders } from './terrain-physics';
 import type { BuiltTerrainChunk, ChunkEntry, TerrainChunkEvents, TerrainLodData, WorldManifest } from './types';
 
@@ -65,6 +66,13 @@ function geometryForLod(level: TerrainLodData, result: BuiltTerrainChunk, chunkM
   geometry.setAttribute('position', new THREE.BufferAttribute(level.positions, 3));
   geometry.setAttribute('normal', new THREE.BufferAttribute(level.normals, 3));
   geometry.setAttribute('color', new THREE.BufferAttribute(level.colors, 3));
+  const vertexCount = level.positions.length / 3;
+  const uvs = new Float32Array(vertexCount * 2);
+  for (let i = 0; i < vertexCount; i += 1) {
+    uvs[i * 2] = (level.positions[i * 3] ?? 0) / 10;
+    uvs[i * 2 + 1] = (level.positions[i * 3 + 2] ?? 0) / 10;
+  }
+  geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   geometry.setIndex(new THREE.BufferAttribute(level.indices, 1));
   const half = chunkMeters / 2;
   const verticalRadius = (result.maximumHeight - result.minimumHeight) / 2 + 4;
@@ -153,7 +161,12 @@ export class ChunkManager {
   private readonly scene: THREE.Scene;
   private readonly world: World;
   private readonly colliders: TerrainColliders;
-  private readonly material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.94, side: THREE.DoubleSide });
+  private readonly material = new THREE.MeshStandardMaterial({
+    map: createTerrainDetailTexture(),
+    vertexColors: true,
+    roughness: 0.90,
+    side: THREE.DoubleSide,
+  });
   private readonly roadRenderer = new RoadRenderer();
   private readonly buildingRenderer = new BuildingRenderer();
   private readonly debugOverlays: ChunkDebugOverlays;
@@ -370,6 +383,7 @@ export class ChunkManager {
     for (const record of this.records.values()) this.unload(record, false);
     this.records.clear();
     this.colliders.clear();
+    this.material.map?.dispose();
     this.material.dispose();
     this.roadRenderer.dispose();
     this.buildingRenderer.dispose();

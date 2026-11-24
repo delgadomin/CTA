@@ -59,11 +59,24 @@ function pedestrianGeometry(): THREE.BufferGeometry {
     const shoe = new THREE.SphereGeometry(0.13, 9, 6);
     shoe.scale(1, 0.55, 1.55);
     addPart(parts, shoe, 0x282522, new THREE.Vector3(side * 0.12, 0.08, 0.055));
+    // Crisp sneaker midsole (white sidewall) and dark tread
+    const midsole = new THREE.SphereGeometry(0.132, 8, 5);
+    midsole.scale(1, 0.22, 1.52);
+    addPart(parts, midsole, 0xf0f2f5, new THREE.Vector3(side * 0.12, 0.042, 0.055));
     const sole = new THREE.SphereGeometry(0.13, 8, 5);
-    sole.scale(1, 0.18, 1.5);
-    addPart(parts, sole, 0x111315, new THREE.Vector3(side * 0.12, 0.025, 0.055));
+    sole.scale(1, 0.16, 1.5);
+    addPart(parts, sole, 0x111315, new THREE.Vector3(side * 0.12, 0.018, 0.055));
     addPart(parts, new THREE.CapsuleGeometry(0.035, 0.08, 2, 5), 0x282522, new THREE.Vector3(side * 0.15, 0.91, 0.12));
   }
+  // Sunglasses for urban character flair
+  const glasses = new THREE.BoxGeometry(0.18, 0.038, 0.04);
+  addPart(parts, glasses, 0x18181a, new THREE.Vector3(0, 1.685, 0.145));
+  // Crossbody leather bag strap and hip satchel
+  const satchel = new THREE.BoxGeometry(0.16, 0.18, 0.08);
+  addPart(parts, satchel, 0x483427, new THREE.Vector3(0.24, 0.88, 0.06));
+  const strap = new THREE.CapsuleGeometry(0.016, 0.65, 2, 5);
+  strap.rotateZ(0.5);
+  addPart(parts, strap, 0x483427, new THREE.Vector3(0.04, 1.18, 0.16));
   return finish(parts, new THREE.CapsuleGeometry(0.25, 1.2, 4, 8));
 }
 
@@ -212,14 +225,41 @@ function vehicleGeometry(police = false): THREE.BufferGeometry {
     rearWheel.rotateZ(Math.PI / 2);
     addPart(parts, rearWheel, 0x25272a, new THREE.Vector3(side * 0.89, 0.36, -1.32));
     for (const z of [1.32, -1.32]) {
-      const hub = new THREE.CylinderGeometry(0.15, 0.15, 0.23, 8);
+      // Alloy rim outer lip
+      const rim = new THREE.CylinderGeometry(0.24, 0.24, 0.23, 10);
+      rim.rotateZ(Math.PI / 2);
+      addPart(parts, rim, 0xd0d4d8, new THREE.Vector3(side * 0.9, 0.36, z));
+      // Dark brake disc
+      const disc = new THREE.CylinderGeometry(0.18, 0.18, 0.222, 8);
+      disc.rotateZ(Math.PI / 2);
+      addPart(parts, disc, 0x2c2e30, new THREE.Vector3(side * 0.895, 0.36, z));
+      // Center hub
+      const hub = new THREE.CylinderGeometry(0.09, 0.09, 0.235, 8);
       hub.rotateZ(Math.PI / 2);
-      addPart(parts, hub, 0x9da2a5, new THREE.Vector3(side * 0.9, 0.36, z));
+      addPart(parts, hub, 0x9da2a5, new THREE.Vector3(side * 0.902, 0.36, z));
+      // 5-spoke alloy wheels
+      for (let s = 0; s < 5; s += 1) {
+        const spokeAngle = (s * Math.PI * 2) / 5;
+        const spoke = new THREE.BoxGeometry(0.02, 0.22, 0.028);
+        spoke.rotateX(spokeAngle);
+        addPart(parts, spoke, 0xd0d4d8, new THREE.Vector3(side * 0.905, 0.36, z));
+      }
     }
     for (const z of [0.18, -0.88]) {
       addPart(parts, new THREE.CapsuleGeometry(0.012, 0.34, 2, 5), 0x3e4244, new THREE.Vector3(side * 0.85, 0.59, z));
       addPart(parts, new THREE.CapsuleGeometry(0.015, 0.095, 2, 5), 0x85898a, new THREE.Vector3(side * 0.86, 0.77, z + 0.21));
     }
+  }
+  // Front and rear Spanish / European license plates (white with blue EU band)
+  addPart(parts, new THREE.BoxGeometry(0.42, 0.11, 0.03), 0xf4f4f4, new THREE.Vector3(0, 0.25, 2.06));
+  addPart(parts, new THREE.BoxGeometry(0.06, 0.11, 0.032), 0x154ca0, new THREE.Vector3(-0.18, 0.25, 2.062));
+  addPart(parts, new THREE.BoxGeometry(0.42, 0.11, 0.03), 0xf4f4f4, new THREE.Vector3(0, 0.27, -2.06));
+  addPart(parts, new THREE.BoxGeometry(0.06, 0.11, 0.032), 0x154ca0, new THREE.Vector3(-0.18, 0.27, -2.062));
+  // Dual chrome exhaust tips at rear
+  for (const exX of [-0.52, -0.42]) {
+    const pipe = new THREE.CylinderGeometry(0.036, 0.036, 0.16, 8);
+    pipe.rotateX(Math.PI / 2);
+    addPart(parts, pipe, 0xd0d4d8, new THREE.Vector3(exX, 0.22, -2.08));
   }
   // Front seats and dashboard are visible through the glass at close range.
   for (const x of [-0.28, 0.28]) {
@@ -228,9 +268,18 @@ function vehicleGeometry(police = false): THREE.BufferGeometry {
   }
   addPart(parts, new THREE.CapsuleGeometry(0.07, 1.15, 2, 6), 0x333638, new THREE.Vector3(0, 0.81, 0.64));
   if (police) {
-    addPart(parts, new THREE.BoxGeometry(0.9, 0.12, 0.25), 0x202c37, new THREE.Vector3(0, 1.42, -0.05));
-    addPart(parts, new THREE.BoxGeometry(0.36, 0.12, 0.23), 0x3b8dff, new THREE.Vector3(-0.24, 1.51, -0.05));
-    addPart(parts, new THREE.BoxGeometry(0.36, 0.12, 0.23), 0xe34d4d, new THREE.Vector3(0.24, 1.51, -0.05));
+    // Aerodynamic emergency lightbar
+    addPart(parts, new THREE.BoxGeometry(0.82, 0.04, 0.14), 0x181a1c, new THREE.Vector3(0, 1.38, -0.05));
+    addPart(parts, new THREE.BoxGeometry(0.38, 0.11, 0.22), 0x2979ff, new THREE.Vector3(-0.24, 1.46, -0.05));
+    addPart(parts, new THREE.BoxGeometry(0.38, 0.11, 0.22), 0xff2a2a, new THREE.Vector3(0.24, 1.46, -0.05));
+    const siren = new THREE.CylinderGeometry(0.045, 0.045, 0.12, 8);
+    siren.rotateX(Math.PI / 2);
+    addPart(parts, siren, 0xcccccc, new THREE.Vector3(0, 1.46, -0.05));
+    // Spanish police flank livery striping
+    for (const side of [-1, 1]) {
+      addPart(parts, new THREE.BoxGeometry(0.02, 0.14, 1.8), 0x18488a, new THREE.Vector3(side * 0.895, 0.62, 0));
+      addPart(parts, new THREE.BoxGeometry(0.02, 0.05, 1.8), 0x1e824c, new THREE.Vector3(side * 0.896, 0.52, 0));
+    }
   }
   return finish(parts, new THREE.BoxGeometry(1.9, 1, 4.1));
 }

@@ -51,30 +51,58 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality.pixelRatio));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.08;
+renderer.toneMappingExposure = 1.14;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-const fogColor = '#bed3dc';
+const fogColor = '#c8d7df';
 renderer.setClearColor(fogColor);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(fogColor);
-scene.fog = new THREE.Fog(fogColor, quality.viewDistance * 0.5, quality.viewDistance * 1.05);
+scene.fog = new THREE.Fog(fogColor, quality.viewDistance * 0.45, quality.viewDistance * 1.05);
+
 // Gradient sky sphere with warm Iberian horizon and rich azure zenith.
-const skyGeometry = new THREE.SphereGeometry(quality.viewDistance * 1.2, 32, 16);
+const skyGeometry = new THREE.SphereGeometry(quality.viewDistance * 1.25, 32, 16);
 const skyPositions = skyGeometry.attributes.position as THREE.BufferAttribute;
 const skyColors = new Float32Array(skyPositions.count * 3);
 for (let i = 0; i < skyPositions.count; i += 1) {
   const y = skyPositions.getY(i);
   const t = Math.max(0, Math.min(1, (y + quality.viewDistance * 0.15) / (quality.viewDistance * 1.35)));
-  skyColors[i * 3] = THREE.MathUtils.lerp(0.86, 0.44, t);
-  skyColors[i * 3 + 1] = THREE.MathUtils.lerp(0.87, 0.67, t);
-  skyColors[i * 3 + 2] = THREE.MathUtils.lerp(0.85, 0.89, t);
+  const r = t < 0.28
+    ? THREE.MathUtils.lerp(0.96, 0.68, t / 0.28)
+    : THREE.MathUtils.lerp(0.68, 0.20, (t - 0.28) / 0.72);
+  const g = t < 0.28
+    ? THREE.MathUtils.lerp(0.88, 0.81, t / 0.28)
+    : THREE.MathUtils.lerp(0.81, 0.48, (t - 0.28) / 0.72);
+  const b = t < 0.28
+    ? THREE.MathUtils.lerp(0.78, 0.90, t / 0.28)
+    : THREE.MathUtils.lerp(0.90, 0.82, (t - 0.28) / 0.72);
+  skyColors[i * 3] = r;
+  skyColors[i * 3 + 1] = g;
+  skyColors[i * 3 + 2] = b;
 }
 skyGeometry.setAttribute('color', new THREE.BufferAttribute(skyColors, 3));
 const skyMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, depthWrite: false });
 const sky = new THREE.Mesh(skyGeometry, skyMaterial);
 scene.add(sky);
+
+// Radiant Sun disc and warm atmospheric halo in the Iberian sky
+const sunDistance = quality.viewDistance * 1.18;
+const sunDir = new THREE.Vector3(-320, 240, 220).normalize();
+const sunDiskGeo = new THREE.CircleGeometry(quality.viewDistance * 0.045, 24);
+const sunDiskMat = new THREE.MeshBasicMaterial({ color: 0xfffaea, side: THREE.DoubleSide, depthWrite: false });
+const sunDisk = new THREE.Mesh(sunDiskGeo, sunDiskMat);
+sunDisk.position.copy(sunDir).multiplyScalar(sunDistance);
+sunDisk.lookAt(0, 0, 0);
+scene.add(sunDisk);
+
+const sunCoronaGeo = new THREE.RingGeometry(quality.viewDistance * 0.04, quality.viewDistance * 0.12, 24);
+const sunCoronaMat = new THREE.MeshBasicMaterial({ color: 0xffdf9a, transparent: true, opacity: 0.38, side: THREE.DoubleSide, depthWrite: false });
+const sunCorona = new THREE.Mesh(sunCoronaGeo, sunCoronaMat);
+sunCorona.position.copy(sunDisk.position);
+sunCorona.lookAt(0, 0, 0);
+scene.add(sunCorona);
+
 const camera = new THREE.PerspectiveCamera(54, window.innerWidth / window.innerHeight, 0.5, quality.viewDistance + 50);
 camera.position.set(0, 570, 72);
 const input = new InputManager(canvas);
@@ -82,22 +110,24 @@ const cameraRig = new CameraRig(camera, input, 5.2, 0.002, 2.07, -0.12);
 cameraRig.mode = 'thirdPerson';
 const logger = new Logger('world', 'info');
 const character = new Character();
-scene.add(new THREE.HemisphereLight('#deedf5', '#4d4638', 2.1));
+scene.add(new THREE.HemisphereLight('#9ec6e8', '#5a4836', 2.0));
 scene.add(character.group);
-const sun = new THREE.DirectionalLight('#fff4de', 3.2);
-sun.position.set(-220, 520, 200);
+
+// Dramatic warm afternoon sun angle creating authentic long shadows
+const sun = new THREE.DirectionalLight('#fff0d6', 3.6);
+sun.position.set(-320, 240, 220);
 sun.castShadow = true;
 sun.shadow.mapSize.width = quality.shadowMapSize;
 sun.shadow.mapSize.height = quality.shadowMapSize;
-sun.shadow.camera.near = 100;
-sun.shadow.camera.far = 1100;
-const shadowSpan = 260;
+sun.shadow.camera.near = 50;
+sun.shadow.camera.far = 850;
+const shadowSpan = 240;
 sun.shadow.camera.left = -shadowSpan;
 sun.shadow.camera.right = shadowSpan;
 sun.shadow.camera.top = shadowSpan;
 sun.shadow.camera.bottom = -shadowSpan;
-sun.shadow.bias = -0.0004;
-sun.shadow.normalBias = 0.04;
+sun.shadow.bias = -0.0003;
+sun.shadow.normalBias = 0.035;
 scene.add(sun);
 scene.add(sun.target);
 
@@ -374,8 +404,11 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
   focusInitialized = true;
   if (inVehicle && activeVehicle) playerSpeed = activeVehicle.speed;
 
-  sun.position.set(focus.x - 220, 520, focus.z + 200);
+  sun.position.set(focus.x - 320, 240, focus.z + 220);
   sun.target.position.set(focus.x, focus.y, focus.z);
+  sky.position.set(focus.x, focus.y * 0.2, focus.z);
+  sunDisk.position.set(focus.x + sunDir.x * sunDistance, focus.y * 0.2 + sunDir.y * sunDistance, focus.z + sunDir.z * sunDistance);
+  sunCorona.position.copy(sunDisk.position);
 
   if (npcs && chunks) npcs.update(frameSeconds, focus, camera, chunks);
   if (police && chunks) {

@@ -54,6 +54,16 @@ function drawArchedWindow(context: CanvasRenderingContext2D, x: number, y: numbe
   context.fillStyle = stone;
   context.fillRect(x + width * 0.48, y + 12, 3, height - 9);
   context.fillRect(x, y + height * 0.58, width, 3);
+
+  // Diagonal sky reflection sheen across the glass
+  context.fillStyle = 'rgb(245 250 255 / 22%)';
+  context.beginPath();
+  context.moveTo(x + 3, y + 16);
+  context.lineTo(x + Math.min(width - 4, 18), y + 16);
+  context.lineTo(x + 3, y + height - 6);
+  context.closePath();
+  context.fill();
+
   if (style === 'casco') {
     context.fillStyle = '#765c46';
     context.fillRect(x - 12, y + 15, 7, height - 10);
@@ -64,8 +74,11 @@ function drawArchedWindow(context: CanvasRenderingContext2D, x: number, y: numbe
       context.fillRect(x + width + 5, y + 20 + slat * 9, 7, 2);
     }
   }
-  context.fillStyle = '#e0d3bd';
-  context.fillRect(x - 8, y + height + 5, width + 16, 6);
+  // Beveled granite sill with highlight and drop shadow
+  context.fillStyle = '#f2e5cf';
+  context.fillRect(x - 8, y + height + 5, width + 16, 2);
+  context.fillStyle = '#5a4c3c';
+  context.fillRect(x - 8, y + height + 9, width + 16, 2);
 }
 
 function canvasTexture(canvas: HTMLCanvasElement, repeat: boolean): THREE.CanvasTexture {
@@ -173,21 +186,42 @@ function drawRoof(tile: boolean): HTMLCanvasElement {
   if (!context) throw new Error('Could not create procedural roof texture.');
   canvas.width = 256;
   canvas.height = 256;
-  context.fillStyle = tile ? '#98664b' : '#8c8b84';
+  context.fillStyle = tile ? '#874d32' : '#8c8b84';
   context.fillRect(0, 0, canvas.width, canvas.height);
+
   if (tile) {
-    for (let row = 0; row < 16; row += 1) {
-      const offset = row % 2 === 0 ? 0 : 8;
-      for (let column = -1; column < 16; column += 1) {
-        const x = column * 16 + offset;
-        const y = row * 16;
-        context.fillStyle = ['#a56e4e', '#9c6548', '#ad7554'][(row + column + 48) % 3] ?? '#9c6548';
-        context.beginPath();
-        context.ellipse(x + 8, y + 7, 8, 7, 0, 0, Math.PI * 2);
-        context.fill();
-        context.strokeStyle = '#754d3b';
-        context.lineWidth = 1;
-        context.stroke();
+    // 3D cylindrical Spanish barrel tiles (tejas árabes curvas)
+    const colW = 16;
+    const tileH = 20;
+    const cols = 256 / colW;
+    const rows = 256 / tileH + 1;
+    for (let col = 0; col < cols; col += 1) {
+      const x = col * colW;
+      for (let row = -1; row < rows; row += 1) {
+        const y = row * tileH;
+        const seed = (col * 37 + row * 19 + 71) % 6;
+        const tones = ['#9e5334', '#a85c39', '#8e492c', '#b36540', '#954c2f', '#a15637'];
+        const baseColor = tones[seed] ?? '#9e5334';
+        context.fillStyle = baseColor;
+        context.fillRect(x + 1, y, colW - 2, tileH);
+
+        // Cylindrical ridge lighting: highlight in center, deep shadow at edges
+        const grad = context.createLinearGradient(x, y, x + colW, y);
+        grad.addColorStop(0, 'rgb(0 0 0 / 40%)');
+        grad.addColorStop(0.35, 'rgb(255 255 255 / 22%)');
+        grad.addColorStop(0.5, 'rgb(255 255 255 / 35%)');
+        grad.addColorStop(0.7, 'rgb(255 255 255 / 15%)');
+        grad.addColorStop(1, 'rgb(0 0 0 / 45%)');
+        context.fillStyle = grad;
+        context.fillRect(x + 1, y, colW - 2, tileH);
+
+        // Bottom overlap shadow
+        context.fillStyle = 'rgb(0 0 0 / 38%)';
+        context.fillRect(x, y + tileH - 2.5, colW, 2.5);
+
+        // Mortar line between tile rows
+        context.fillStyle = 'rgb(220 215 195 / 20%)';
+        context.fillRect(x + 1, y + tileH - 1, colW - 2, 1);
       }
     }
   } else {
@@ -207,19 +241,38 @@ function drawMonumentStone(): HTMLCanvasElement {
   if (!context) throw new Error('Could not create procedural stone texture.');
   canvas.width = 256;
   canvas.height = 256;
-  context.fillStyle = '#b9aa8d';
+  context.fillStyle = '#b8aa90';
   context.fillRect(0, 0, canvas.width, canvas.height);
-  for (let row = 0; row < 8; row += 1) {
-    const offset = row % 2 === 0 ? 0 : 16;
-    for (let column = -1; column < 8; column += 1) {
-      const x = column * 32 + offset;
-      const y = row * 32;
-      const tone = (row * 11 + column * 7 + 84) % 5;
-      context.fillStyle = ['#c9b99b', '#b9aa8d', '#c1b398', '#ad9d82', '#d0c2a6'][tone] ?? '#b9aa8d';
-      context.fillRect(x + 1, y + 1, 30, 30);
-      context.strokeStyle = '#8f8069';
-      context.lineWidth = 2;
-      context.strokeRect(x + 1, y + 1, 30, 30);
+
+  // Historic granite ashlar masonry (sillería monumental de granito de Cáceres)
+  const blockH = 32;
+  const rows = 256 / blockH;
+  for (let row = 0; row < rows; row += 1) {
+    const y = row * blockH;
+    const xOffset = (row % 2) * 32;
+    for (let x = -32; x <= 256 + 32; x += 64) {
+      const curX = x + xOffset;
+      const seed = (row * 13 + (x >> 5) * 29 + 43) % 5;
+      const stones = ['#c8b99c', '#baaa8f', '#c1b297', '#b1a186', '#cfc1a5'];
+      context.fillStyle = stones[seed] ?? '#baaa8f';
+      context.fillRect(curX + 1.5, y + 1.5, 61, blockH - 3);
+
+      // Chisel bevel highlight (top/left) and recessed mortar shadow (bottom/right)
+      context.fillStyle = 'rgb(255 255 255 / 22%)';
+      context.fillRect(curX + 2, y + 2, 60, 2);
+      context.fillRect(curX + 2, y + 2, 2, blockH - 4);
+
+      context.fillStyle = 'rgb(45 38 28 / 35%)';
+      context.fillRect(curX + 2, y + blockH - 3.5, 60, 2);
+      context.fillRect(curX + 61, y + 2, 2, blockH - 4);
+
+      // Granite mineral speckles (quartz & mica flecks)
+      for (let k = 0; k < 12; k += 1) {
+        const fx = curX + 4 + ((k * 17) % 54);
+        const fy = y + 4 + ((k * 23) % (blockH - 8));
+        context.fillStyle = k % 2 === 0 ? 'rgb(255 255 255 / 28%)' : 'rgb(35 30 25 / 24%)';
+        context.fillRect(fx, fy, 1.5, 1.5);
+      }
     }
   }
   return canvas;

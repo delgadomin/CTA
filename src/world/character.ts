@@ -64,6 +64,22 @@ export class Character {
     pocket.position.set(-0.16, 1.12, 0.205);
     this.group.add(pocket);
 
+    // Silver metallic jacket zipper and pull
+    const zipper = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.44, 0.02), material(0xc2c6ca, 0.3, 0.85));
+    zipper.position.set(0, 1.16, 0.21);
+    this.group.add(zipper);
+    const zipperPull = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.04, 0.025), material(0xd4af37, 0.25, 0.85));
+    zipperPull.position.set(0, 1.25, 0.22);
+    this.group.add(zipperPull);
+
+    // Leather belt with gold/brass buckle
+    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.285, 0.06, 10), material(0x181818, 0.5));
+    belt.position.y = 0.85;
+    this.group.add(belt);
+    const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.048, 0.03), material(0xd4af37, 0.25, 0.85));
+    buckle.position.set(0, 0.85, 0.22);
+    this.group.add(buckle);
+
     // Head (sphere).
     const headGeo = new THREE.SphereGeometry(0.18, 24, 16);
     const head = new THREE.Mesh(headGeo, material(SKIN_COLOR, 0.5));
@@ -86,6 +102,15 @@ export class Character {
       const eye = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 6), eyeMaterial);
       eye.position.set(side * 0.055, 1.685, 0.169);
       this.group.add(eye);
+    }
+    // Stylish dark sunglasses with polarized sheen
+    const glassesFrame = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.045, 0.04), material(0x111214, 0.2, 0.8));
+    glassesFrame.position.set(0, 1.685, 0.17);
+    this.group.add(glassesFrame);
+    for (const side of [-1, 1]) {
+      const lens = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.036, 0.015), material(0x1a2634, 0.1, 0.9));
+      lens.position.set(side * 0.052, 1.685, 0.188);
+      this.group.add(lens);
     }
     const nose = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), material(SKIN_COLOR, 0.5));
     nose.scale.set(0.68, 0.8, 1.15);
@@ -118,7 +143,7 @@ export class Character {
     this.rightArm.position.set(0.38, 1.4, 0);
     this.group.add(this.rightArm);
 
-    // Hands (small spheres).
+    // Hands (small spheres) and wristwatch.
     const cuffGeo = new THREE.CylinderGeometry(0.075, 0.082, 0.09, 8);
     const lc = new THREE.Mesh(cuffGeo, material(0x233f43));
     lc.position.set(0, -0.49, 0);
@@ -126,6 +151,14 @@ export class Character {
     const rc = new THREE.Mesh(cuffGeo, material(0x233f43));
     rc.position.set(0, -0.49, 0);
     this.rightArm.add(rc);
+    // Gold and dark leather wristwatch on the left wrist
+    const watchStrap = new THREE.Mesh(new THREE.CylinderGeometry(0.078, 0.078, 0.04, 10), material(0x181818, 0.6));
+    watchStrap.position.set(0, -0.52, 0);
+    this.leftArm.add(watchStrap);
+    const watchDial = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.016, 8), material(0xd4af37, 0.25, 0.85));
+    watchDial.rotation.x = Math.PI / 2;
+    watchDial.position.set(0, -0.52, 0.078);
+    this.leftArm.add(watchDial);
     const handGeo = new THREE.SphereGeometry(0.075, 10, 7);
     const lh = new THREE.Mesh(handGeo, material(SKIN_COLOR, 0.5));
     lh.position.set(0, -0.58, 0);
@@ -138,8 +171,11 @@ export class Character {
     const legGeo = new THREE.CapsuleGeometry(0.095, 0.4, 4, 8);
     const footGeo = new THREE.CapsuleGeometry(0.085, 0.16, 3, 8);
     footGeo.scale(1, 0.62, 1.65);
+    const midsoleGeo = new THREE.CapsuleGeometry(0.088, 0.165, 3, 8);
+    midsoleGeo.scale(1, 0.22, 1.65);
     const soleGeo = new THREE.CapsuleGeometry(0.09, 0.17, 3, 8);
     soleGeo.scale(1, 0.2, 1.65);
+
     this.leftLeg = new THREE.Group();
     const ll = new THREE.Mesh(legGeo, material(PANTS_COLOR));
     ll.position.y = -0.35;
@@ -147,8 +183,11 @@ export class Character {
     const lf = new THREE.Mesh(footGeo, material(SHOE_COLOR, 0.4, 0.1));
     lf.position.set(0, -0.69, 0.11);
     this.leftLeg.add(lf);
+    const leftMidsole = new THREE.Mesh(midsoleGeo, material(0xf2f4f7, 0.5));
+    leftMidsole.position.set(0, -0.73, 0.11);
+    this.leftLeg.add(leftMidsole);
     const leftSole = new THREE.Mesh(soleGeo, material(0x111315, 0.8));
-    leftSole.position.set(0, -0.75, 0.11);
+    leftSole.position.set(0, -0.76, 0.11);
     this.leftLeg.add(leftSole);
     this.leftLeg.position.set(-0.14, 0.75, 0);
     this.group.add(this.leftLeg);
@@ -160,8 +199,11 @@ export class Character {
     const rf = new THREE.Mesh(footGeo, material(SHOE_COLOR, 0.4, 0.1));
     rf.position.set(0, -0.69, 0.11);
     this.rightLeg.add(rf);
+    const rightMidsole = new THREE.Mesh(midsoleGeo, material(0xf2f4f7, 0.5));
+    rightMidsole.position.set(0, -0.73, 0.11);
+    this.rightLeg.add(rightMidsole);
     const rightSole = new THREE.Mesh(soleGeo, material(0x111315, 0.8));
-    rightSole.position.set(0, -0.75, 0.11);
+    rightSole.position.set(0, -0.76, 0.11);
     this.rightLeg.add(rightSole);
     this.rightLeg.position.set(0.14, 0.75, 0);
     this.group.add(this.rightLeg);

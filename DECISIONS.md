@@ -170,3 +170,27 @@
 - Cota de spawn físico: el chasis dinámico se sitúa a `y + 0.82` (en lugar de `y + 0.60`). A `0.60` los muelles de la suspensión (longitud de reposo 0.30 m + radio 0.35 m + conexión 0.20 m = 0.85 m) se comprimían 25 cm contra el suelo en el primer frame, liberando una fuerza de restitución que lanzaba el coche catapultado hacia arriba. A `0.82` el vehículo apoya suavemente en equilibrio.
 - Matriz de instancia fantasma: al requisar o liberar un agente en `NpcSystem.release()`, su matriz en el `InstancedMesh` se colapsa a escala cero bajo el suelo (`y = -9999`) de inmediato. Esto evita que la geometría ambiental anterior quede congelada en el mismo sitio que el nuevo vehículo manejable solapándose visualmente.
 - Salida de vehículo segura: al bajarse con `E`, el jugador calcula el vector lateral a partir de la orientación del vehículo y comprueba colisión con edificios (`collidesWithBuilding`) antes de elegir el lado izquierdo o derecho, evitando quedar atrapado dentro de una pared.
+
+# Gran renovación visual, modelos 3D y ambientación atmosférica (noviembre de 2026)
+
+## 1. Texturizado procedural y relieve de superficies
+- **Micro-relieve de terreno:** Se incorpora un mapa de detalle procedural de 512×512 píxeles (`createTerrainDetailTexture()`) con ruido multifrecuencia, motas de grava, esquirlas de cuarzo y partículas minerales de tierra. Se generan coordenadas UV planares en `ChunkManager.geometryForLod()` (repetición cada 10 m), modulando los colores de vértice del terreno para erradicar la apariencia plana y artificial de 1995.
+- **Pavimentos y calzadas (256×256):** Texturas procedurales enriquecidas con adoquines de granito con biseles de cincelado y llagas de mortero para calles del casco histórico (`stone`), losas de granito serradas con relieve para aceras (`sidewalk`), y asfalto granular con áridos para vías de ensanche y periferia.
+- **Tejas curvas y sillería monumental:** Textura de tejados con sombreado cilíndrico tridimensional emulando la curvatura y solapes de las tejas árabes tradicionales de Cáceres; sillería de granito con hiladas regulares, juntas de mortero rehundidas y destellos minerales. Ventanas con reflejo oblicuo de cielo y repisas de granito biseladas.
+
+## 2. Vegetación orgánica y mobiliario urbano histórico
+- **Árboles mediterráneos:** Sustitución de los conos de 8 segmentos por mallas compuestas (`createTreeTrunkGeometry` y `createTreeFoliageGeometry`) fusionadas con `BufferGeometryUtils.mergeGeometries`: troncos ramificados con corteza leñosa y copas multirracimo de cinco volúmenes dodecaédricos orgánicos inspirados en encinas y pinos piñoneros ibéricos.
+- **Farolas fernandinas de forja:** Sustitución de los cilindros simples por farolas históricas con base octogonal, fuste estriado, collar de capitel, jaula de linterna de cuatro caras y remate cónico, con emisión suave y proyección de sombras suaves en el suelo.
+
+## 3. Renovación de vehículos y personajes
+- **Pinturas automotrices realistas:** Sustitución del generador de colores HSL estridentes por una paleta curada de acabados de automoción (Blanco Nácar, Negro Profundo, Gris Grafito, Plata Metalizada, Azul Medianoche, Rojo Burdeos, Verde Bosque, Arena Ibérica, etc.).
+- **Detallado vehicular 3D:** Llantas de aleación plateadas de 5 radios con discos de freno oscuros, ópticas de xenón delanteras (`emissive: 0xfffae8`, intensidad 1.2), pilotos traseros rojo rubí (`emissiveIntensity: 1.0`), tubos de escape dobles cromados en la zaga y matrículas delantera y trasera formato español/europeo con banda azul de la UE.
+- **Patrullas policiales:** Librea lateral con franjas verde/azul inspirada en la Policía Local y Guardia Civil, puente de luces aerodinámico con estroboscopios azul/rojo y bocina central.
+- **Diseño del protagonista:** Gafas de sol oscuras de acetato polarizado, cremallera metálica plateada con tirador dorado en la chaqueta, cinturón de cuero con hebilla dorada, reloj de pulsera en la muñeca izquierda y zapatillas urbanas con entresuela blanca y suela de caucho.
+- **Peatones:** Paleta de prendas europeas sobrias, gafas de sol, bandoleras y bolsos cruzados de cuero, y zapatillas con suela blanca contrastada.
+
+## 4. Iluminación cinematográfica, sol dorado y cúpula celeste
+- **Ángulo solar de hora dorada:** Orientación de la luz solar a ~33° de elevación (`dx = -320, dy = 240, dz = 220`), generando sombras diagonales largas y estilizadas que realzan el relieve arquitectónico de torres, palacios y arcos.
+- **Sol radiante y halo en el cielo:** Incorporación de un disco solar luminoso y corona cálida translúcida en la cúpula celeste que se desplazan sincronizados con el jugador.
+- **Cúpula celeste ibérica:** Gradiente tricromático cálido con tono melocotón/ámbar en el horizonte, transición a azul celeste y cenit zafiro profundo, sincronizado con niebla atmosférica (`#c8d7df`) y exposición fílmica ACES a 1.14.
+- **Ajustes de sombras:** Reducción de la distancia de cámara de sombras (`near: 50, far: 850`) y calibración de `normalBias = 0.035` para erradicar el *shadow acne* y maximizar la precisión de profundidad.
