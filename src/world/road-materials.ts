@@ -3,7 +3,10 @@ import type { RoadSurfaceStyle } from './types';
 
 // Stronger contrast between surfaces so the player can read sidewalk edges,
 // crossings and intersections at a glance while driving.
-const ROAD_PALETTES: Record<Exclude<RoadSurfaceStyle, 'marking'>, readonly [number, number, number]> = {
+const ROAD_PALETTES: Record<
+  Exclude<RoadSurfaceStyle, 'marking'>,
+  readonly [number, number, number]
+> = {
   asphalt: [55, 58, 65],
   stone: [200, 184, 153],
   sidewalk: [225, 218, 198],
@@ -15,9 +18,28 @@ export function createRoadMaterials(): Map<RoadSurfaceStyle, THREE.MeshStandardM
   const materials = new Map<RoadSurfaceStyle, THREE.MeshStandardMaterial>();
   for (const style of ['asphalt', 'stone', 'sidewalk', 'concrete', 'earth'] as const) {
     const texture = makeRoadTexture(style);
-    materials.set(style, new THREE.MeshStandardMaterial({ map: texture, vertexColors: true, roughness: 0.92, side: THREE.DoubleSide }));
+    materials.set(
+      style,
+      new THREE.MeshStandardMaterial({
+        map: texture,
+        vertexColors: true,
+        roughness: 0.92,
+        side: THREE.DoubleSide,
+      }),
+    );
   }
-  materials.set('marking', new THREE.MeshStandardMaterial({ color: '#ffffff', vertexColors: true, roughness: 0.8, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+  materials.set(
+    'marking',
+    new THREE.MeshStandardMaterial({
+      color: '#ffffff',
+      vertexColors: true,
+      roughness: 0.8,
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
+    }),
+  );
   return materials;
 }
 
@@ -116,7 +138,7 @@ function makeRoadTexture(style: Exclude<RoadSurfaceStyle, 'marking'>): THREE.Can
     const count = style === 'earth' ? 1400 : 1800;
     for (let index = 0; index < count; index += 1) {
       const shade = random() > 0.5 ? 1 : -1;
-      const alpha = style === 'asphalt' ? 0.08 + random() * 0.22 : 0.06 + random() * 0.20;
+      const alpha = style === 'asphalt' ? 0.08 + random() * 0.22 : 0.06 + random() * 0.2;
       const gray = shade > 0 ? 255 : 20;
       context.fillStyle = `rgb(${gray} ${gray} ${gray} / ${alpha})`;
       const size = 1 + random() * (style === 'earth' ? 3.5 : 2.2);

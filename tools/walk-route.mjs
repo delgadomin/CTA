@@ -8,11 +8,23 @@ export function buildWalkRoute(osm, network, origin) {
     findLandmark(osm, /^Plaza Mayor$/i),
     findLandmark(osm, /^Arco de la Estrella$/i),
     findLandmark(osm, /^Plaza de San Jorge$/i),
-  ].map((anchor) => ({ ...anchor, position: [anchor.position[0] - originProjected.easting, anchor.position[1] - originProjected.northing] }));
+  ].map((anchor) => ({
+    ...anchor,
+    position: [
+      anchor.position[0] - originProjected.easting,
+      anchor.position[1] - originProjected.northing,
+    ],
+  }));
   const snapped = anchors.map((anchor) => {
     const node = nearestNode(network.nodes, anchor.position);
-    if (!node || node.distance > 60) throw new Error(`No safe road graph snap found for ${anchor.name}.`);
-    return { ...anchor, nodeId: node.id, snapDistanceMeters: node.distance, snapPosition: node.position };
+    if (!node || node.distance > 60)
+      throw new Error(`No safe road graph snap found for ${anchor.name}.`);
+    return {
+      ...anchor,
+      nodeId: node.id,
+      snapDistanceMeters: node.distance,
+      snapPosition: node.position,
+    };
   });
   const byId = new Map(network.nodes.map((node) => [node.id, node]));
   const legs = [];
@@ -77,13 +89,20 @@ function findLandmark(osm, namePattern) {
     lon = element.lon;
     lat = element.lat;
   } else if (Array.isArray(element.geometry) && element.geometry.length > 0) {
-    const sums = element.geometry.reduce((result, point) => ({ lon: result.lon + point.lon, lat: result.lat + point.lat }), { lon: 0, lat: 0 });
+    const sums = element.geometry.reduce(
+      (result, point) => ({ lon: result.lon + point.lon, lat: result.lat + point.lat }),
+      { lon: 0, lat: 0 },
+    );
     lon = sums.lon / element.geometry.length;
     lat = sums.lat / element.geometry.length;
   } else throw new Error(`OSM landmark has no point: ${element.tags?.name ?? element.id}.`);
   const projected = projectEtrs89Utm29(lon, lat);
   return {
-    id: element.tags?.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') ?? `osm-${element.id}`,
+    id:
+      element.tags?.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '') ?? `osm-${element.id}`,
     name: element.tags?.name ?? `OSM ${element.id}`,
     osmId: `${element.type === 'node' ? 'n' : 'w'}${element.id}`,
     position: [projected.easting, projected.northing],
@@ -103,7 +122,8 @@ function roadCost(segment) {
   if (MOTOR_ONLY.has(segment.highway)) return Infinity;
   if (segment.highway === 'steps') return segment.lengthMeters * 1.2;
   if (segment.walkable || segment.highway === 'pedestrian') return segment.lengthMeters;
-  if (['primary', 'secondary', 'tertiary', 'trunk'].includes(segment.highway)) return segment.lengthMeters * 1.35;
+  if (['primary', 'secondary', 'tertiary', 'trunk'].includes(segment.highway))
+    return segment.lengthMeters * 1.35;
   return segment.lengthMeters * 1.08;
 }
 
@@ -128,7 +148,10 @@ function shortestWalkPath(network, nodeById, startId, endId) {
     let bestDistance = Infinity;
     for (const id of pending) {
       const distance = distances.get(id) ?? Infinity;
-      if (distance < bestDistance) { current = id; bestDistance = distance; }
+      if (distance < bestDistance) {
+        current = id;
+        bestDistance = distance;
+      }
     }
     if (!current || current === endId) break;
     pending.delete(current);
@@ -142,7 +165,8 @@ function shortestWalkPath(network, nodeById, startId, endId) {
       pending.add(edge.to);
     }
   }
-  if (!distances.has(endId) || !nodeById.has(endId)) throw new Error(`No pedestrian path between ${startId} and ${endId}.`);
+  if (!distances.has(endId) || !nodeById.has(endId))
+    throw new Error(`No pedestrian path between ${startId} and ${endId}.`);
   const nodeIds = [endId];
   const segmentIds = [];
   let current = endId;

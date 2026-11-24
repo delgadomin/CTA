@@ -1,10 +1,30 @@
 const DEFAULT_LANES = new Map([
-  ['motorway', 2], ['trunk', 2], ['primary', 2], ['secondary', 2], ['tertiary', 2],
-  ['residential', 2], ['living_street', 1], ['service', 1], ['unclassified', 1],
-  ['pedestrian', 0], ['footway', 0], ['steps', 0], ['ladder', 0], ['path', 0],
-  ['bridleway', 0], ['cycleway', 1], ['track', 1],
+  ['motorway', 2],
+  ['trunk', 2],
+  ['primary', 2],
+  ['secondary', 2],
+  ['tertiary', 2],
+  ['residential', 2],
+  ['living_street', 1],
+  ['service', 1],
+  ['unclassified', 1],
+  ['pedestrian', 0],
+  ['footway', 0],
+  ['steps', 0],
+  ['ladder', 0],
+  ['path', 0],
+  ['bridleway', 0],
+  ['cycleway', 1],
+  ['track', 1],
 ]);
-const WALKABLE_HIGHWAYS = new Set(['pedestrian', 'footway', 'steps', 'ladder', 'path', 'bridleway']);
+const WALKABLE_HIGHWAYS = new Set([
+  'pedestrian',
+  'footway',
+  'steps',
+  'ladder',
+  'path',
+  'bridleway',
+]);
 
 function laneDirections(lanes, oneWay) {
   if (oneWay === 1) return { forward: lanes, reverse: 0 };
@@ -15,7 +35,8 @@ function laneDirections(lanes, oneWay) {
 function maneuverAt(nodeId, from, to, nodes) {
   if (from.id === to.id) return 'uturn';
   const origin = nodes.get(nodeId)?.position ?? [0, 0];
-  const fromEnd = nodes.get(from.fromNode === nodeId ? from.toNode : from.fromNode)?.position ?? origin;
+  const fromEnd =
+    nodes.get(from.fromNode === nodeId ? from.toNode : from.fromNode)?.position ?? origin;
   const toEnd = nodes.get(to.fromNode === nodeId ? to.toNode : to.fromNode)?.position ?? origin;
   const inX = origin[0] - fromEnd[0];
   const inZ = origin[1] - fromEnd[1];
@@ -33,9 +54,11 @@ export function buildRoadNetwork(roads) {
   for (const road of roads) {
     if (!Array.isArray(road.points) || road.points.length < 2) continue;
     const refsMatch = Array.isArray(road.nodeIds) && road.nodeIds.length === road.points.length;
-    const nodeIds = road.points.map((_, index) => refsMatch && Number.isSafeInteger(road.nodeIds[index])
-      ? `n${road.nodeIds[index]}`
-      : `${road.id}:p${index}`);
+    const nodeIds = road.points.map((_, index) =>
+      refsMatch && Number.isSafeInteger(road.nodeIds[index])
+        ? `n${road.nodeIds[index]}`
+        : `${road.id}:p${index}`,
+    );
     for (let index = 0; index < nodeIds.length; index += 1) {
       const id = nodeIds[index];
       const position = road.points[index];
@@ -45,7 +68,10 @@ export function buildRoadNetwork(roads) {
       nodes.set(id, node);
     }
 
-    const lanes = Number.isInteger(road.lanes) && road.lanes > 0 ? road.lanes : DEFAULT_LANES.get(road.highway) ?? 1;
+    const lanes =
+      Number.isInteger(road.lanes) && road.lanes > 0
+        ? road.lanes
+        : (DEFAULT_LANES.get(road.highway) ?? 1);
     const oneWay = road.oneway ?? 0;
     const directions = laneDirections(lanes, oneWay);
     const walkable = WALKABLE_HIGHWAYS.has(road.highway);
@@ -89,14 +115,21 @@ export function buildRoadNetwork(roads) {
   const segmentById = new Map(segments.map((segment) => [segment.id, segment]));
   const connections = [];
   for (const nodeId of intersections) {
-    const incident = [...(nodes.get(nodeId)?.segmentIds ?? [])].map((id) => segmentById.get(id)).filter(Boolean);
+    const incident = [...(nodes.get(nodeId)?.segmentIds ?? [])]
+      .map((id) => segmentById.get(id))
+      .filter(Boolean);
     for (const from of incident) {
       const canEnter = from.toNode === nodeId ? from.forwardAllowed : from.reverseAllowed;
       if (!canEnter) continue;
       for (const to of incident) {
         const canExit = to.fromNode === nodeId ? to.forwardAllowed : to.reverseAllowed;
         if (!canExit) continue;
-        connections.push({ intersectionNode: nodeId, fromSegment: from.id, toSegment: to.id, maneuver: maneuverAt(nodeId, from, to, nodes) });
+        connections.push({
+          intersectionNode: nodeId,
+          fromSegment: from.id,
+          toSegment: to.id,
+          maneuver: maneuverAt(nodeId, from, to, nodes),
+        });
       }
     }
   }
@@ -104,14 +137,20 @@ export function buildRoadNetwork(roads) {
   return {
     schemaVersion: 1,
     crs: 'EPSG:25829',
-    nodes: [...nodes.values()].map((node) => ({
-      id: node.id,
-      position: node.position,
-      segmentIds: [...node.segmentIds].sort(),
-      intersection: intersections.includes(node.id),
-    })).sort((left, right) => left.id.localeCompare(right.id)),
+    nodes: [...nodes.values()]
+      .map((node) => ({
+        id: node.id,
+        position: node.position,
+        segmentIds: [...node.segmentIds].sort(),
+        intersection: intersections.includes(node.id),
+      }))
+      .sort((left, right) => left.id.localeCompare(right.id)),
     segments: segments.sort((left, right) => left.id.localeCompare(right.id)),
-    connections: connections.sort((left, right) => `${left.intersectionNode}|${left.fromSegment}|${left.toSegment}`.localeCompare(`${right.intersectionNode}|${right.fromSegment}|${right.toSegment}`)),
+    connections: connections.sort((left, right) =>
+      `${left.intersectionNode}|${left.fromSegment}|${left.toSegment}`.localeCompare(
+        `${right.intersectionNode}|${right.fromSegment}|${right.toSegment}`,
+      ),
+    ),
     intersections,
   };
 }

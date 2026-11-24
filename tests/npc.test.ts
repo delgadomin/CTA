@@ -9,7 +9,13 @@ function segment(
   id: string,
   fromNode: string,
   toNode: string,
-  options: { highway: string; lanes: number; oneWay?: -1 | 0 | 1; walkable?: boolean; length: number },
+  options: {
+    highway: string;
+    lanes: number;
+    oneWay?: -1 | 0 | 1;
+    walkable?: boolean;
+    length: number;
+  },
 ): RoadNetwork['segments'][number] {
   const forward = options.oneWay !== -1;
   const reverse = options.oneWay === undefined || options.oneWay === 0;
@@ -98,8 +104,12 @@ describe('road graph for ambient agents', () => {
         tracked.set(id, { x, z });
         return id;
       },
-      move: (id, x, _y, z) => { tracked.set(id, { x, z }); },
-      remove: (id) => { tracked.delete(id); },
+      move: (id, x, _y, z) => {
+        tracked.set(id, { x, z });
+      },
+      remove: (id) => {
+        tracked.delete(id);
+      },
     };
     const system = new NpcSystem(graph, { pedestrians: 8, vehicles: 3 }, colliders);
     const camera = new THREE.PerspectiveCamera();

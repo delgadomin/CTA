@@ -7,12 +7,19 @@ const SKIRT_DEPTH_METERS = 4;
 function pointInsidePolygon(x: number, z: number, points: ChunkFeature['points']): boolean {
   if (!points || points.length < 3) return false;
   let inside = false;
-  for (let index = 0, previous = points.length - 1; index < points.length; previous = index, index += 1) {
+  for (
+    let index = 0, previous = points.length - 1;
+    index < points.length;
+    previous = index, index += 1
+  ) {
     const current = points[index];
     const prior = points[previous];
     if (!current || !prior) continue;
-    const crosses = (current[1] > z) !== (prior[1] > z)
-      && x < ((prior[0] - current[0]) * (z - current[1])) / (prior[1] - current[1] || Number.EPSILON) + current[0];
+    const crosses =
+      current[1] > z !== prior[1] > z &&
+      x <
+        ((prior[0] - current[0]) * (z - current[1])) / (prior[1] - current[1] || Number.EPSILON) +
+          current[0];
     if (crosses) inside = !inside;
   }
   return inside;
@@ -20,7 +27,8 @@ function pointInsidePolygon(x: number, z: number, points: ChunkFeature['points']
 
 function materialAt(x: number, z: number, surfaces: readonly ChunkFeature[]): GroundMaterial {
   for (const surface of surfaces) {
-    if (pointInsidePolygon(x, z, surface.points)) return classifyGround(surface.kind, surface.value, surface.surface);
+    if (pointInsidePolygon(x, z, surface.points))
+      return classifyGround(surface.kind, surface.value, surface.surface);
   }
   return 'grass';
 }
@@ -34,9 +42,16 @@ function perimeter(size: number): number[] {
   return result;
 }
 
-function buildLod(chunk: RawTerrainChunk, heights: Float32Array, surfaces: readonly ChunkFeature[], level: number, sampleStep: number): TerrainLodData {
+function buildLod(
+  chunk: RawTerrainChunk,
+  heights: Float32Array,
+  surfaces: readonly ChunkFeature[],
+  level: number,
+  sampleStep: number,
+): TerrainLodData {
   const size = (chunk.terrain.samples - 1) / sampleStep + 1;
-  if (!Number.isInteger(size) || size < 2) throw new Error(`Terrain sample count is incompatible with LOD ${level}.`);
+  if (!Number.isInteger(size) || size < 2)
+    throw new Error(`Terrain sample count is incompatible with LOD ${level}.`);
   const vertexCount = size * size;
   const edge = perimeter(size);
   const positions = new Float32Array((vertexCount + edge.length) * 3);
@@ -53,18 +68,52 @@ function buildLod(chunk: RawTerrainChunk, heights: Float32Array, surfaces: reado
       const x = chunk.bounds.minX + sourceColumn * chunk.terrain.stepMeters;
       const vertex = row * size + column;
       const height = heights[sourceRow * chunk.terrain.samples + sourceColumn] ?? 0;
-      const left = heights[sourceRow * chunk.terrain.samples + Math.max(0, sourceColumn - sampleStep)] ?? height;
-      const right = heights[sourceRow * chunk.terrain.samples + Math.min(chunk.terrain.samples - 1, sourceColumn + sampleStep)] ?? height;
-      const down = heights[Math.max(0, sourceRow - sampleStep) * chunk.terrain.samples + sourceColumn] ?? height;
-      const up = heights[Math.min(chunk.terrain.samples - 1, sourceRow + sampleStep) * chunk.terrain.samples + sourceColumn] ?? height;
-      const dx = (right - left) / (spacing * (sourceColumn === 0 || sourceColumn === chunk.terrain.samples - 1 ? 1 : 2));
-      const dz = (up - down) / (spacing * (sourceRow === 0 || sourceRow === chunk.terrain.samples - 1 ? 1 : 2));
+      const left =
+        heights[sourceRow * chunk.terrain.samples + Math.max(0, sourceColumn - sampleStep)] ??
+        height;
+      const right =
+        heights[
+          sourceRow * chunk.terrain.samples +
+            Math.min(chunk.terrain.samples - 1, sourceColumn + sampleStep)
+        ] ?? height;
+      const down =
+        heights[Math.max(0, sourceRow - sampleStep) * chunk.terrain.samples + sourceColumn] ??
+        height;
+      const up =
+        heights[
+          Math.min(chunk.terrain.samples - 1, sourceRow + sampleStep) * chunk.terrain.samples +
+            sourceColumn
+        ] ?? height;
+      const dx =
+        (right - left) /
+        (spacing * (sourceColumn === 0 || sourceColumn === chunk.terrain.samples - 1 ? 1 : 2));
+      const dz =
+        (up - down) /
+        (spacing * (sourceRow === 0 || sourceRow === chunk.terrain.samples - 1 ? 1 : 2));
       const normalLength = Math.hypot(dx, dz, 1);
-      positions.set([x - (chunk.bounds.minX + chunk.bounds.maxX) / 2, height, z - (chunk.bounds.minZ + chunk.bounds.maxZ) / 2], vertex * 3);
-      normals.set([dx === 0 ? 0 : -dx / normalLength, 1 / normalLength, dz === 0 ? 0 : -dz / normalLength], vertex * 3);
+      positions.set(
+        [
+          x - (chunk.bounds.minX + chunk.bounds.maxX) / 2,
+          height,
+          z - (chunk.bounds.minZ + chunk.bounds.maxZ) / 2,
+        ],
+        vertex * 3,
+      );
+      normals.set(
+        [dx === 0 ? 0 : -dx / normalLength, 1 / normalLength, dz === 0 ? 0 : -dz / normalLength],
+        vertex * 3,
+      );
       const baseColor = GROUND_COLORS[materialAt(x, z, surfaces)];
-      const variation = ((Math.sin(x * 0.37 + z * 0.71) + Math.cos(x * 0.13 - z * 0.41)) * 0.5 + 0.5) * 0.02 - 0.01;
-      colors.set([Math.min(1, Math.max(0, baseColor[0] + variation)), Math.min(1, Math.max(0, baseColor[1] + variation * 0.7)), Math.min(1, Math.max(0, baseColor[2] + variation * 0.4))], vertex * 3);
+      const variation =
+        ((Math.sin(x * 0.37 + z * 0.71) + Math.cos(x * 0.13 - z * 0.41)) * 0.5 + 0.5) * 0.02 - 0.01;
+      colors.set(
+        [
+          Math.min(1, Math.max(0, baseColor[0] + variation)),
+          Math.min(1, Math.max(0, baseColor[1] + variation * 0.7)),
+          Math.min(1, Math.max(0, baseColor[2] + variation * 0.4)),
+        ],
+        vertex * 3,
+      );
     }
   }
 
@@ -75,17 +124,32 @@ function buildLod(chunk: RawTerrainChunk, heights: Float32Array, surfaces: reado
       const southEast = southWest + 1;
       const northWest = southWest + size;
       const northEast = northWest + 1;
-      const southWestHeight = heights[(row * sampleStep) * chunk.terrain.samples + column * sampleStep] ?? 0;
-      const southEastHeight = heights[(row * sampleStep) * chunk.terrain.samples + (column + 1) * sampleStep] ?? southWestHeight;
-      const northWestHeight = heights[((row + 1) * sampleStep) * chunk.terrain.samples + column * sampleStep] ?? southWestHeight;
-      const northEastHeight = heights[((row + 1) * sampleStep) * chunk.terrain.samples + (column + 1) * sampleStep] ?? southWestHeight;
+      const southWestHeight =
+        heights[row * sampleStep * chunk.terrain.samples + column * sampleStep] ?? 0;
+      const southEastHeight =
+        heights[row * sampleStep * chunk.terrain.samples + (column + 1) * sampleStep] ??
+        southWestHeight;
+      const northWestHeight =
+        heights[(row + 1) * sampleStep * chunk.terrain.samples + column * sampleStep] ??
+        southWestHeight;
+      const northEastHeight =
+        heights[(row + 1) * sampleStep * chunk.terrain.samples + (column + 1) * sampleStep] ??
+        southWestHeight;
 
       // Choose the shorter 3D diagonal so each two-triangle cell follows the
       // measured relief with less interpolation error, without changing heights.
-      if (Math.abs(southWestHeight - northEastHeight) <= Math.abs(southEastHeight - northWestHeight)) {
-        indices.set([southWest, northWest, southEast, southEast, northWest, northEast], indexOffset);
+      if (
+        Math.abs(southWestHeight - northEastHeight) <= Math.abs(southEastHeight - northWestHeight)
+      ) {
+        indices.set(
+          [southWest, northWest, southEast, southEast, northWest, northEast],
+          indexOffset,
+        );
       } else {
-        indices.set([southWest, northWest, northEast, southWest, northEast, southEast], indexOffset);
+        indices.set(
+          [southWest, northWest, northEast, southWest, northEast, southEast],
+          indexOffset,
+        );
       }
       indexOffset += 6;
     }
@@ -98,7 +162,14 @@ function buildLod(chunk: RawTerrainChunk, heights: Float32Array, surfaces: reado
     const skirtIndex = skirtBase + edgeIndex;
     const positionOffset = source * 3;
     const lowerOffset = skirtIndex * 3;
-    positions.set([positions[positionOffset] ?? 0, (positions[positionOffset + 1] ?? 0) - SKIRT_DEPTH_METERS, positions[positionOffset + 2] ?? 0], lowerOffset);
+    positions.set(
+      [
+        positions[positionOffset] ?? 0,
+        (positions[positionOffset + 1] ?? 0) - SKIRT_DEPTH_METERS,
+        positions[positionOffset + 2] ?? 0,
+      ],
+      lowerOffset,
+    );
     normals.set(normals.subarray(positionOffset, positionOffset + 3), lowerOffset);
     colors.set(colors.subarray(positionOffset, positionOffset + 3), lowerOffset);
     const nextSkirt = skirtBase + ((edgeIndex + 1) % edge.length);
@@ -113,7 +184,10 @@ export function buildTerrainChunk(raw: RawTerrainChunk): BuiltTerrainChunk {
   if (raw.terrain.heights.length !== expectedHeights || raw.terrain.heights.includes(-32768)) {
     throw new Error(`Chunk ${raw.id} has incomplete elevation data.`);
   }
-  const heights = Float32Array.from(raw.terrain.heights, (height) => height * raw.terrain.quantizationMeters);
+  const heights = Float32Array.from(
+    raw.terrain.heights,
+    (height) => height * raw.terrain.quantizationMeters,
+  );
   const surfaces = raw.features.filter((feature) => feature.featureType === 'surface');
   const levels = LOD_STEPS.map((step, index) => buildLod(raw, heights, surfaces, index, step));
   let minimumHeight = Infinity;
@@ -122,5 +196,14 @@ export function buildTerrainChunk(raw: RawTerrainChunk): BuiltTerrainChunk {
     minimumHeight = Math.min(minimumHeight, height);
     maximumHeight = Math.max(maximumHeight, height);
   }
-  return { id: raw.id, bounds: raw.bounds, samples: raw.terrain.samples, stepMeters: raw.terrain.stepMeters, heights, minimumHeight, maximumHeight, levels };
+  return {
+    id: raw.id,
+    bounds: raw.bounds,
+    samples: raw.terrain.samples,
+    stepMeters: raw.terrain.stepMeters,
+    heights,
+    minimumHeight,
+    maximumHeight,
+    levels,
+  };
 }

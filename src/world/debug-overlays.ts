@@ -9,7 +9,11 @@ export interface DebugChunkView {
   readonly hasCollider: boolean;
 }
 
-function colliderMesh(positions: Float32Array, indices: Uint32Array, material: THREE.Material): THREE.Mesh | undefined {
+function colliderMesh(
+  positions: Float32Array,
+  indices: Uint32Array,
+  material: THREE.Material,
+): THREE.Mesh | undefined {
   if (positions.length < 9 || indices.length < 3) return undefined;
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -22,9 +26,30 @@ function colliderMesh(positions: Float32Array, indices: Uint32Array, material: T
 export class ChunkDebugOverlays {
   private readonly scene: THREE.Scene;
   private readonly views = new Map<string, DebugChunkView>();
-  private readonly colliderGroupMaterial = new THREE.MeshBasicMaterial({ color: '#f5d547', wireframe: true, transparent: true, opacity: 0.95, depthTest: true, toneMapped: false });
-  private readonly roadMaterial = new THREE.MeshBasicMaterial({ color: '#53d6ff', wireframe: true, transparent: true, opacity: 0.85, depthTest: true, toneMapped: false });
-  private readonly buildingMaterial = new THREE.MeshBasicMaterial({ color: '#ff6d62', wireframe: true, transparent: true, opacity: 0.9, depthTest: true, toneMapped: false });
+  private readonly colliderGroupMaterial = new THREE.MeshBasicMaterial({
+    color: '#f5d547',
+    wireframe: true,
+    transparent: true,
+    opacity: 0.95,
+    depthTest: true,
+    toneMapped: false,
+  });
+  private readonly roadMaterial = new THREE.MeshBasicMaterial({
+    color: '#53d6ff',
+    wireframe: true,
+    transparent: true,
+    opacity: 0.85,
+    depthTest: true,
+    toneMapped: false,
+  });
+  private readonly buildingMaterial = new THREE.MeshBasicMaterial({
+    color: '#ff6d62',
+    wireframe: true,
+    transparent: true,
+    opacity: 0.9,
+    depthTest: true,
+    toneMapped: false,
+  });
   private showColliders = false;
   private showRoadSurfaces = false;
   private showLodBounds = false;
@@ -90,15 +115,37 @@ export class ChunkDebugOverlays {
         terrain.name = 'terrain collider';
         group.add(terrain);
       }
-      const roads = result.roads && colliderMesh(result.roads.colliderPositions, result.roads.colliderIndices, this.roadMaterial);
-      const buildings = result.buildings && colliderMesh(result.buildings.colliderPositions, result.buildings.colliderIndices, this.buildingMaterial);
-      if (roads) { roads.name = 'road colliders'; group.add(roads); }
-      if (buildings) { buildings.name = 'building colliders'; group.add(buildings); }
+      const roads =
+        result.roads &&
+        colliderMesh(
+          result.roads.colliderPositions,
+          result.roads.colliderIndices,
+          this.roadMaterial,
+        );
+      const buildings =
+        result.buildings &&
+        colliderMesh(
+          result.buildings.colliderPositions,
+          result.buildings.colliderIndices,
+          this.buildingMaterial,
+        );
+      if (roads) {
+        roads.name = 'road colliders';
+        group.add(roads);
+      }
+      if (buildings) {
+        buildings.name = 'building colliders';
+        group.add(buildings);
+      }
       this.scene.add(group);
       this.colliderGroups.set(entry.id, group);
     }
     if (this.showRoadSurfaces && result.roads) {
-      const roads = colliderMesh(result.roads.colliderPositions, result.roads.colliderIndices, this.roadMaterial);
+      const roads = colliderMesh(
+        result.roads.colliderPositions,
+        result.roads.colliderIndices,
+        this.roadMaterial,
+      );
       if (roads) {
         roads.name = `debug-road-surface-${entry.id}`;
         roads.position.set(centerX, 0.08, centerZ);
@@ -128,16 +175,23 @@ export class ChunkDebugOverlays {
     const group = this.colliderGroups.get(id);
     if (group) {
       this.scene.remove(group);
-      group.traverse((object) => { if (object instanceof THREE.Mesh) object.geometry.dispose(); });
+      group.traverse((object) => {
+        if (object instanceof THREE.Mesh) object.geometry.dispose();
+      });
       this.colliderGroups.delete(id);
     }
     const road = this.roadMeshes.get(id);
-    if (road) { this.scene.remove(road); road.geometry.dispose(); this.roadMeshes.delete(id); }
+    if (road) {
+      this.scene.remove(road);
+      road.geometry.dispose();
+      this.roadMeshes.delete(id);
+    }
     const helper = this.lodHelpers.get(id);
     if (helper) {
       this.scene.remove(helper);
       helper.geometry.dispose();
-      if (Array.isArray(helper.material)) for (const material of helper.material) material.dispose();
+      if (Array.isArray(helper.material))
+        for (const material of helper.material) material.dispose();
       else helper.material.dispose();
       this.lodHelpers.delete(id);
     }

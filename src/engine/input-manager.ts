@@ -1,4 +1,5 @@
-export type GameAction = 'moveForward' | 'moveBack' | 'moveLeft' | 'moveRight' | 'sprint' | 'lookToggle';
+export type GameAction =
+  'moveForward' | 'moveBack' | 'moveLeft' | 'moveRight' | 'sprint' | 'lookToggle';
 export type InputBindings = Readonly<Record<GameAction, string>>;
 
 export const DEFAULT_BINDINGS: InputBindings = {
@@ -30,8 +31,12 @@ export class InputManager {
   private stickX = 0;
   private stickY = 0;
 
-  get lookX(): number { return this.lookDeltaX; }
-  get lookY(): number { return this.lookDeltaY; }
+  get lookX(): number {
+    return this.lookDeltaX;
+  }
+  get lookY(): number {
+    return this.lookDeltaY;
+  }
 
   constructor(target: HTMLElement, bindings: InputBindings = DEFAULT_BINDINGS) {
     this.target = target;
@@ -52,7 +57,8 @@ export class InputManager {
   }
 
   isPressed(action: GameAction): boolean {
-    if (action === 'sprint' && (this.pressed.has('ShiftLeft') || this.pressed.has('ShiftRight'))) return true;
+    if (action === 'sprint' && (this.pressed.has('ShiftLeft') || this.pressed.has('ShiftRight')))
+      return true;
     const code = this.bindingMap.get(action);
     return code !== undefined && this.pressed.has(code);
   }
@@ -85,8 +91,10 @@ export class InputManager {
   }
 
   movement(result: MovementAxes): void {
-    const horizontal = Number(this.isPressed('moveRight')) - Number(this.isPressed('moveLeft')) + this.stickX;
-    const vertical = Number(this.isPressed('moveForward')) - Number(this.isPressed('moveBack')) - this.stickY;
+    const horizontal =
+      Number(this.isPressed('moveRight')) - Number(this.isPressed('moveLeft')) + this.stickX;
+    const vertical =
+      Number(this.isPressed('moveForward')) - Number(this.isPressed('moveBack')) - this.stickY;
     const magnitude = Math.hypot(horizontal, vertical);
     const divisor = magnitude > 1 ? magnitude : 1;
     result.horizontal = horizontal / divisor;

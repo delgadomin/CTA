@@ -31,11 +31,20 @@ describe('FixedStepLoop', () => {
   it('runs systems in stable order for ten thousand deterministic steps', () => {
     const order: string[] = [];
     let ticks = 0;
-    const loop = new FixedStepLoop([
-      { name: 'late', order: 20, update: () => order.push('late') },
-      { name: 'early', order: 10, update: () => order.push('early') },
-      { name: 'simulation', order: 30, update: (dt) => { ticks += dt; } },
-    ], () => undefined);
+    const loop = new FixedStepLoop(
+      [
+        { name: 'late', order: 20, update: () => order.push('late') },
+        { name: 'early', order: 10, update: () => order.push('early') },
+        {
+          name: 'simulation',
+          order: 30,
+          update: (dt) => {
+            ticks += dt;
+          },
+        },
+      ],
+      () => undefined,
+    );
 
     for (let step = 0; step < 10_000; step += 1) loop.advance(1 / 60);
 
@@ -45,7 +54,18 @@ describe('FixedStepLoop', () => {
 
   it('limits catch-up work after a long frame', () => {
     let ticks = 0;
-    const loop = new FixedStepLoop([{ name: 'counter', order: 0, update: () => { ticks += 1; } }], () => undefined);
+    const loop = new FixedStepLoop(
+      [
+        {
+          name: 'counter',
+          order: 0,
+          update: () => {
+            ticks += 1;
+          },
+        },
+      ],
+      () => undefined,
+    );
     expect(loop.advance(10)).toBe(5);
     expect(ticks).toBe(5);
   });

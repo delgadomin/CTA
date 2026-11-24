@@ -98,7 +98,13 @@ export class PoliceSystem {
     }
   }
 
-  update(deltaSeconds: number, stars: number, target: THREE.Vector3, camera: Camera, world: NpcWorld): void {
+  update(
+    deltaSeconds: number,
+    stars: number,
+    target: THREE.Vector3,
+    camera: Camera,
+    world: NpcWorld,
+  ): void {
     const dt = Math.min(Math.max(deltaSeconds, 0), 0.05);
     this.elapsed += dt;
     this.cameraDirection.set(0, 0, -1).applyQuaternion(camera.quaternion);
@@ -158,7 +164,11 @@ export class PoliceSystem {
       const z = target.z + Math.sin(angle) * radius;
       const towardX = x - target.x;
       const towardZ = z - target.z;
-      if (towardX * (this.cameraDirection.x ?? 0) + towardZ * (this.cameraDirection.z ?? 0) > -radius * 0.15) continue;
+      if (
+        towardX * (this.cameraDirection.x ?? 0) + towardZ * (this.cameraDirection.z ?? 0) >
+        -radius * 0.15
+      )
+        continue;
       const height = world.groundHeightAt(x, z);
       if (height === undefined || world.collidesWithBuilding(x, z, 1)) continue;
       const start = this.graph.nearestNode(x, z, 'vehicle');
@@ -176,7 +186,8 @@ export class PoliceSystem {
       this.progress[slot] = 0;
       this.checkedMid[slot] = 0;
       this.activeCount += 1;
-      this.colliderIds[slot] = this.colliders?.create('vehicle', x, height, z, this.heading[slot] ?? 0) ?? -1;
+      this.colliderIds[slot] =
+        this.colliders?.create('vehicle', x, height, z, this.heading[slot] ?? 0) ?? -1;
       this.setRoute(slot, start, target);
       return;
     }
@@ -204,14 +215,22 @@ export class PoliceSystem {
   private advance(slot: number, dt: number, world: NpcWorld): void {
     const edge = this.edge[slot] ?? -1;
     const info = this.graph.segments[this.graph.edgeSegment(edge)];
-    if (!info) { this.release(slot); return; }
+    if (!info) {
+      this.release(slot);
+      return;
+    }
     const forward = (edge & 1) === 0;
     const toNode = forward ? info.to : info.from;
     let desired = Math.min(info.speed * 1.25, 18);
 
     if ((this.progress[slot] ?? 0) > 0.92) {
       const owner = this.intersectionOwner[toNode] ?? 0;
-      if (owner !== 0 && owner !== slot + 1 && this.elapsed - (this.claimTime[toNode] ?? 0) < YIELD_SECONDS) desired = 0;
+      if (
+        owner !== 0 &&
+        owner !== slot + 1 &&
+        this.elapsed - (this.claimTime[toNode] ?? 0) < YIELD_SECONDS
+      )
+        desired = 0;
       else {
         this.intersectionOwner[toNode] = slot + 1;
         this.claimTime[toNode] = this.elapsed;
@@ -224,7 +243,10 @@ export class PoliceSystem {
     let progress = (this.progress[slot] ?? 0) + (nextSpeed * dt) / info.length;
     if (progress >= 1) {
       const nextEdge = this.selectNextEdge(slot, toNode);
-      if (nextEdge < 0) { this.release(slot); return; }
+      if (nextEdge < 0) {
+        this.release(slot);
+        return;
+      }
       this.edge[slot] = nextEdge;
       this.checkedMid[slot] = 0;
       progress -= 1;
@@ -233,7 +255,10 @@ export class PoliceSystem {
 
     const current = this.edge[slot] ?? edge;
     const currentInfo = this.graph.segments[this.graph.edgeSegment(current)];
-    if (!currentInfo) { this.release(slot); return; }
+    if (!currentInfo) {
+      this.release(slot);
+      return;
+    }
     const currentForward = (current & 1) === 0;
     const ax = this.graph.nodeX[currentForward ? currentInfo.from : currentInfo.to] ?? 0;
     const az = this.graph.nodeZ[currentForward ? currentInfo.from : currentInfo.to] ?? 0;
@@ -242,7 +267,10 @@ export class PoliceSystem {
     this.x[slot] = ax + (bx - ax) * progress;
     this.z[slot] = az + (bz - az) * progress;
     const height = world.groundHeightAt(this.x[slot] ?? 0, this.z[slot] ?? 0);
-    if (height === undefined) { this.release(slot); return; }
+    if (height === undefined) {
+      this.release(slot);
+      return;
+    }
     const mid = progress >= 0.5 ? 1 : 0;
     if (mid !== (this.checkedMid[slot] ?? 0)) {
       this.checkedMid[slot] = mid;
@@ -253,7 +281,13 @@ export class PoliceSystem {
     }
     this.y[slot] = height;
     if (nextSpeed > 0.05) this.heading[slot] = Math.atan2(bx - ax, bz - az);
-    this.colliders?.move(this.colliderIds[slot] ?? -1, this.x[slot] ?? 0, this.y[slot] ?? 0, this.z[slot] ?? 0, this.heading[slot] ?? 0);
+    this.colliders?.move(
+      this.colliderIds[slot] ?? -1,
+      this.x[slot] ?? 0,
+      this.y[slot] ?? 0,
+      this.z[slot] ?? 0,
+      this.heading[slot] ?? 0,
+    );
   }
 
   private edgeStart(slot: number): number {
@@ -264,7 +298,8 @@ export class PoliceSystem {
 
   private selectNextEdge(slot: number, node: number): number {
     const index = this.routeIndex[slot] ?? 0;
-    const target = index < (this.routeLength[slot] ?? 0) ? this.route[slot * MAX_ROUTE + index] ?? -1 : -1;
+    const target =
+      index < (this.routeLength[slot] ?? 0) ? (this.route[slot * MAX_ROUTE + index] ?? -1) : -1;
     const edges = this.graph.outgoingEdges(node, 'vehicle');
     for (const edge of edges) {
       if (this.graph.edgeDestination(edge) !== target) continue;

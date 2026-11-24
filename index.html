@@ -4,7 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#171a19" />
-    <meta name="description" content="Cáceres Criminal: prototipo técnico de una ciudad abierta en el navegador." />
+    <meta
+      name="description"
+      content="Cáceres Criminal: prototipo técnico de una ciudad abierta en el navegador."
+    />
     <title>Cáceres Criminal — prototipo</title>
   </head>
   <body>
@@ -13,31 +16,85 @@
       <section class="debug-panel" aria-live="polite" aria-label="Panel de depuración">
         <p class="eyebrow">CÁCERES CRIMINAL <span>·</span> CIUDAD EDIFICADA</p>
         <h1>Cáceres</h1>
-        <p class="status"><span class="status-dot"></span><span id="world-status">Iniciando motor físico…</span></p>
+        <p class="status">
+          <span class="status-dot"></span><span id="world-status">Iniciando motor físico…</span>
+        </p>
         <dl>
-          <div><dt>FPS</dt><dd id="fps">--</dd></div>
-          <div><dt>Pico de frame</dt><dd id="frame-time">-- ms</dd></div>
-          <div><dt>Chunks</dt><dd id="chunks">0</dd></div>
-          <div><dt>Colisionadores</dt><dd id="colliders">0</dd></div>
-          <div><dt>Llamadas de dibujo</dt><dd id="draw-calls">0</dd></div>
-          <div><dt>Triángulos</dt><dd id="triangles">0</dd></div>
-          <div><dt>Memoria geométrica</dt><dd id="memory">0 MiB</dd></div>
-          <div><dt>Heap navegador</dt><dd id="heap-memory">n/d</dd></div>
-          <div><dt>Agentes</dt><dd id="agents">0</dd></div>
-          <div><dt>Agentes por LOD</dt><dd id="agents-lod">0 / 0 / 0</dd></div>
-          <div><dt id="wanted-label">Búsqueda</dt><dd id="wanted">—</dd></div>
-          <div class="wide"><dt>Tiempo por sistema</dt><dd id="system-times">física 0 · jugador 0 · streaming 0 · render 0 ms</dd></div>
+          <div>
+            <dt>FPS</dt>
+            <dd id="fps">--</dd>
+          </div>
+          <div>
+            <dt>Pico de frame</dt>
+            <dd id="frame-time">-- ms</dd>
+          </div>
+          <div>
+            <dt>Chunks</dt>
+            <dd id="chunks">0</dd>
+          </div>
+          <div>
+            <dt>Colisionadores</dt>
+            <dd id="colliders">0</dd>
+          </div>
+          <div>
+            <dt>Llamadas de dibujo</dt>
+            <dd id="draw-calls">0</dd>
+          </div>
+          <div>
+            <dt>Triángulos</dt>
+            <dd id="triangles">0</dd>
+          </div>
+          <div>
+            <dt>Memoria geométrica</dt>
+            <dd id="memory">0 MiB</dd>
+          </div>
+          <div>
+            <dt>Heap navegador</dt>
+            <dd id="heap-memory">n/d</dd>
+          </div>
+          <div>
+            <dt>Agentes</dt>
+            <dd id="agents">0</dd>
+          </div>
+          <div>
+            <dt>Agentes por LOD</dt>
+            <dd id="agents-lod">0 / 0 / 0</dd>
+          </div>
+          <div>
+            <dt id="wanted-label">Búsqueda</dt>
+            <dd id="wanted">—</dd>
+          </div>
+          <div class="wide">
+            <dt>Tiempo por sistema</dt>
+            <dd id="system-times">física 0 · jugador 0 · streaming 0 · render 0 ms</dd>
+          </div>
         </dl>
-        <p id="debug-modes" class="hint">F5 colisiones · F6 calzadas · F7 LOD · F8 sombras · F9 postprocesado no configurado</p>
-        <p class="hint" id="controls-hint">WASD camina · Mayús corre · E roba/sale · clic captura el ratón</p>
-        <p class="hint"><kbd>F4</kbd> panel y bordes · con <kbd>?debug=1</kbd>: <kbd>F3</kbd> panel, <kbd>F4</kbd> bordes, <kbd>`</kbd> consola</p>
+        <p id="debug-modes" class="hint">
+          F5 colisiones · F6 calzadas · F7 LOD · F8 sombras · F9 postprocesado no configurado
+        </p>
+        <p class="hint" id="controls-hint">
+          WASD camina · Mayús corre · E roba/sale · clic captura el ratón
+        </p>
+        <p class="hint">
+          <kbd>F4</kbd> panel y bordes · con <kbd>?debug=1</kbd>: <kbd>F3</kbd> panel,
+          <kbd>F4</kbd> bordes, <kbd>`</kbd> consola
+        </p>
       </section>
-      <section id="debug-console" class="debug-console is-hidden" aria-label="Consola de depuración">
+      <section
+        id="debug-console"
+        class="debug-console is-hidden"
+        aria-label="Consola de depuración"
+      >
         <p>Consola de depuración · escribe <code>help</code> para ver comandos · Esc para cerrar</p>
         <pre id="debug-console-output" role="log" aria-live="polite">Consola lista.</pre>
         <form id="debug-console-form">
           <label for="debug-console-input">&gt;</label>
-          <input id="debug-console-input" autocomplete="off" spellcheck="false" aria-label="Comando de depuración" />
+          <input
+            id="debug-console-input"
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="Comando de depuración"
+          />
         </form>
       </section>
       <div class="minimap-container" aria-label="Minimapa radar">

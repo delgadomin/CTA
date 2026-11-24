@@ -7,11 +7,15 @@ import { discoverLandmarkModels } from '../tools/landmark-assets.mjs';
 const directories: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(directories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })));
+  await Promise.all(
+    directories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })),
+  );
 });
 
 function glb(jsonValue: unknown): Buffer {
-  const json = Buffer.from(JSON.stringify(jsonValue).padEnd(Math.ceil(JSON.stringify(jsonValue).length / 4) * 4, ' '));
+  const json = Buffer.from(
+    JSON.stringify(jsonValue).padEnd(Math.ceil(JSON.stringify(jsonValue).length / 4) * 4, ' '),
+  );
   const bytes = Buffer.alloc(20 + json.length);
   bytes.write('glTF', 0, 4, 'ascii');
   bytes.writeUInt32LE(2, 4);
@@ -27,15 +31,33 @@ describe('landmark GLB discovery', () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'cta-landmarks-'));
     directories.push(root);
     await mkdir(path.join(root, 'landmarks'));
-    await writeFile(path.join(root, 'landmarks', 'w123.glb'), glb({ asset: { version: '2.0' }, scene: 0, scenes: [{ nodes: [] }], nodes: [], buffers: [{ byteLength: 0 }] }));
-    expect([...await discoverLandmarkModels(root)]).toEqual(['w123']);
+    await writeFile(
+      path.join(root, 'landmarks', 'w123.glb'),
+      glb({
+        asset: { version: '2.0' },
+        scene: 0,
+        scenes: [{ nodes: [] }],
+        nodes: [],
+        buffers: [{ byteLength: 0 }],
+      }),
+    );
+    expect([...(await discoverLandmarkModels(root))]).toEqual(['w123']);
   });
 
   it('rejects external resources referenced by GLB JSON', async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'cta-landmarks-'));
     directories.push(root);
     await mkdir(path.join(root, 'landmarks'));
-    await writeFile(path.join(root, 'landmarks', 'w456.glb'), glb({ asset: { version: '2.0' }, scene: 0, scenes: [{ nodes: [] }], nodes: [], buffers: [{ uri: '../payload.bin', byteLength: 0 }] }));
+    await writeFile(
+      path.join(root, 'landmarks', 'w456.glb'),
+      glb({
+        asset: { version: '2.0' },
+        scene: 0,
+        scenes: [{ nodes: [] }],
+        nodes: [],
+        buffers: [{ uri: '../payload.bin', byteLength: 0 }],
+      }),
+    );
     await expect(discoverLandmarkModels(root)).rejects.toThrow('External URIs are forbidden');
   });
 });

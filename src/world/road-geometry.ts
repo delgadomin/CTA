@@ -1,4 +1,10 @@
-import type { BuiltTerrainChunk, ChunkFeature, ProjectedBounds, RoadSurfaceGeometry, RoadSurfaceStyle } from './types';
+import type {
+  BuiltTerrainChunk,
+  ChunkFeature,
+  ProjectedBounds,
+  RoadSurfaceGeometry,
+  RoadSurfaceStyle,
+} from './types';
 
 export type RoadPoint = readonly [number, number];
 export type RoadPoint3 = readonly [number, number, number];
@@ -15,12 +21,32 @@ export const ROAD_VERTEX_COLORS: Record<RoadSurfaceStyle, readonly [number, numb
 };
 
 const HIGHWAY_WIDTHS: Record<string, number> = {
-  motorway: 7.2, trunk: 7, primary: 7, secondary: 6.5, tertiary: 6, residential: 5.5,
-  living_street: 4.5, service: 4, unclassified: 4.5, pedestrian: 4.5, footway: 1.8,
-  steps: 1.6, ladder: 0.8, path: 1.5, bridleway: 2, cycleway: 2.2, track: 3,
+  motorway: 7.2,
+  trunk: 7,
+  primary: 7,
+  secondary: 6.5,
+  tertiary: 6,
+  residential: 5.5,
+  living_street: 4.5,
+  service: 4,
+  unclassified: 4.5,
+  pedestrian: 4.5,
+  footway: 1.8,
+  steps: 1.6,
+  ladder: 0.8,
+  path: 1.5,
+  bridleway: 2,
+  cycleway: 2.2,
+  track: 3,
 };
 
-const WIDE_SIDEWALKS = new Set(['primary', 'secondary', 'tertiary', 'residential', 'living_street']);
+const WIDE_SIDEWALKS = new Set([
+  'primary',
+  'secondary',
+  'tertiary',
+  'residential',
+  'living_street',
+]);
 const WALKWAYS = new Set(['pedestrian', 'footway', 'steps', 'ladder', 'path', 'bridleway']);
 
 export interface RoadVertex {
@@ -39,29 +65,72 @@ export class RoadGeometryBuilder {
   private readonly uvs: number[] = [];
   private readonly indices: number[] = [];
 
-  constructor(style: RoadSurfaceStyle, terrain: BuiltTerrainChunk, originX: number, originZ: number) {
+  constructor(
+    style: RoadSurfaceStyle,
+    terrain: BuiltTerrainChunk,
+    originX: number,
+    originZ: number,
+  ) {
     this.style = style;
     this.terrain = terrain;
     this.originX = originX;
     this.originZ = originZ;
   }
 
-  addPolygon(points: readonly RoadPoint[], bounds: ProjectedBounds, lift: number, seed: string): void {
+  addPolygon(
+    points: readonly RoadPoint[],
+    bounds: ProjectedBounds,
+    lift: number,
+    seed: string,
+  ): void {
     const clipped = clipToBounds(points, bounds);
     if (clipped.length < 3) return;
-    this.appendVertices(clipped.map((point) => [point[0], sampleHeight(this.terrain, point[0], point[1]) + lift, point[1]]), seed, true, triangulatePolygon(clipped));
+    this.appendVertices(
+      clipped.map((point) => [
+        point[0],
+        sampleHeight(this.terrain, point[0], point[1]) + lift,
+        point[1],
+      ]),
+      seed,
+      true,
+      triangulatePolygon(clipped),
+    );
   }
 
-  addPolygonAtHeight(points: readonly RoadPoint[], bounds: ProjectedBounds, lift: number, seed: string, offsetAt: (point: RoadPoint) => number): void {
+  addPolygonAtHeight(
+    points: readonly RoadPoint[],
+    bounds: ProjectedBounds,
+    lift: number,
+    seed: string,
+    offsetAt: (point: RoadPoint) => number,
+  ): void {
     const clipped = clipToBounds(points, bounds);
     if (clipped.length < 3) return;
-    this.appendVertices(clipped.map((point) => [point[0], sampleHeight(this.terrain, point[0], point[1]) + lift + offsetAt(point), point[1]]), seed, true);
+    this.appendVertices(
+      clipped.map((point) => [
+        point[0],
+        sampleHeight(this.terrain, point[0], point[1]) + lift + offsetAt(point),
+        point[1],
+      ]),
+      seed,
+      true,
+    );
   }
 
-  addFlatPolygon(points: readonly RoadPoint[], elevation: number, bounds: ProjectedBounds, seed: string): void {
+  addFlatPolygon(
+    points: readonly RoadPoint[],
+    elevation: number,
+    bounds: ProjectedBounds,
+    seed: string,
+  ): void {
     const clipped = clipToBounds(points, bounds);
     if (clipped.length < 3) return;
-    this.appendVertices(clipped.map((point) => [point[0], elevation, point[1]]), seed, true, triangulatePolygon(clipped));
+    this.appendVertices(
+      clipped.map((point) => [point[0], elevation, point[1]]),
+      seed,
+      true,
+      triangulatePolygon(clipped),
+    );
   }
 
   addPolygon3D(points: readonly RoadPoint3[], bounds: ProjectedBounds, seed: string): void {
@@ -81,7 +150,12 @@ export class RoadGeometryBuilder {
     };
   }
 
-  private appendVertices(vertices: readonly RoadPoint3[], seed: string, terrainNormals: boolean, triangles?: readonly (readonly [number, number, number])[]): void {
+  private appendVertices(
+    vertices: readonly RoadPoint3[],
+    seed: string,
+    terrainNormals: boolean,
+    triangles?: readonly (readonly [number, number, number])[],
+  ): void {
     const base = ROAD_VERTEX_COLORS[this.style];
     const first = this.positions.length / 3;
     const surfaceNormal = terrainNormals ? undefined : polygonNormal(vertices);
@@ -90,14 +164,16 @@ export class RoadGeometryBuilder {
       if (!point) continue;
       const normal = terrainNormals
         ? sampleNormal(this.terrain, point[0], point[2])
-        : surfaceNormal ?? [0, 1, 0];
+        : (surfaceNormal ?? [0, 1, 0]);
       const brightness = this.style === 'marking' ? 1 : wear(seed, point[0], point[2]);
       this.positions.push(point[0] - this.originX, point[1], point[2] - this.originZ);
       this.normals.push(...normal);
       this.colors.push(base[0] * brightness, base[1] * brightness, base[2] * brightness);
       this.uvs.push(point[0] / 4, point[2] / 4);
     }
-    const faces = triangles ?? Array.from({ length: vertices.length - 2 }, (_, index) => [0, index + 1, index + 2] as const);
+    const faces =
+      triangles ??
+      Array.from({ length: vertices.length - 2 }, (_, index) => [0, index + 1, index + 2] as const);
     for (const [firstIndex, secondIndex, thirdIndex] of faces) {
       const a = first + firstIndex;
       const b = first + secondIndex;
@@ -110,15 +186,18 @@ export class RoadGeometryBuilder {
 
 export function roadStyle(feature: ChunkFeature): Exclude<RoadSurfaceStyle, 'marking'> {
   const surface = feature.surface?.toLowerCase() ?? '';
-  if (['cobblestone', 'unhewn_cobblestone', 'sett', 'paving_stones', 'stone'].includes(surface)) return 'stone';
-  if (['concrete', 'concrete:plates', 'asphalt', 'paved'].includes(surface)) return surface.startsWith('concrete') ? 'concrete' : 'asphalt';
+  if (['cobblestone', 'unhewn_cobblestone', 'sett', 'paving_stones', 'stone'].includes(surface))
+    return 'stone';
+  if (['concrete', 'concrete:plates', 'asphalt', 'paved'].includes(surface))
+    return surface.startsWith('concrete') ? 'concrete' : 'asphalt';
   if (['ground', 'dirt', 'gravel', 'fine_gravel', 'unpaved'].includes(surface)) return 'earth';
   if (['pedestrian', 'footway', 'steps', 'ladder'].includes(feature.highway ?? '')) return 'stone';
   return 'asphalt';
 }
 
 export function roadWidth(feature: ChunkFeature): number {
-  if (feature.widthMeters && feature.widthMeters > 0) return Math.min(24, Math.max(0.5, feature.widthMeters));
+  if (feature.widthMeters && feature.widthMeters > 0)
+    return Math.min(24, Math.max(0.5, feature.widthMeters));
   if (feature.lanes && feature.lanes > 0) return Math.min(24, Math.max(2.4, feature.lanes * 3.1));
   return HIGHWAY_WIDTHS[feature.highway ?? ''] ?? 4;
 }
@@ -129,8 +208,16 @@ export function sidewalkSides(feature: ChunkFeature): readonly (-1 | 1)[] {
   if (combined === 'no') return [];
   const left = feature.sidewalkLeft ?? 'unknown';
   const right = feature.sidewalkRight ?? 'unknown';
-  const hasLeft = left !== 'unknown' ? left !== 'no' : ['left', 'both', 'yes'].includes(combined) || (combined === 'unknown' && WIDE_SIDEWALKS.has(feature.highway ?? ''));
-  const hasRight = right !== 'unknown' ? right !== 'no' : ['right', 'both', 'yes'].includes(combined) || (combined === 'unknown' && WIDE_SIDEWALKS.has(feature.highway ?? ''));
+  const hasLeft =
+    left !== 'unknown'
+      ? left !== 'no'
+      : ['left', 'both', 'yes'].includes(combined) ||
+        (combined === 'unknown' && WIDE_SIDEWALKS.has(feature.highway ?? ''));
+  const hasRight =
+    right !== 'unknown'
+      ? right !== 'no'
+      : ['right', 'both', 'yes'].includes(combined) ||
+        (combined === 'unknown' && WIDE_SIDEWALKS.has(feature.highway ?? ''));
   return [...(hasLeft ? [1 as const] : []), ...(hasRight ? [-1 as const] : [])];
 }
 
@@ -138,7 +225,8 @@ export function smoothRoadCenterline(points: readonly RoadPoint[]): RoadPoint[] 
   const clean: RoadPoint[] = [];
   for (const point of points) {
     const previous = clean.at(-1);
-    if (!previous || Math.hypot(point[0] - previous[0], point[1] - previous[1]) > 0.01) clean.push([point[0], point[1]]);
+    if (!previous || Math.hypot(point[0] - previous[0], point[1] - previous[1]) > 0.01)
+      clean.push([point[0], point[1]]);
   }
   if (clean.length < 3) return clean;
   const smoothed: RoadPoint[] = [[clean[0]?.[0] ?? 0, clean[0]?.[1] ?? 0]];
@@ -150,8 +238,14 @@ export function smoothRoadCenterline(points: readonly RoadPoint[]): RoadPoint[] 
     const inLength = Math.hypot(current[0] - previous[0], current[1] - previous[1]);
     const outLength = Math.hypot(next[0] - current[0], next[1] - current[1]);
     if (inLength < 0.01 || outLength < 0.01) continue;
-    const inDirection: RoadPoint = [(current[0] - previous[0]) / inLength, (current[1] - previous[1]) / inLength];
-    const outDirection: RoadPoint = [(next[0] - current[0]) / outLength, (next[1] - current[1]) / outLength];
+    const inDirection: RoadPoint = [
+      (current[0] - previous[0]) / inLength,
+      (current[1] - previous[1]) / inLength,
+    ];
+    const outDirection: RoadPoint = [
+      (next[0] - current[0]) / outLength,
+      (next[1] - current[1]) / outLength,
+    ];
     if (inDirection[0] * outDirection[0] + inDirection[1] * outDirection[1] > 0.999) {
       smoothed.push(current);
       continue;
@@ -178,7 +272,10 @@ export function smoothRoadCenterline(points: readonly RoadPoint[]): RoadPoint[] 
 export function clipToBounds(points: readonly RoadPoint[], bounds: ProjectedBounds): RoadPoint[] {
   let polygon = points.map((point) => [point[0], point[1]] as RoadPoint);
   const edges: readonly [0 | 1, number, boolean][] = [
-    [0, bounds.minX, true], [0, bounds.maxX, false], [1, bounds.minZ, true], [1, bounds.maxZ, false],
+    [0, bounds.minX, true],
+    [0, bounds.maxX, false],
+    [1, bounds.minZ, true],
+    [1, bounds.maxZ, false],
   ];
   for (const [axis, boundary, keepGreater] of edges) {
     if (polygon.length === 0) break;
@@ -189,7 +286,8 @@ export function clipToBounds(points: readonly RoadPoint[], bounds: ProjectedBoun
       if (!previous) continue;
       const previousInside = keepGreater ? previous[axis] >= boundary : previous[axis] <= boundary;
       const currentInside = keepGreater ? current[axis] >= boundary : current[axis] <= boundary;
-      if (currentInside !== previousInside) polygon.push(intersection(previous, current, axis, boundary));
+      if (currentInside !== previousInside)
+        polygon.push(intersection(previous, current, axis, boundary));
       if (currentInside) polygon.push(current);
       previous = current;
     }
@@ -219,7 +317,11 @@ export function sampleHeight(terrain: BuiltTerrainChunk, x: number, z: number): 
   return h11 + (1 - tx) * (h01 - h11) + (1 - tz) * (h10 - h11);
 }
 
-export function sampleNormal(terrain: BuiltTerrainChunk, x: number, z: number): readonly [number, number, number] {
+export function sampleNormal(
+  terrain: BuiltTerrainChunk,
+  x: number,
+  z: number,
+): readonly [number, number, number] {
   const step = terrain.stepMeters;
   const dx = (sampleHeight(terrain, x + step, z) - sampleHeight(terrain, x - step, z)) / (2 * step);
   const dz = (sampleHeight(terrain, x, z + step) - sampleHeight(terrain, x, z - step)) / (2 * step);
@@ -233,10 +335,16 @@ function intersection(a: RoadPoint, b: RoadPoint, axis: 0 | 1, boundary: number)
   return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
 }
 
-function clipVerticesToBounds(points: readonly RoadPoint3[], bounds: ProjectedBounds): RoadPoint3[] {
+function clipVerticesToBounds(
+  points: readonly RoadPoint3[],
+  bounds: ProjectedBounds,
+): RoadPoint3[] {
   let polygon = points.map((point) => [point[0], point[1], point[2]] as RoadPoint3);
   const edges: readonly [0 | 2, number, boolean][] = [
-    [0, bounds.minX, true], [0, bounds.maxX, false], [2, bounds.minZ, true], [2, bounds.maxZ, false],
+    [0, bounds.minX, true],
+    [0, bounds.maxX, false],
+    [2, bounds.minZ, true],
+    [2, bounds.maxZ, false],
   ];
   for (const [axis, boundary, keepGreater] of edges) {
     if (polygon.length === 0) break;
@@ -247,14 +355,17 @@ function clipVerticesToBounds(points: readonly RoadPoint3[], bounds: ProjectedBo
       if (!previous) continue;
       const previousInside = keepGreater ? previous[axis] >= boundary : previous[axis] <= boundary;
       const currentInside = keepGreater ? current[axis] >= boundary : current[axis] <= boundary;
-      if (currentInside !== previousInside) polygon.push(intersectVertex(previous, current, axis, boundary));
+      if (currentInside !== previousInside)
+        polygon.push(intersectVertex(previous, current, axis, boundary));
       if (currentInside) polygon.push(current);
       previous = current;
     }
   }
   return polygon.filter((point, index) => {
     const previous = polygon[(index + polygon.length - 1) % polygon.length];
-    return previous !== undefined && Math.hypot(point[0] - previous[0], point[2] - previous[2]) > 1e-5;
+    return (
+      previous !== undefined && Math.hypot(point[0] - previous[0], point[2] - previous[2]) > 1e-5
+    );
   });
 }
 
@@ -267,7 +378,9 @@ function intersectVertex(a: RoadPoint3, b: RoadPoint3, axis: 0 | 2, boundary: nu
 function removeDuplicatePoints(points: readonly RoadPoint[]): RoadPoint[] {
   const result = points.filter((point, index) => {
     const previous = points[(index + points.length - 1) % points.length];
-    return previous !== undefined && Math.hypot(point[0] - previous[0], point[1] - previous[1]) > 1e-5;
+    return (
+      previous !== undefined && Math.hypot(point[0] - previous[0], point[1] - previous[1]) > 1e-5
+    );
   });
   if (result.length > 1) {
     const first = result[0];
@@ -287,7 +400,9 @@ function removeCollinearPoints(points: readonly RoadPoint[]): RoadPoint[] {
       const current = result[index];
       const next = result[(index + 1) % result.length];
       if (!previous || !current || !next) continue;
-      const between = (current[0] - previous[0]) * (current[0] - next[0]) + (current[1] - previous[1]) * (current[1] - next[1]);
+      const between =
+        (current[0] - previous[0]) * (current[0] - next[0]) +
+        (current[1] - previous[1]) * (current[1] - next[1]);
       if (Math.abs(cross2D(previous, current, next)) < 1e-6 && between <= 1e-6) {
         result.splice(index, 1);
         changed = true;
@@ -298,7 +413,9 @@ function removeCollinearPoints(points: readonly RoadPoint[]): RoadPoint[] {
   return result;
 }
 
-export function triangulatePolygon(points: readonly RoadPoint[]): readonly (readonly [number, number, number])[] {
+export function triangulatePolygon(
+  points: readonly RoadPoint[],
+): readonly (readonly [number, number, number])[] {
   if (points.length < 3) return [];
   const area = points.reduce((sum, point, index) => {
     const next = points[(index + 1) % points.length];
@@ -320,7 +437,17 @@ export function triangulatePolygon(points: readonly RoadPoint[]): readonly (read
       const b = points[current];
       const c = points[next];
       if (!a || !b || !c || orientation * cross2D(a, b, c) <= 1e-8) continue;
-      if (remaining.some((candidate) => candidate !== previous && candidate !== current && candidate !== next && points[candidate] && insideTriangle(points[candidate] as RoadPoint, a, b, c, orientation))) continue;
+      if (
+        remaining.some(
+          (candidate) =>
+            candidate !== previous &&
+            candidate !== current &&
+            candidate !== next &&
+            points[candidate] &&
+            insideTriangle(points[candidate] as RoadPoint, a, b, c, orientation),
+        )
+      )
+        continue;
       triangles.push([previous, current, next]);
       remaining.splice(index, 1);
       earFound = true;
@@ -332,7 +459,8 @@ export function triangulatePolygon(points: readonly RoadPoint[]): readonly (read
     const first = remaining[0];
     const second = remaining[1];
     const third = remaining[2];
-    if (first !== undefined && second !== undefined && third !== undefined) triangles.push([first, second, third]);
+    if (first !== undefined && second !== undefined && third !== undefined)
+      triangles.push([first, second, third]);
   }
   return triangles;
 }
@@ -345,10 +473,18 @@ function cross2D(a: RoadPoint, b: RoadPoint, c: RoadPoint): number {
   return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
 }
 
-function insideTriangle(point: RoadPoint, a: RoadPoint, b: RoadPoint, c: RoadPoint, orientation: number): boolean {
-  return orientation * cross2D(a, b, point) >= -1e-7
-    && orientation * cross2D(b, c, point) >= -1e-7
-    && orientation * cross2D(c, a, point) >= -1e-7;
+function insideTriangle(
+  point: RoadPoint,
+  a: RoadPoint,
+  b: RoadPoint,
+  c: RoadPoint,
+  orientation: number,
+): boolean {
+  return (
+    orientation * cross2D(a, b, point) >= -1e-7 &&
+    orientation * cross2D(b, c, point) >= -1e-7 &&
+    orientation * cross2D(c, a, point) >= -1e-7
+  );
 }
 
 function polygonNormal(vertices: readonly RoadPoint3[]): readonly [number, number, number] {
@@ -358,7 +494,11 @@ function polygonNormal(vertices: readonly RoadPoint3[]): readonly [number, numbe
   if (!a || !b || !c) return [0, 1, 0];
   const ab: RoadPoint3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
   const ac: RoadPoint3 = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
-  const normal: RoadPoint3 = [ab[1] * ac[2] - ab[2] * ac[1], ab[2] * ac[0] - ab[0] * ac[2], ab[0] * ac[1] - ab[1] * ac[0]];
+  const normal: RoadPoint3 = [
+    ab[1] * ac[2] - ab[2] * ac[1],
+    ab[2] * ac[0] - ab[0] * ac[2],
+    ab[0] * ac[1] - ab[1] * ac[0],
+  ];
   const length = Math.hypot(normal[0], normal[1], normal[2]);
   if (length < 1e-8) return [0, 1, 0];
   return [normal[0] / length, normal[1] / length, normal[2] / length];
@@ -371,12 +511,13 @@ function triangleFacesUp(positions: readonly number[], a: number, b: number, c: 
   const bz = positions[b * 3 + 2] ?? 0;
   const cx = positions[c * 3] ?? 0;
   const cz = positions[c * 3 + 2] ?? 0;
-  return ((bz - az) * (cx - ax) - (bx - ax) * (cz - az)) >= 0;
+  return (bz - az) * (cx - ax) - (bx - ax) * (cz - az) >= 0;
 }
 
 function wear(seed: string, x: number, z: number): number {
   let hash = 2166136261;
-  for (let index = 0; index < seed.length; index += 1) hash = Math.imul(hash ^ seed.charCodeAt(index), 16777619);
+  for (let index = 0; index < seed.length; index += 1)
+    hash = Math.imul(hash ^ seed.charCodeAt(index), 16777619);
   hash = Math.imul(hash ^ Math.round(x / 2), 16777619);
   hash = Math.imul(hash ^ Math.round(z / 2), 16777619);
   return 0.94 + ((hash >>> 0) % 13) / 100;

@@ -25,7 +25,14 @@ function seededSequence(seed: number): () => number {
   };
 }
 
-function drawArchedWindow(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, style: FacadeStyle): void {
+function drawArchedWindow(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  style: FacadeStyle,
+): void {
   const stone = style === 'casco' ? '#9f8a6e' : '#77766e';
   context.fillStyle = '#766858';
   context.fillRect(x - 7, y + 3, width + 14, height + 9);
@@ -228,8 +235,14 @@ function drawRoof(tile: boolean): HTMLCanvasElement {
     context.strokeStyle = '#aaa89f';
     context.lineWidth = 3;
     for (let offset = 0; offset <= 256; offset += 32) {
-      context.beginPath(); context.moveTo(offset, 0); context.lineTo(offset, 256); context.stroke();
-      context.beginPath(); context.moveTo(0, offset); context.lineTo(256, offset); context.stroke();
+      context.beginPath();
+      context.moveTo(offset, 0);
+      context.lineTo(offset, 256);
+      context.stroke();
+      context.beginPath();
+      context.moveTo(0, offset);
+      context.lineTo(256, offset);
+      context.stroke();
     }
   }
   return canvas;
@@ -285,21 +298,23 @@ export function createBuildingMaterials(): Map<BuildingMaterial, THREE.MeshStand
   const cascoGlow = drawFacade('casco', true);
   const ensancheGlow = drawFacade('ensanche', true);
   const periferiaGlow = drawFacade('periferia', true);
-  const facade = (map: HTMLCanvasElement, glow: HTMLCanvasElement): THREE.MeshStandardMaterial => new THREE.MeshStandardMaterial({
-    map: canvasTexture(map, false),
-    emissive: '#ffca77',
-    emissiveMap: canvasTexture(glow, false),
-    emissiveIntensity: 0,
-    vertexColors: true,
-    roughness: 0.88,
-    side: THREE.DoubleSide,
-  });
-  const roof = (tile: boolean): THREE.MeshStandardMaterial => new THREE.MeshStandardMaterial({
-    map: canvasTexture(drawRoof(tile), true),
-    vertexColors: true,
-    roughness: tile ? 0.91 : 0.76,
-    side: THREE.DoubleSide,
-  });
+  const facade = (map: HTMLCanvasElement, glow: HTMLCanvasElement): THREE.MeshStandardMaterial =>
+    new THREE.MeshStandardMaterial({
+      map: canvasTexture(map, false),
+      emissive: '#ffca77',
+      emissiveMap: canvasTexture(glow, false),
+      emissiveIntensity: 0,
+      vertexColors: true,
+      roughness: 0.88,
+      side: THREE.DoubleSide,
+    });
+  const roof = (tile: boolean): THREE.MeshStandardMaterial =>
+    new THREE.MeshStandardMaterial({
+      map: canvasTexture(drawRoof(tile), true),
+      vertexColors: true,
+      roughness: tile ? 0.91 : 0.76,
+      side: THREE.DoubleSide,
+    });
   const monumentStone = new THREE.MeshStandardMaterial({
     map: canvasTexture(drawMonumentStone(), true),
     vertexColors: true,

@@ -3,17 +3,37 @@ import * as RAPIER from '@dimforge/rapier3d-compat';
 import { buildTerrainChunk } from '../src/world/mesh-builder';
 import { buildChunkBorderGeometry } from '../src/world/chunk-debug';
 import { classifyGround } from '../src/world/materials';
-import { createPhysicsWorld, TerrainColliders, toRapierColumnMajor } from '../src/world/terrain-physics';
+import {
+  createPhysicsWorld,
+  TerrainColliders,
+  toRapierColumnMajor,
+} from '../src/world/terrain-physics';
 import type { RawTerrainChunk } from '../src/world/types';
 
 const rawChunk: RawTerrainChunk = {
   id: '0_0',
   bounds: { minX: -2, minZ: -2, maxX: 2, maxZ: 2 },
-  terrain: { samples: 5, stepMeters: 1, quantizationMeters: 0.25, heights: Array.from({ length: 25 }, () => 1600) },
-  features: [{
-    featureType: 'surface', kind: 'landuse', value: 'residential', surface: '',
-    points: [[-2, -2], [2, -2], [2, 2], [-2, 2], [-2, -2]],
-  }],
+  terrain: {
+    samples: 5,
+    stepMeters: 1,
+    quantizationMeters: 0.25,
+    heights: Array.from({ length: 25 }, () => 1600),
+  },
+  features: [
+    {
+      featureType: 'surface',
+      kind: 'landuse',
+      value: 'residential',
+      surface: '',
+      points: [
+        [-2, -2],
+        [2, -2],
+        [2, 2],
+        [-2, 2],
+        [-2, -2],
+      ],
+    },
+  ],
 };
 
 describe('terrain meshes', () => {
@@ -30,7 +50,8 @@ describe('terrain meshes', () => {
   it('colors terrain from mapped land use without adding road geometry', () => {
     const chunk = buildTerrainChunk(rawChunk);
     const centerColorOffset = (2 * 5 + 2) * 3;
-    const centerColor = chunk.levels[0]?.colors.slice(centerColorOffset, centerColorOffset + 3) ?? [];
+    const centerColor =
+      chunk.levels[0]?.colors.slice(centerColorOffset, centerColorOffset + 3) ?? [];
     expect(centerColor[0]).toBeCloseTo(0.54, 6);
     expect(centerColor[1]).toBeCloseTo(0.497, 6);
     expect(centerColor[2]).toBeCloseTo(0.414, 6);
@@ -56,7 +77,9 @@ describe('chunk debug borders', () => {
 
 describe('Rapier terrain grid layout', () => {
   it('converts row-major heights into Rapier column-major order', () => {
-    expect(Array.from(toRapierColumnMajor(new Float32Array([1, 2, 3, 4]), 2))).toEqual([1, 3, 2, 4]);
+    expect(Array.from(toRapierColumnMajor(new Float32Array([1, 2, 3, 4]), 2))).toEqual([
+      1, 3, 2, 4,
+    ]);
   });
 
   it('creates a heightfield collider for a complete sample grid', async () => {

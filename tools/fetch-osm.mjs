@@ -19,7 +19,10 @@ async function fetchWithRetry(query, fetchImpl = fetch) {
     try {
       const response = await fetchImpl(OVERPASS_ENDPOINT, {
         method: 'POST',
-        headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'CaceresCriminalDataBuilder/0.1' },
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+          'user-agent': 'CaceresCriminalDataBuilder/0.1',
+        },
         body: new URLSearchParams({ data: query }),
         signal: AbortSignal.timeout(150000),
       });
@@ -47,7 +50,10 @@ async function fetchWithRetry(query, fetchImpl = fetch) {
       return data;
     } catch (error) {
       lastError = error;
-      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, error.retryDelayMs ?? 1000 * 2 ** attempt));
+      if (attempt < 3)
+        await new Promise((resolve) =>
+          setTimeout(resolve, error.retryDelayMs ?? 1000 * 2 ** attempt),
+        );
     }
   }
   throw lastError;
@@ -69,20 +75,30 @@ export async function getOsmData(regionName, region, { fresh = false, fetchImpl 
   const serialized = JSON.stringify(data);
   await mkdir(path.dirname(rawPath), { recursive: true });
   await writeFile(rawPath, serialized, 'utf8');
-  await writeFile(`${rawPath}.meta.json`, `${JSON.stringify({
-    source: OVERPASS_ENDPOINT,
-    retrievedAt: new Date().toISOString(),
-    querySha256: createHash('sha256').update(query).digest('hex'),
-    payloadSha256: createHash('sha256').update(serialized).digest('hex'),
-    bytes: Buffer.byteLength(serialized),
-    originEtrs89Utm29: center,
-    elementCount: data.elements.length,
-  }, null, 2)}\n`, 'utf8');
+  await writeFile(
+    `${rawPath}.meta.json`,
+    `${JSON.stringify(
+      {
+        source: OVERPASS_ENDPOINT,
+        retrievedAt: new Date().toISOString(),
+        querySha256: createHash('sha256').update(query).digest('hex'),
+        payloadSha256: createHash('sha256').update(serialized).digest('hex'),
+        bytes: Buffer.byteLength(serialized),
+        originEtrs89Utm29: center,
+        elementCount: data.elements.length,
+      },
+      null,
+      2,
+    )}\n`,
+    'utf8',
+  );
   return data;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const regionName = process.argv.find((argument) => argument.startsWith('--region='))?.split('=')[1] ?? 'cc-monumental';
+  const regionName =
+    process.argv.find((argument) => argument.startsWith('--region='))?.split('=')[1] ??
+    'cc-monumental';
   const config = JSON.parse(await readFile(path.join(ROOT, 'tools/config/regions.json'), 'utf8'));
   const region = config[regionName];
   if (!region) throw new Error(`Unknown region: ${regionName}`);

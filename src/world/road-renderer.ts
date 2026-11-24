@@ -123,7 +123,12 @@ function propGeometry(kind: BuiltRoadChunk['props'][number]['kind']): THREE.Buff
 
 export class RoadRenderer {
   private readonly roadMaterials = createRoadMaterials();
-  private readonly propMaterials = new Map(['traffic_signals', 'stop', 'give_way', 'street_lamp', 'tree'].map((kind) => [kind, createRoadPropMaterial(kind)]));
+  private readonly propMaterials = new Map(
+    ['traffic_signals', 'stop', 'give_way', 'street_lamp', 'tree'].map((kind) => [
+      kind,
+      createRoadPropMaterial(kind),
+    ]),
+  );
   private readonly materials = new Map([...this.roadMaterials, ...this.propMaterials]);
 
   createMeshes(roads: BuiltRoadChunk | undefined, centerX: number, centerZ: number): THREE.Mesh[] {
@@ -154,7 +159,11 @@ export class RoadRenderer {
         const trunkMesh = new THREE.InstancedMesh(trunkGeo, trunkMat, count);
         // Foliage cluster.
         const foliageGeo = createTreeFoliageGeometry();
-        const foliageMat = new THREE.MeshStandardMaterial({ color: 0x3b6632, roughness: 0.76, metalness: 0.04 });
+        const foliageMat = new THREE.MeshStandardMaterial({
+          color: 0x3b6632,
+          roughness: 0.76,
+          metalness: 0.04,
+        });
         const foliageMesh = new THREE.InstancedMesh(foliageGeo, foliageMat, count);
         for (let index = 0; index < count; index += 1) {
           const offset = index * 3;
@@ -177,12 +186,24 @@ export class RoadRenderer {
         meshes.push(trunkMesh, foliageMesh);
         continue;
       }
-      const mesh = new THREE.InstancedMesh(propGeometry(batch.kind), this.materials.get(batch.kind), batch.positions.length / 3);
+      const mesh = new THREE.InstancedMesh(
+        propGeometry(batch.kind),
+        this.materials.get(batch.kind),
+        batch.positions.length / 3,
+      );
       for (let index = 0; index < batch.positions.length / 3; index += 1) {
         const offset = index * 3;
         const height = 0;
         rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), batch.headings[index] ?? 0);
-        matrix.compose(new THREE.Vector3(batch.positions[offset] ?? 0, (batch.positions[offset + 1] ?? 0) + height, batch.positions[offset + 2] ?? 0), rotation, scale);
+        matrix.compose(
+          new THREE.Vector3(
+            batch.positions[offset] ?? 0,
+            (batch.positions[offset + 1] ?? 0) + height,
+            batch.positions[offset + 2] ?? 0,
+          ),
+          rotation,
+          scale,
+        );
         mesh.setMatrixAt(index, matrix);
       }
       mesh.computeBoundingSphere();
@@ -193,12 +214,20 @@ export class RoadRenderer {
     return meshes;
   }
 
-  async prepare(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, terrainMaterial: THREE.Material): Promise<void> {
+  async prepare(
+    renderer: THREE.WebGLRenderer,
+    scene: THREE.Scene,
+    camera: THREE.Camera,
+    terrainMaterial: THREE.Material,
+  ): Promise<void> {
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     const warmup: THREE.Mesh[] = [new THREE.Mesh(geometry, terrainMaterial)];
-    for (const material of this.roadMaterials.values()) warmup.push(new THREE.Mesh(geometry, material));
-    for (const material of this.propMaterials.values()) warmup.push(new THREE.InstancedMesh(geometry, material, 1));
-    for (const material of this.materials.values()) if (material.map) renderer.initTexture(material.map);
+    for (const material of this.roadMaterials.values())
+      warmup.push(new THREE.Mesh(geometry, material));
+    for (const material of this.propMaterials.values())
+      warmup.push(new THREE.InstancedMesh(geometry, material, 1));
+    for (const material of this.materials.values())
+      if (material.map) renderer.initTexture(material.map);
     for (const mesh of warmup) scene.add(mesh);
     try {
       await renderer.compileAsync(scene, camera);

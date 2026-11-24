@@ -35,7 +35,9 @@ export class AudioSystem {
     if (this.initialized) return true;
     if (typeof window === 'undefined') return false;
 
-    const ContextClass = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    const ContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!ContextClass) return false;
 
     try {
@@ -161,7 +163,14 @@ export class AudioSystem {
 
   /** Updates vehicle engine rpm pitch and volume based on speed and throttle. */
   updateVehicleEngine(active: boolean, speed: number, throttle: boolean): void {
-    if (!this.initialized || !this.context || !this.engineGain || !this.engineOsc || !this.engineFilter) return;
+    if (
+      !this.initialized ||
+      !this.context ||
+      !this.engineGain ||
+      !this.engineOsc ||
+      !this.engineFilter
+    )
+      return;
     const now = this.context.currentTime;
     if (!active) {
       this.engineGain.gain.setTargetAtTime(0, now, 0.15);
@@ -209,7 +218,8 @@ export class AudioSystem {
 
   /** Short footstep sound triggered on walking cadence. */
   playFootstep(): void {
-    if (!this.initialized || !this.context || !this.noiseBuffer || !this.sfxGain || this.muted) return;
+    if (!this.initialized || !this.context || !this.noiseBuffer || !this.sfxGain || this.muted)
+      return;
     try {
       const now = this.context.currentTime;
       const stepSource = this.context.createBufferSource();
@@ -237,7 +247,8 @@ export class AudioSystem {
 
   /** Crash or punchy collision sound. */
   playCollision(intensity = 0.5): void {
-    if (!this.initialized || !this.context || !this.noiseBuffer || !this.sfxGain || this.muted) return;
+    if (!this.initialized || !this.context || !this.noiseBuffer || !this.sfxGain || this.muted)
+      return;
     try {
       const now = this.context.currentTime;
       const punchOsc = this.context.createOscillator();

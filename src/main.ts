@@ -51,7 +51,11 @@ requiredElement<HTMLElement>('#wanted-label').textContent = t('hud.wanted');
 requiredElement<HTMLElement>('#controls-hint').textContent = t('controls.hint');
 const debugMode = new URLSearchParams(window.location.search).get('debug') === '1';
 const quality = QUALITY_PRESETS.high;
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: quality.antialias, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: quality.antialias,
+  powerPreference: 'high-performance',
+});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality.pixelRatio));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -72,22 +76,32 @@ const skyPositions = skyGeometry.attributes.position as THREE.BufferAttribute;
 const skyColors = new Float32Array(skyPositions.count * 3);
 for (let i = 0; i < skyPositions.count; i += 1) {
   const y = skyPositions.getY(i);
-  const t = Math.max(0, Math.min(1, (y + quality.viewDistance * 0.15) / (quality.viewDistance * 1.35)));
-  const r = t < 0.28
-    ? THREE.MathUtils.lerp(0.96, 0.68, t / 0.28)
-    : THREE.MathUtils.lerp(0.68, 0.20, (t - 0.28) / 0.72);
-  const g = t < 0.28
-    ? THREE.MathUtils.lerp(0.88, 0.81, t / 0.28)
-    : THREE.MathUtils.lerp(0.81, 0.48, (t - 0.28) / 0.72);
-  const b = t < 0.28
-    ? THREE.MathUtils.lerp(0.78, 0.90, t / 0.28)
-    : THREE.MathUtils.lerp(0.90, 0.82, (t - 0.28) / 0.72);
+  const t = Math.max(
+    0,
+    Math.min(1, (y + quality.viewDistance * 0.15) / (quality.viewDistance * 1.35)),
+  );
+  const r =
+    t < 0.28
+      ? THREE.MathUtils.lerp(0.96, 0.68, t / 0.28)
+      : THREE.MathUtils.lerp(0.68, 0.2, (t - 0.28) / 0.72);
+  const g =
+    t < 0.28
+      ? THREE.MathUtils.lerp(0.88, 0.81, t / 0.28)
+      : THREE.MathUtils.lerp(0.81, 0.48, (t - 0.28) / 0.72);
+  const b =
+    t < 0.28
+      ? THREE.MathUtils.lerp(0.78, 0.9, t / 0.28)
+      : THREE.MathUtils.lerp(0.9, 0.82, (t - 0.28) / 0.72);
   skyColors[i * 3] = r;
   skyColors[i * 3 + 1] = g;
   skyColors[i * 3 + 2] = b;
 }
 skyGeometry.setAttribute('color', new THREE.BufferAttribute(skyColors, 3));
-const skyMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, depthWrite: false });
+const skyMaterial = new THREE.MeshBasicMaterial({
+  vertexColors: true,
+  side: THREE.BackSide,
+  depthWrite: false,
+});
 const sky = new THREE.Mesh(skyGeometry, skyMaterial);
 scene.add(sky);
 
@@ -95,20 +109,39 @@ scene.add(sky);
 const sunDistance = quality.viewDistance * 1.18;
 const sunDir = new THREE.Vector3(-320, 240, 220).normalize();
 const sunDiskGeo = new THREE.CircleGeometry(quality.viewDistance * 0.045, 24);
-const sunDiskMat = new THREE.MeshBasicMaterial({ color: 0xfffaea, side: THREE.DoubleSide, depthWrite: false });
+const sunDiskMat = new THREE.MeshBasicMaterial({
+  color: 0xfffaea,
+  side: THREE.DoubleSide,
+  depthWrite: false,
+});
 const sunDisk = new THREE.Mesh(sunDiskGeo, sunDiskMat);
 sunDisk.position.copy(sunDir).multiplyScalar(sunDistance);
 sunDisk.lookAt(0, 0, 0);
 scene.add(sunDisk);
 
-const sunCoronaGeo = new THREE.RingGeometry(quality.viewDistance * 0.04, quality.viewDistance * 0.12, 24);
-const sunCoronaMat = new THREE.MeshBasicMaterial({ color: 0xffdf9a, transparent: true, opacity: 0.38, side: THREE.DoubleSide, depthWrite: false });
+const sunCoronaGeo = new THREE.RingGeometry(
+  quality.viewDistance * 0.04,
+  quality.viewDistance * 0.12,
+  24,
+);
+const sunCoronaMat = new THREE.MeshBasicMaterial({
+  color: 0xffdf9a,
+  transparent: true,
+  opacity: 0.38,
+  side: THREE.DoubleSide,
+  depthWrite: false,
+});
 const sunCorona = new THREE.Mesh(sunCoronaGeo, sunCoronaMat);
 sunCorona.position.copy(sunDisk.position);
 sunCorona.lookAt(0, 0, 0);
 scene.add(sunCorona);
 
-const camera = new THREE.PerspectiveCamera(54, window.innerWidth / window.innerHeight, 0.5, quality.viewDistance + 50);
+const camera = new THREE.PerspectiveCamera(
+  54,
+  window.innerWidth / window.innerHeight,
+  0.5,
+  quality.viewDistance + 50,
+);
 camera.position.set(0, 570, 72);
 const input = new InputManager(canvas);
 const cameraRig = new CameraRig(camera, input, 5.2, 0.002, 2.07, -0.12);
@@ -151,9 +184,13 @@ function modelUrl(path: string): string {
 
 function loadVehicleVisual(vehicle: Vehicle): void {
   if (!chunks) return;
-  void vehicle.loadModel(chunks, modelUrl('models/vehicles/graphite-sedan.glb')).catch((error: unknown) => {
-    logger.warn('Detailed vehicle model failed to load; keeping the built-in vehicle', { error: String(error) });
-  });
+  void vehicle
+    .loadModel(chunks, modelUrl('models/vehicles/graphite-sedan.glb'))
+    .catch((error: unknown) => {
+      logger.warn('Detailed vehicle model failed to load; keeping the built-in vehicle', {
+        error: String(error),
+      });
+    });
 }
 
 let activeVehicle: Vehicle | null = null;
@@ -233,7 +270,8 @@ const debugConsole = new DebugConsole(
 
 function debugSnapshot(): DebugSnapshot {
   const position = character.position;
-  const browserMemory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
+  const browserMemory = (performance as Performance & { memory?: { usedJSHeapSize: number } })
+    .memory;
   return {
     position: { x: position.x, y: position.y, z: position.z },
     groundHeight: chunks?.groundHeightAt(position.x, position.z) ?? null,
@@ -271,17 +309,37 @@ function teleportForAudit(x: number, z: number): void {
 if (debugMode) window.__CTA_DEBUG__ = { teleport: teleportForAudit, metrics: debugSnapshot };
 
 function normalizeLandmarkQuery(value: string): string {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-ES').trim();
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('es-ES')
+    .trim();
 }
 
 async function teleportToLandmark(query: string): Promise<string> {
-  const response = await fetch(new URL('data/landmarks/landmarks.json', new URL(import.meta.env.BASE_URL, window.location.href)));
+  const response = await fetch(
+    new URL(
+      'data/landmarks/landmarks.json',
+      new URL(import.meta.env.BASE_URL, window.location.href),
+    ),
+  );
   if (!response.ok) throw new Error(`no se pudo leer el catálogo de hitos (${response.status}).`);
-  const catalog = await response.json() as { landmarks: { id: string; name: string; position?: { localMeters?: readonly [number, number] } }[] };
+  const catalog = (await response.json()) as {
+    landmarks: {
+      id: string;
+      name: string;
+      position?: { localMeters?: readonly [number, number] };
+    }[];
+  };
   const normalized = normalizeLandmarkQuery(query);
-  const landmark = catalog.landmarks.find((item) => normalizeLandmarkQuery(item.id) === normalized || normalizeLandmarkQuery(item.name) === normalized);
+  const landmark = catalog.landmarks.find(
+    (item) =>
+      normalizeLandmarkQuery(item.id) === normalized ||
+      normalizeLandmarkQuery(item.name) === normalized,
+  );
   const point = landmark?.position?.localMeters;
-  if (!landmark || !point) throw new Error(`no encuentro el hito «${query}» con coordenadas disponibles.`);
+  if (!landmark || !point)
+    throw new Error(`no encuentro el hito «${query}» con coordenadas disponibles.`);
   teleportForAudit(point[0], point[1]);
   return `Teletransporte: ${landmark.name}.`;
 }
@@ -334,15 +392,23 @@ function updateDebug(timestamp: number): void {
   drawCallsLabel.textContent = String(renderer.info.render.calls);
   trianglesLabel.textContent = renderer.info.render.triangles.toLocaleString('es-ES');
   memoryLabel.textContent = `≈ ${chunks.memoryMiB.toFixed(1)} MiB`;
-  const browserMemory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
-  heapMemoryLabel.textContent = browserMemory ? `≈ ${(browserMemory.usedJSHeapSize / (1024 * 1024)).toFixed(1)} MiB` : 'n/d';
+  const browserMemory = (performance as Performance & { memory?: { usedJSHeapSize: number } })
+    .memory;
+  heapMemoryLabel.textContent = browserMemory
+    ? `≈ ${(browserMemory.usedJSHeapSize / (1024 * 1024)).toFixed(1)} MiB`
+    : 'n/d';
   systemTimesLabel.textContent = `física ${physicsQueryMs.toFixed(2)} · jugador ${actorUpdateMs.toFixed(2)} · streaming ${streamingUpdateMs.toFixed(2)} · render ${renderUpdateMs.toFixed(2)} ms`;
   const agents = npcs?.counts;
-  agentsLabel.textContent = agents ? `${agents.pedestrians} peatones · ${agents.vehicles} coches` : 'cargando red viaria…';
+  agentsLabel.textContent = agents
+    ? `${agents.pedestrians} peatones · ${agents.vehicles} coches`
+    : 'cargando red viaria…';
   agentsLodLabel.textContent = (npcs?.lodCounts ?? [0, 0, 0]).join(' / ');
   const stars = crime.stars;
   wantedLabel.textContent = stars > 0 ? `${'★'.repeat(stars)}${'☆'.repeat(5 - stars)}` : '—';
-  statusLabel.textContent = chunks.loadedCount > 0 ? 'Edificios, calles y terreno MDT05 en streaming' : 'Preparando la ciudad desde datos oficiales…';
+  statusLabel.textContent =
+    chunks.loadedCount > 0
+      ? 'Edificios, calles y terreno MDT05 en streaming'
+      : 'Preparando la ciudad desde datos oficiales…';
   if (noticeUntil > 0 && timestamp >= noticeUntil) {
     noticeLabel.hidden = true;
     noticeUntil = 0;
@@ -371,7 +437,9 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
     };
     activeVehicle.update(frameSeconds, driveInput);
     audio.updateVehicleEngine(true, activeVehicle.speed, driveInput.forward || driveInput.backward);
-    const isSkidding = (driveInput.handbrake && activeVehicle.speed > 3) || ((driveInput.left || driveInput.right) && activeVehicle.speed > 9);
+    const isSkidding =
+      (driveInput.handbrake && activeVehicle.speed > 3) ||
+      ((driveInput.left || driveInput.right) && activeVehicle.speed > 9);
     audio.updateSkid(isSkidding);
     audio.setHorn(hornPressed);
     cameraRig.mode = 'thirdPerson';
@@ -385,7 +453,9 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
       if (dist > 0.1) {
         dir.normalize();
         for (let i = 0; i < 8; i += 1) {
-          camera.position.copy(activeVehicle.position).addScaledVector(dir, dist * (1 - (i + 1) / 9));
+          camera.position
+            .copy(activeVehicle.position)
+            .addScaledVector(dir, dist * (1 - (i + 1) / 9));
           if (!chunks.collidesWithBuilding(camera.position.x, camera.position.z, 0)) break;
         }
       }
@@ -435,7 +505,8 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
   }
   const focus = inVehicle && activeVehicle ? activeVehicle.position : character.position;
   let playerSpeed = 0;
-  if (focusInitialized) playerSpeed = Math.min(focus.distanceTo(previousFocus) / Math.max(frameSeconds, 1 / 120), 25);
+  if (focusInitialized)
+    playerSpeed = Math.min(focus.distanceTo(previousFocus) / Math.max(frameSeconds, 1 / 120), 25);
   previousFocus.copy(focus);
   focusInitialized = true;
   if (inVehicle && activeVehicle) playerSpeed = activeVehicle.speed;
@@ -443,7 +514,11 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
   sun.position.set(focus.x - 320, 240, focus.z + 220);
   sun.target.position.set(focus.x, focus.y, focus.z);
   sky.position.set(focus.x, focus.y * 0.2, focus.z);
-  sunDisk.position.set(focus.x + sunDir.x * sunDistance, focus.y * 0.2 + sunDir.y * sunDistance, focus.z + sunDir.z * sunDistance);
+  sunDisk.position.set(
+    focus.x + sunDir.x * sunDistance,
+    focus.y * 0.2 + sunDir.y * sunDistance,
+    focus.z + sunDir.z * sunDistance,
+  );
   sunCorona.position.copy(sunDisk.position);
 
   if (npcs && chunks) npcs.update(frameSeconds, focus, camera, chunks);
@@ -458,7 +533,13 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
   previousStars = crime.stars;
   audio.updatePoliceSiren(crime.stars, police ? police.nearestDistance(focus) : 999);
 
-  if (npcs && inVehicle && activeVehicle && activeVehicle.speed > 6 && npcs.checkVehicleImpact(activeVehicle.position)) {
+  if (
+    npcs &&
+    inVehicle &&
+    activeVehicle &&
+    activeVehicle.speed > 6 &&
+    npcs.checkVehicleImpact(activeVehicle.position)
+  ) {
     if (crime.report('pedestrianImpact', activeVehicle.position.x, activeVehicle.position.z)) {
       npcs.alarm(activeVehicle.position.x, activeVehicle.position.z);
       showNotice(t('notice.pedestrianImpact'), timestamp);
@@ -468,7 +549,8 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
   }
   if (inVehicle && activeVehicle && activeVehicle.speed > 16) {
     recklessSeconds += frameSeconds;
-    if (recklessSeconds > 2.5 && crime.report('recklessDriving', focus.x, focus.z)) recklessSeconds = 0;
+    if (recklessSeconds > 2.5 && crime.report('recklessDriving', focus.x, focus.z))
+      recklessSeconds = 0;
   } else {
     recklessSeconds = 0;
   }
@@ -581,7 +663,10 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
     const isMuted = audio.toggleMute();
     showNotice(isMuted ? t('notice.audioMuted') : t('notice.audioUnmuted'), performance.now());
   }
-  if (event.code === 'Space') { spacePressed = true; event.preventDefault(); }
+  if (event.code === 'Space') {
+    spacePressed = true;
+    event.preventDefault();
+  }
   if (event.code === 'KeyE') {
     if (inVehicle && activeVehicle) {
       const side = new THREE.Vector3(1.8, 0, 0).applyQuaternion(activeVehicle.group.quaternion);
@@ -602,12 +687,22 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
       let best = 3;
       for (const v of vehicles) {
         const d = v.position.distanceTo(character.position);
-        if (d < best) { best = d; nearest = v; }
+        if (d < best) {
+          best = d;
+          nearest = v;
+        }
       }
       if (!nearest && npcs && world) {
         const claimed = npcs.claimVehicle(character.position, 4.5);
         if (claimed) {
-          const stolen = new Vehicle(world, claimed.x, claimed.y, claimed.z, claimed.heading, claimed.color);
+          const stolen = new Vehicle(
+            world,
+            claimed.x,
+            claimed.y,
+            claimed.z,
+            claimed.heading,
+            claimed.color,
+          );
           vehicles.push(stolen);
           scene.add(stolen.group);
           loadVehicleVisual(stolen);
@@ -650,8 +745,11 @@ async function initializeWorld(): Promise<void> {
   const worldBaseUrl = new URL(import.meta.env.BASE_URL, window.location.href);
   const manifestUrl = new URL('world/cc-monumental/manifest.json', worldBaseUrl);
   chunks = new ChunkManager(scene, world, manifestUrl, worldBaseUrl);
-  cameraRig.occlusion = (origin, dir, maxDist) => chunks?.cameraOcclusion(origin, dir, maxDist) ?? maxDist;
-  chunks.events.on('chunkLoaded', ({ id, lod }) => logger.debug('Terrain chunk loaded', { id, lod }));
+  cameraRig.occlusion = (origin, dir, maxDist) =>
+    chunks?.cameraOcclusion(origin, dir, maxDist) ?? maxDist;
+  chunks.events.on('chunkLoaded', ({ id, lod }) =>
+    logger.debug('Terrain chunk loaded', { id, lod }),
+  );
   chunks.events.on('chunkUnloaded', ({ id }) => logger.debug('Terrain chunk unloaded', { id }));
   await chunks.initialize();
   const startHeight = chunks.groundHeightAt(0, 0);
@@ -666,9 +764,13 @@ async function initializeWorld(): Promise<void> {
   }
   await chunks.prepareRenderer(renderer, camera);
   chunks.setDebugBorders(showDebug);
-  void character.loadModel(chunks, modelUrl('models/characters/casual-walker.glb')).catch((error: unknown) => {
-    logger.warn('Detailed player model failed to load; keeping the built-in character', { error: String(error) });
-  });
+  void character
+    .loadModel(chunks, modelUrl('models/characters/casual-walker.glb'))
+    .catch((error: unknown) => {
+      logger.warn('Detailed player model failed to load; keeping the built-in character', {
+        error: String(error),
+      });
+    });
   for (const vehicle of vehicles) loadVehicleVisual(vehicle);
   statusLabel.textContent = 'Ciudad lista · WASD camina · clic captura el ratón';
   logger.info('World streaming initialized', { region: 'cc-monumental', stepHz: 60, lods: 3 });
@@ -686,16 +788,23 @@ async function initializeNpcs(worldBaseUrl: URL): Promise<void> {
   if (!response.ok) throw new Error(`road-network.json HTTP ${response.status}`);
   const network = (await response.json()) as RoadNetwork;
   const graph = new RoadGraph(network);
-  npcs = new NpcSystem(graph, {
-    pedestrians: Math.round(150 * quality.populationDensity),
-    vehicles: Math.round(60 * quality.populationDensity),
-  }, agentColliders);
+  npcs = new NpcSystem(
+    graph,
+    {
+      pedestrians: Math.round(150 * quality.populationDensity),
+      vehicles: Math.round(60 * quality.populationDensity),
+    },
+    agentColliders,
+  );
   scene.add(npcs.group);
   if (chunks) {
-    void chunks.loadModel(modelUrl('models/characters/casual-walker-lod1.glb'), 60)
+    void chunks
+      .loadModel(modelUrl('models/characters/casual-walker-lod1.glb'), 60)
       .then((gltf) => npcs?.setPedestrianModel(gltf))
       .catch((error: unknown) => {
-        logger.warn('Detailed pedestrian model failed to load; keeping the built-in crowd', { error: String(error) });
+        logger.warn('Detailed pedestrian model failed to load; keeping the built-in crowd', {
+          error: String(error),
+        });
       });
   }
   police = new PoliceSystem(graph, agentColliders);
@@ -708,7 +817,10 @@ async function initializeNpcs(worldBaseUrl: URL): Promise<void> {
 }
 
 void initializeWorld().catch((error: unknown) => {
-  statusLabel.textContent = error instanceof Error ? `No se pudo iniciar el mundo: ${error.message}` : 'No se pudo iniciar el mundo.';
+  statusLabel.textContent =
+    error instanceof Error
+      ? `No se pudo iniciar el mundo: ${error.message}`
+      : 'No se pudo iniciar el mundo.';
   logger.error('World initialization failed', { error: String(error) });
 });
 loop.start();

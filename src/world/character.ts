@@ -40,26 +40,37 @@ export class Character {
     this.body.castShadow = true;
     this.group.add(this.body);
 
-    const shirt = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.13, 0.42, 8), material(0xe6ddc8));
+    const shirt = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.095, 0.13, 0.42, 8),
+      material(0xe6ddc8),
+    );
     shirt.scale.z = 0.82;
     shirt.position.set(0, 1.16, 0.17);
     this.group.add(shirt);
-    const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 0.1, 10), material(0x263f44));
+    const collar = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.12, 0.15, 0.1, 10),
+      material(0x263f44),
+    );
     collar.position.y = 1.48;
     collar.castShadow = true;
     this.group.add(collar);
-    const hem = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.29, 0.09, 10), material(0x2a5054));
+    const hem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.27, 0.29, 0.09, 10),
+      material(0x2a5054),
+    );
     hem.position.y = 0.88;
     this.group.add(hem);
 
     const lapelMaterial = material(0x517a7d);
     for (const side of [-1, 1]) {
       const lapel = new THREE.BufferGeometry();
-      lapel.setAttribute('position', new THREE.Float32BufferAttribute([
-        side * 0.025, 1.45, 0.207,
-        side * 0.16, 1.37, 0.207,
-        side * 0.07, 1.08, 0.218,
-      ], 3));
+      lapel.setAttribute(
+        'position',
+        new THREE.Float32BufferAttribute(
+          [side * 0.025, 1.45, 0.207, side * 0.16, 1.37, 0.207, side * 0.07, 1.08, 0.218],
+          3,
+        ),
+      );
       lapel.computeVertexNormals();
       const panel = new THREE.Mesh(lapel, lapelMaterial);
       panel.castShadow = true;
@@ -71,18 +82,30 @@ export class Character {
     this.group.add(pocket);
 
     // Silver metallic jacket zipper and pull
-    const zipper = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.44, 0.02), material(0xc2c6ca, 0.3, 0.85));
+    const zipper = new THREE.Mesh(
+      new THREE.BoxGeometry(0.014, 0.44, 0.02),
+      material(0xc2c6ca, 0.3, 0.85),
+    );
     zipper.position.set(0, 1.16, 0.21);
     this.group.add(zipper);
-    const zipperPull = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.04, 0.025), material(0xd4af37, 0.25, 0.85));
+    const zipperPull = new THREE.Mesh(
+      new THREE.BoxGeometry(0.022, 0.04, 0.025),
+      material(0xd4af37, 0.25, 0.85),
+    );
     zipperPull.position.set(0, 1.25, 0.22);
     this.group.add(zipperPull);
 
     // Leather belt with gold/brass buckle
-    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.285, 0.06, 10), material(0x181818, 0.5));
+    const belt = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.28, 0.285, 0.06, 10),
+      material(0x181818, 0.5),
+    );
     belt.position.y = 0.85;
     this.group.add(belt);
-    const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.048, 0.03), material(0xd4af37, 0.25, 0.85));
+    const buckle = new THREE.Mesh(
+      new THREE.BoxGeometry(0.07, 0.048, 0.03),
+      material(0xd4af37, 0.25, 0.85),
+    );
     buckle.position.set(0, 0.85, 0.22);
     this.group.add(buckle);
 
@@ -110,11 +133,17 @@ export class Character {
       this.group.add(eye);
     }
     // Stylish dark sunglasses with polarized sheen
-    const glassesFrame = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.045, 0.04), material(0x111214, 0.2, 0.8));
+    const glassesFrame = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 0.045, 0.04),
+      material(0x111214, 0.2, 0.8),
+    );
     glassesFrame.position.set(0, 1.685, 0.17);
     this.group.add(glassesFrame);
     for (const side of [-1, 1]) {
-      const lens = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.036, 0.015), material(0x1a2634, 0.1, 0.9));
+      const lens = new THREE.Mesh(
+        new THREE.BoxGeometry(0.065, 0.036, 0.015),
+        material(0x1a2634, 0.1, 0.9),
+      );
       lens.position.set(side * 0.052, 1.685, 0.188);
       this.group.add(lens);
     }
@@ -122,7 +151,10 @@ export class Character {
     nose.scale.set(0.68, 0.8, 1.15);
     nose.position.set(0, 1.65, 0.18);
     this.group.add(nose);
-    const mouth = new THREE.Mesh(new THREE.CapsuleGeometry(0.012, 0.05, 2, 6), material(0x805a4a, 0.7));
+    const mouth = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.012, 0.05, 2, 6),
+      material(0x805a4a, 0.7),
+    );
     mouth.rotation.z = Math.PI / 2;
     mouth.position.set(0, 1.605, 0.175);
     this.group.add(mouth);
@@ -158,10 +190,16 @@ export class Character {
     rc.position.set(0, -0.49, 0);
     this.rightArm.add(rc);
     // Gold and dark leather wristwatch on the left wrist
-    const watchStrap = new THREE.Mesh(new THREE.CylinderGeometry(0.078, 0.078, 0.04, 10), material(0x181818, 0.6));
+    const watchStrap = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.078, 0.078, 0.04, 10),
+      material(0x181818, 0.6),
+    );
     watchStrap.position.set(0, -0.52, 0);
     this.leftArm.add(watchStrap);
-    const watchDial = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.016, 8), material(0xd4af37, 0.25, 0.85));
+    const watchDial = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.026, 0.026, 0.016, 8),
+      material(0xd4af37, 0.25, 0.85),
+    );
     watchDial.rotation.x = Math.PI / 2;
     watchDial.position.set(0, -0.52, 0.078);
     this.leftArm.add(watchDial);
@@ -219,7 +257,8 @@ export class Character {
 
   async loadModel(chunks: ChunkManager, url: string): Promise<void> {
     const gltf = await chunks.loadModel(url, 100);
-    const idleClip = gltf.animations.find((clip) => clip.name.toLowerCase() === 'idle') ?? gltf.animations[0];
+    const idleClip =
+      gltf.animations.find((clip) => clip.name.toLowerCase() === 'idle') ?? gltf.animations[0];
     if (!idleClip) throw new Error('The player model has no animations.');
     const walkClip = gltf.animations.find((clip) => clip.name.toLowerCase() === 'walk') ?? idleClip;
     const model = gltf.scene;
@@ -239,7 +278,13 @@ export class Character {
     idle.play();
   }
 
-  update(deltaSeconds: number, input: InputManager, chunks: ChunkManager | undefined, cameraYaw: number, jump: boolean): void {
+  update(
+    deltaSeconds: number,
+    input: InputManager,
+    chunks: ChunkManager | undefined,
+    cameraYaw: number,
+    jump: boolean,
+  ): void {
     this.stepTriggered = false;
     const axes: MovementAxes = { horizontal: 0, vertical: 0 };
     input.movement(axes);
@@ -262,10 +307,20 @@ export class Character {
       const incrementZ = stepZ / substeps;
       for (let index = 0; index < substeps; index += 1) {
         const nextX = this.group.position.x + incrementX;
-        if (chunks && (chunks.groundHeightAt(nextX, this.group.position.z) === undefined || chunks.collidesWithBuilding(nextX, this.group.position.z, 0.4))) break;
+        if (
+          chunks &&
+          (chunks.groundHeightAt(nextX, this.group.position.z) === undefined ||
+            chunks.collidesWithBuilding(nextX, this.group.position.z, 0.4))
+        )
+          break;
         this.group.position.x = nextX;
         const nextZ = this.group.position.z + incrementZ;
-        if (chunks && (chunks.groundHeightAt(this.group.position.x, nextZ) === undefined || chunks.collidesWithBuilding(this.group.position.x, nextZ, 0.4))) break;
+        if (
+          chunks &&
+          (chunks.groundHeightAt(this.group.position.x, nextZ) === undefined ||
+            chunks.collidesWithBuilding(this.group.position.x, nextZ, 0.4))
+        )
+          break;
         this.group.position.z = nextZ;
       }
       const targetYaw = Math.atan2(dirX, dirZ);
@@ -333,7 +388,9 @@ export class Character {
     this.body.position.y = 1.15 + (moving ? Math.abs(Math.sin(this.walkPhase * 2)) * 0.05 : 0);
   }
 
-  get position(): THREE.Vector3 { return this.group.position; }
+  get position(): THREE.Vector3 {
+    return this.group.position;
+  }
 }
 
 function createTorsoGeometry(): THREE.BufferGeometry {

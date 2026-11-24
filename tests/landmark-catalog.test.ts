@@ -18,13 +18,42 @@ const sourceWay = {
   ],
 };
 const targets = [
-  { id: 'casa', name: 'Casa de Prueba', scope: 'cc-monumental', aliases: [], keyFeatures: ['Fachada por revisar.'], references: [] },
-  { id: 'parque', name: 'Parque fuera', scope: 'ciudad', aliases: [], keyFeatures: [], references: [] },
+  {
+    id: 'casa',
+    name: 'Casa de Prueba',
+    scope: 'cc-monumental',
+    aliases: [],
+    keyFeatures: ['Fachada por revisar.'],
+    references: [],
+  },
+  {
+    id: 'parque',
+    name: 'Parque fuera',
+    scope: 'ciudad',
+    aliases: [],
+    keyFeatures: [],
+    references: [],
+  },
 ];
-const features = [{ id: 'w42', featureType: 'building', name: 'Casa de Prueba', points: [[0, 0], [1, 0], [1, 1], [0, 0]], visualHeightMeters: 9 }];
+const features = [
+  {
+    id: 'w42',
+    featureType: 'building',
+    name: 'Casa de Prueba',
+    points: [
+      [0, 0],
+      [1, 0],
+      [1, 1],
+      [0, 0],
+    ],
+    visualHeightMeters: 9,
+  },
+];
 const temporaryRoots: string[] = [];
 
-afterEach(async () => Promise.all(temporaryRoots.splice(0).map((root) => rm(root, { recursive: true, force: true }))));
+afterEach(async () =>
+  Promise.all(temporaryRoots.splice(0).map((root) => rm(root, { recursive: true, force: true }))),
+);
 
 describe('landmark catalog generation', () => {
   it('derives positions, footprints, and level-based height from OSM source geometry', () => {

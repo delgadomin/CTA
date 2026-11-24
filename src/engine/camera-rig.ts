@@ -51,7 +51,9 @@ export class CameraRig {
     return this.mode;
   }
 
-  getYaw(): number { return this.yaw; }
+  getYaw(): number {
+    return this.yaw;
+  }
 
   /** Widens the field of view proportionally to driving speed. */
   setSpeedFov(speed: number): void {
@@ -113,9 +115,14 @@ export class CameraRig {
     }
 
     this.input.movement(this.axes);
-    this.direction.set(this.axes.horizontal, 0, -this.axes.vertical).applyAxisAngle(this.upAxis, this.yaw);
+    this.direction
+      .set(this.axes.horizontal, 0, -this.axes.vertical)
+      .applyAxisAngle(this.upAxis, this.yaw);
     const speedMultiplier = this.input.isPressed('sprint') ? 5 : 1;
-    this.camera.position.addScaledVector(this.direction, this.moveSpeed * speedMultiplier * deltaSeconds);
+    this.camera.position.addScaledVector(
+      this.direction,
+      this.moveSpeed * speedMultiplier * deltaSeconds,
+    );
     this.updateFov(deltaSeconds);
   }
 

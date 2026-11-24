@@ -16,21 +16,32 @@ function buildingGeometry(surface: BuildingSurfaceGeometry): THREE.BufferGeometr
 export class BuildingRenderer {
   private readonly materials = createBuildingMaterials();
 
-  createMeshes(buildings: BuiltBuildingChunk | undefined, centerX: number, centerZ: number): THREE.Mesh[][] {
+  createMeshes(
+    buildings: BuiltBuildingChunk | undefined,
+    centerX: number,
+    centerZ: number,
+  ): THREE.Mesh[][] {
     if (!buildings) return [];
-    return buildings.levels.map((level) => level.surfaces.flatMap((surface) => {
-      const material = this.materials.get(surface.material);
-      if (!material || surface.indices.length === 0) return [];
-      const mesh = new THREE.Mesh(buildingGeometry(surface), material);
-      mesh.position.set(centerX, 0, centerZ);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      mesh.visible = false;
-      return [mesh];
-    }));
+    return buildings.levels.map((level) =>
+      level.surfaces.flatMap((surface) => {
+        const material = this.materials.get(surface.material);
+        if (!material || surface.indices.length === 0) return [];
+        const mesh = new THREE.Mesh(buildingGeometry(surface), material);
+        mesh.position.set(centerX, 0, centerZ);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        mesh.visible = false;
+        return [mesh];
+      }),
+    );
   }
 
-  async prepare(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, terrainMaterial: THREE.Material): Promise<void> {
+  async prepare(
+    renderer: THREE.WebGLRenderer,
+    scene: THREE.Scene,
+    camera: THREE.Camera,
+    terrainMaterial: THREE.Material,
+  ): Promise<void> {
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     const warmup: THREE.Mesh[] = [new THREE.Mesh(geometry, terrainMaterial)];
     for (const material of this.materials.values()) {

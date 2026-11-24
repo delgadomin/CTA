@@ -17,19 +17,29 @@ for (const segment of network.segments) {
 }
 const isolated = network.nodes.filter((node) => (degree.get(node.id) ?? 0) === 0);
 const deadEnds = network.nodes.filter((node) => (degree.get(node.id) ?? 0) === 1);
-const intersectionsWithConnections = new Set(network.connections.map((connection) => connection.intersectionNode));
-const missingIntersectionLinks = network.intersections.filter((id) => !intersectionsWithConnections.has(id));
+const intersectionsWithConnections = new Set(
+  network.connections.map((connection) => connection.intersectionNode),
+);
+const missingIntersectionLinks = network.intersections.filter(
+  (id) => !intersectionsWithConnections.has(id),
+);
 
 const outgoing = new Map(network.nodes.map((node) => [node.id, 0]));
 const incoming = new Map(network.nodes.map((node) => [node.id, 0]));
 for (const segment of network.segments) {
-  if (segment.forwardAllowed) outgoing.set(segment.fromNode, (outgoing.get(segment.fromNode) ?? 0) + 1);
+  if (segment.forwardAllowed)
+    outgoing.set(segment.fromNode, (outgoing.get(segment.fromNode) ?? 0) + 1);
   if (segment.reverseAllowed) outgoing.set(segment.toNode, (outgoing.get(segment.toNode) ?? 0) + 1);
-  if (segment.reverseAllowed) incoming.set(segment.fromNode, (incoming.get(segment.fromNode) ?? 0) + 1);
+  if (segment.reverseAllowed)
+    incoming.set(segment.fromNode, (incoming.get(segment.fromNode) ?? 0) + 1);
   if (segment.forwardAllowed) incoming.set(segment.toNode, (incoming.get(segment.toNode) ?? 0) + 1);
 }
-const drivableSinks = network.nodes.filter((node) => (outgoing.get(node.id) ?? 0) === 0 && (incoming.get(node.id) ?? 0) > 0);
-const drivableSources = network.nodes.filter((node) => (incoming.get(node.id) ?? 0) === 0 && (outgoing.get(node.id) ?? 0) > 0);
+const drivableSinks = network.nodes.filter(
+  (node) => (outgoing.get(node.id) ?? 0) === 0 && (incoming.get(node.id) ?? 0) > 0,
+);
+const drivableSources = network.nodes.filter(
+  (node) => (incoming.get(node.id) ?? 0) === 0 && (outgoing.get(node.id) ?? 0) > 0,
+);
 
 function pointInPolygon(x, z, points) {
   let inside = false;
@@ -39,7 +49,7 @@ function pointInPolygon(x, z, points) {
     if (!a || !b) continue;
     const [ax, az] = a;
     const [bx, bz] = b;
-    if ((az > z) !== (bz > z) && x < ((bx - ax) * (z - az)) / (bz - az) + ax) inside = !inside;
+    if (az > z !== bz > z && x < ((bx - ax) * (z - az)) / (bz - az) + ax) inside = !inside;
   }
   return inside;
 }
@@ -86,9 +96,10 @@ for (const segment of walkableSegments) {
   if (crossed) crossingSegments.push(segment.id);
 }
 
-const manifestMatches = manifest.roadNetwork?.nodes === network.nodes.length
-  && manifest.roadNetwork?.segments === network.segments.length
-  && manifest.roadNetwork?.connections === network.connections.length;
+const manifestMatches =
+  manifest.roadNetwork?.nodes === network.nodes.length &&
+  manifest.roadNetwork?.segments === network.segments.length &&
+  manifest.roadNetwork?.connections === network.connections.length;
 
 const lines = [
   '# Auditoría del grafo viario (fase 10)',
@@ -118,7 +129,9 @@ const lines = [
   `- **Media:** los nodos aislados y las fuentes/sumideros vehiculares se excluyen al generar agentes.`,
   `- **Media:** los callejones sin salida son válidos en casco histórico; se documentan, no se corrige la fuente OSM.`,
   `- **Alta:** ${crossingSegments.length} tramos peatonales atraviesan huellas conocidas; el sistema los descarta mediante la prueba de edificio antes de mover al agente.`,
-  crossingSegments.length > 0 ? `- Ejemplos: ${crossingSegments.slice(0, 10).join(', ')}.` : '- No se detectaron tramos peatonales sobre huellas.',
+  crossingSegments.length > 0
+    ? `- Ejemplos: ${crossingSegments.slice(0, 10).join(', ')}.`
+    : '- No se detectaron tramos peatonales sobre huellas.',
   '',
   '## Límites de los datos',
   '',
@@ -130,5 +143,7 @@ const lines = [
 ];
 
 await writeFile(path.join(ROOT, 'reports', 'audit-npcs.md'), `${lines.join('\n')}\n`);
-console.info(`Grafo validado: ${network.nodes.length} nodos, ${walkableSegments.length} tramos peatonales, ${crossingSegments.length} solapamientos con edificios.`);
+console.info(
+  `Grafo validado: ${network.nodes.length} nodos, ${walkableSegments.length} tramos peatonales, ${crossingSegments.length} solapamientos con edificios.`,
+);
 if (!manifestMatches) process.exitCode = 1;

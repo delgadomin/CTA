@@ -19,7 +19,9 @@ export class RoadHeightIndex {
   }
 
   heightAt(x: number, z: number): number | undefined {
-    const candidates = this.cells.get(this.key(Math.floor(x / CELL_SIZE), Math.floor(z / CELL_SIZE)));
+    const candidates = this.cells.get(
+      this.key(Math.floor(x / CELL_SIZE), Math.floor(z / CELL_SIZE)),
+    );
     if (!candidates) return undefined;
     let highest: number | undefined;
     for (const triangle of candidates) {
@@ -67,8 +69,14 @@ export class RoadHeightIndex {
   private vertex(index: number): readonly [number, number, number] | undefined {
     const offset = index * 3;
     if (offset + 2 >= this.positions.length) return undefined;
-    return [this.positions[offset] ?? 0, this.positions[offset + 1] ?? 0, this.positions[offset + 2] ?? 0];
+    return [
+      this.positions[offset] ?? 0,
+      this.positions[offset + 1] ?? 0,
+      this.positions[offset + 2] ?? 0,
+    ];
   }
 
-  private key(x: number, z: number): string { return `${x}:${z}`; }
+  private key(x: number, z: number): string {
+    return `${x}:${z}`;
+  }
 }

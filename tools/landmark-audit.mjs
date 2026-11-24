@@ -1,5 +1,10 @@
 function normalizeName(value) {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('es');
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLocaleLowerCase('es');
 }
 
 function sourceLink(id) {
@@ -23,7 +28,8 @@ function geometryKind(feature) {
 export function auditLandmarks(features, targets, regionName, landmarkDataset) {
   const byName = new Map();
   for (const feature of features) {
-    if (typeof feature.name !== 'string' || !feature.name.trim() || typeof feature.id !== 'string') continue;
+    if (typeof feature.name !== 'string' || !feature.name.trim() || typeof feature.id !== 'string')
+      continue;
     const key = normalizeName(feature.name);
     const matches = byName.get(key) ?? [];
     matches.push(feature);
@@ -31,21 +37,37 @@ export function auditLandmarks(features, targets, regionName, landmarkDataset) {
   }
 
   return targets.map((target) => {
-    if (target.scope !== regionName) return { ...target, status: 'out-of-scope', sourceIds: [], geometry: [] };
+    if (target.scope !== regionName)
+      return { ...target, status: 'out-of-scope', sourceIds: [], geometry: [] };
     const names = [target.name, ...(target.aliases ?? [])].map(normalizeName);
     const matches = names.flatMap((name) => byName.get(name) ?? []);
     const sourceIds = [...new Set(matches.map((feature) => feature.id))].sort();
-    const sourceShapes = landmarkDataset?.landmarks.find((landmark) => landmark.id === target.id)?.sources ?? [];
-    const catalogGeometry = sourceShapes.map((source) => {
-      if (source.geometryType === 'polygon' || source.geometryType === 'multipolygon') return 'polígono';
-      if (source.geometryType === 'line') return 'trazado';
-      return undefined;
-    }).filter(Boolean);
-    const polygonSourceIds = new Set(sourceShapes.filter((source) => ['polygon', 'multipolygon'].includes(source.geometryType)).map((source) => source.id));
-    const matchedGeometry = matches.filter((feature) => !(polygonSourceIds.has(feature.id) && geometryKind(feature) === 'punto')).map(geometryKind);
+    const sourceShapes =
+      landmarkDataset?.landmarks.find((landmark) => landmark.id === target.id)?.sources ?? [];
+    const catalogGeometry = sourceShapes
+      .map((source) => {
+        if (source.geometryType === 'polygon' || source.geometryType === 'multipolygon')
+          return 'polígono';
+        if (source.geometryType === 'line') return 'trazado';
+        return undefined;
+      })
+      .filter(Boolean);
+    const polygonSourceIds = new Set(
+      sourceShapes
+        .filter((source) => ['polygon', 'multipolygon'].includes(source.geometryType))
+        .map((source) => source.id),
+    );
+    const matchedGeometry = matches
+      .filter((feature) => !(polygonSourceIds.has(feature.id) && geometryKind(feature) === 'punto'))
+      .map(geometryKind);
     const geometryKinds = [...new Set(matchedGeometry.concat(catalogGeometry))];
     const geometry = geometryKinds.sort();
-    return { ...target, status: sourceIds.length > 0 ? 'found' : 'not-found-in-extract', sourceIds, geometry };
+    return {
+      ...target,
+      status: sourceIds.length > 0 ? 'found' : 'not-found-in-extract',
+      sourceIds,
+      geometry,
+    };
   });
 }
 
@@ -62,7 +84,10 @@ export function formatLandmarkAudit(audit) {
     '',
     '| Hito | Estado en la región | Geometría fuente | IDs OSM |',
     '| --- | --- | --- | --- |',
-    ...audit.map((item) => `| ${item.name} | ${statusText[item.status]} | ${item.geometry.join(', ') || '—'} | ${item.sourceIds.map(sourceLink).join(', ') || '—'} |`),
+    ...audit.map(
+      (item) =>
+        `| ${item.name} | ${statusText[item.status]} | ${item.geometry.join(', ') || '—'} | ${item.sourceIds.map(sourceLink).join(', ') || '—'} |`,
+    ),
     '',
   ];
 }

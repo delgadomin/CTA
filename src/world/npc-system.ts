@@ -4,7 +4,12 @@ import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import type { AgentColliderSink } from './agent-colliders';
 import { RoadGraph } from './road-graph';
 import type { AgentMode } from './road-graph';
-import { createDetailedPedestrianGeometry, createPedestrianMesh, createVehicleMesh, disposeAgentMesh } from './npc-models';
+import {
+  createDetailedPedestrianGeometry,
+  createPedestrianMesh,
+  createVehicleMesh,
+  disposeAgentMesh,
+} from './npc-models';
 
 export interface NpcWorld {
   groundHeightAt(x: number, z: number): number | undefined;
@@ -119,19 +124,21 @@ export class NpcSystem {
     this.fleeTime = new Float32Array(capacity);
     this.fleeX = new Float32Array(capacity);
     this.fleeZ = new Float32Array(capacity);
-    for (let slot = this.pedestrianCapacity - 1; slot >= 0; slot -= 1) this.freePedestrians.push(slot);
-    for (let slot = capacity - 1; slot >= this.pedestrianCapacity; slot -= 1) this.freeVehicles.push(slot);
+    for (let slot = this.pedestrianCapacity - 1; slot >= 0; slot -= 1)
+      this.freePedestrians.push(slot);
+    for (let slot = capacity - 1; slot >= this.pedestrianCapacity; slot -= 1)
+      this.freeVehicles.push(slot);
     // Curated European pedestrian palettes: earthy tones, denims, leathers and jackets
     const PEDESTRIAN_COLORS = [
-      0x384a5c, 0x5a4638, 0x2d3439, 0x6a7568, 0x85684e, 0x423b4e, 0x314241, 0x68584a,
-      0x2c3138, 0x763f38, 0x485869, 0x505050, 0x866e51, 0x3a483e, 0x5e4758, 0x494e55,
-      0x755e44, 0x243036, 0x7d4f3e, 0x3a4650,
+      0x384a5c, 0x5a4638, 0x2d3439, 0x6a7568, 0x85684e, 0x423b4e, 0x314241, 0x68584a, 0x2c3138,
+      0x763f38, 0x485869, 0x505050, 0x866e51, 0x3a483e, 0x5e4758, 0x494e55, 0x755e44, 0x243036,
+      0x7d4f3e, 0x3a4650,
     ];
     for (const hex of PEDESTRIAN_COLORS) this.pedestrianColors.push(new THREE.Color(hex));
     // Curated realistic automotive paint finishes (metallic pearl, graphite, navy, burgundy, champagne)
     const AUTOMOTIVE_PAINTS = [
-      0xf0f3f6, 0x1c1d20, 0x383c42, 0x9da3a8, 0x8b1e22, 0x1c3258, 0x274332,
-      0xb29b7c, 0x325a88, 0x592332, 0x4a463d, 0xd94432, 0x5c6970, 0x252a30,
+      0xf0f3f6, 0x1c1d20, 0x383c42, 0x9da3a8, 0x8b1e22, 0x1c3258, 0x274332, 0xb29b7c, 0x325a88,
+      0x592332, 0x4a463d, 0xd94432, 0x5c6970, 0x252a30,
     ];
     for (const hex of AUTOMOTIVE_PAINTS) this.vehicleColors.push(new THREE.Color(hex));
   }
@@ -261,8 +268,12 @@ export class NpcSystem {
       const dx = (this.x[slot] ?? 0) - player.x;
       const dz = (this.z[slot] ?? 0) - player.z;
       const squared = dx * dx + dz * dz;
-      const lod: 0 | 1 | 2 = squared < LOD_NEAR_METERS * LOD_NEAR_METERS ? 0
-        : squared < LOD_MID_METERS * LOD_MID_METERS ? 1 : 2;
+      const lod: 0 | 1 | 2 =
+        squared < LOD_NEAR_METERS * LOD_NEAR_METERS
+          ? 0
+          : squared < LOD_MID_METERS * LOD_MID_METERS
+            ? 1
+            : 2;
       this.lodPopulation[lod] = (this.lodPopulation[lod] ?? 0) + 1;
       // Stagger updates across frames so far agents cost a quarter of the work.
       const cadence = lod === 0 ? 1 : lod === 1 ? 2 : 4;
@@ -324,7 +335,11 @@ export class NpcSystem {
       const towardZ = z - player.z;
       // Stricter filter: agents only spawn well behind the camera so the player
       // never catches a pop-in.
-      if (towardX * (this.cameraDirection.x ?? 0) + towardZ * (this.cameraDirection.z ?? 0) > -radius * 0.4) continue;
+      if (
+        towardX * (this.cameraDirection.x ?? 0) + towardZ * (this.cameraDirection.z ?? 0) >
+        -radius * 0.4
+      )
+        continue;
       const height = world.groundHeightAt(x, z);
       if (height === undefined || world.collidesWithBuilding(x, z, 1)) continue;
       const start = this.graph.nearestNode(x, z, mode);
@@ -349,7 +364,9 @@ export class NpcSystem {
       this.checkedMid[slot] = 0;
       this.reroutes[slot] = 0;
       this.fleeTime[slot] = 0;
-      this.colorIndex[slot] = Math.floor(this.random() * (kind === 0 ? this.pedestrianColors.length : this.vehicleColors.length));
+      this.colorIndex[slot] = Math.floor(
+        this.random() * (kind === 0 ? this.pedestrianColors.length : this.vehicleColors.length),
+      );
       if (kind === 0) this.activePedestrians += 1;
       else this.activeVehicles += 1;
       this.colliderIds[slot] = this.colliders?.create(mode, x, height, z, 0) ?? -1;
@@ -363,12 +380,18 @@ export class NpcSystem {
     const edge = this.edge[slot] ?? -1;
     const segment = this.graph.edgeSegment(edge);
     const info = this.graph.segments[segment];
-    if (!info) { this.release(slot); return; }
+    if (!info) {
+      this.release(slot);
+      return;
+    }
     const forward = (edge & 1) === 0;
     const toNode = forward ? info.to : info.from;
     const mode: AgentMode = this.kind[slot] === 0 ? 'pedestrian' : 'vehicle';
     let desired = mode === 'pedestrian' ? 1.5 : Math.min(info.speed, 14);
-    desired *= this.kind[slot] === 0 ? 0.85 + (this.scale[slot] ?? 1) * 0.2 : 0.75 + (this.scale[slot] ?? 1) * 0.25;
+    desired *=
+      this.kind[slot] === 0
+        ? 0.85 + (this.scale[slot] ?? 1) * 0.2
+        : 0.75 + (this.scale[slot] ?? 1) * 0.25;
     if (this.kind[slot] === 0 && (this.fleeTime[slot] ?? 0) > 0) {
       this.fleeTime[slot] = Math.max(0, (this.fleeTime[slot] ?? 0) - dt);
       desired = Math.max(desired, 3.6);
@@ -377,7 +400,12 @@ export class NpcSystem {
     if (this.blockedAhead(slot, player)) desired = 0;
     if ((this.progress[slot] ?? 0) > 0.94) {
       const owner = this.intersectionOwner[toNode] ?? 0;
-      if (owner !== 0 && owner !== slot + 1 && this.elapsed - (this.claimTime[toNode] ?? 0) < INTERSECTION_YIELD_SECONDS) desired = 0;
+      if (
+        owner !== 0 &&
+        owner !== slot + 1 &&
+        this.elapsed - (this.claimTime[toNode] ?? 0) < INTERSECTION_YIELD_SECONDS
+      )
+        desired = 0;
       else {
         this.intersectionOwner[toNode] = slot + 1;
         this.claimTime[toNode] = this.elapsed;
@@ -398,7 +426,10 @@ export class NpcSystem {
     let progress = (this.progress[slot] ?? 0) + (nextSpeed * dt) / info.length;
     if (progress >= 1) {
       const nextEdge = this.selectNextEdge(slot, toNode, mode);
-      if (nextEdge < 0) { this.release(slot); return; }
+      if (nextEdge < 0) {
+        this.release(slot);
+        return;
+      }
       this.edge[slot] = nextEdge;
       this.checkedMid[slot] = 0;
       progress -= 1;
@@ -406,7 +437,10 @@ export class NpcSystem {
     this.progress[slot] = progress;
     const current = this.edge[slot] ?? edge;
     const currentInfo = this.graph.segments[this.graph.edgeSegment(current)];
-    if (!currentInfo) { this.release(slot); return; }
+    if (!currentInfo) {
+      this.release(slot);
+      return;
+    }
     const currentForward = (current & 1) === 0;
     const ax = this.graph.nodeX[currentForward ? currentInfo.from : currentInfo.to] ?? 0;
     const az = this.graph.nodeZ[currentForward ? currentInfo.from : currentInfo.to] ?? 0;
@@ -449,7 +483,13 @@ export class NpcSystem {
       const turnRate = this.kind[slot] === 0 ? 8 : 5;
       this.heading[slot] = (this.heading[slot] ?? 0) + headingDelta * Math.min(1, dt * turnRate);
     }
-    this.colliders?.move(this.colliderIds[slot] ?? -1, this.x[slot] ?? 0, this.y[slot] ?? 0, this.z[slot] ?? 0, this.heading[slot] ?? 0);
+    this.colliders?.move(
+      this.colliderIds[slot] ?? -1,
+      this.x[slot] ?? 0,
+      this.y[slot] ?? 0,
+      this.z[slot] ?? 0,
+      this.heading[slot] ?? 0,
+    );
   }
 
   private blockedAhead(slot: number, player: THREE.Vector3): boolean {
@@ -499,7 +539,10 @@ export class NpcSystem {
       const dx = (this.graph.nodeX[candidate] ?? 0) - (this.graph.nodeX[start] ?? 0);
       const dz = (this.graph.nodeZ[candidate] ?? 0) - (this.graph.nodeZ[start] ?? 0);
       const squared = dx * dx + dz * dz;
-      if (squared > 80 * 80 && squared < 520 * 520) { destination = candidate; break; }
+      if (squared > 80 * 80 && squared < 520 * 520) {
+        destination = candidate;
+        break;
+      }
     }
     const path = destination >= 0 ? this.graph.route(start, destination, mode) : [];
     const limit = Math.min(path.length, MAX_ROUTE);
@@ -510,7 +553,8 @@ export class NpcSystem {
 
   private selectNextEdge(slot: number, node: number, mode: AgentMode): number {
     const index = this.routeIndex[slot] ?? 0;
-    const target = index < (this.routeLength[slot] ?? 0) ? this.route[slot * MAX_ROUTE + index] ?? -1 : -1;
+    const target =
+      index < (this.routeLength[slot] ?? 0) ? (this.route[slot * MAX_ROUTE + index] ?? -1) : -1;
     const edges = this.graph.outgoingEdges(node, mode);
     if (mode === 'pedestrian' && (this.fleeTime[slot] ?? 0) > 0) {
       let bestEdge = -1;
@@ -551,7 +595,10 @@ export class NpcSystem {
     const instance = this.kind[slot] === 0 ? slot : slot - this.pedestrianCapacity;
     // Taller bob, offset by slot index to break the unison.
     const walkSpeed = this.speed[slot] ?? 0;
-    const bob = this.kind[slot] === 0 ? Math.sin(this.elapsed * 9.5 + slot * 2.3) * Math.min(walkSpeed / 3, 0.12) : 0;
+    const bob =
+      this.kind[slot] === 0
+        ? Math.sin(this.elapsed * 9.5 + slot * 2.3) * Math.min(walkSpeed / 3, 0.12)
+        : 0;
     const pitch = this.kind[slot] === 0 ? Math.min(walkSpeed / 25, 0.12) : 0;
     this.dummy.position.set(this.x[slot] ?? 0, (this.y[slot] ?? 0) + bob, this.z[slot] ?? 0);
     this.dummy.rotation.set(pitch, this.heading[slot] ?? 0, 0);

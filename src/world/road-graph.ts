@@ -72,7 +72,11 @@ class MinHeap {
         const left = index * 2 + 1;
         if (left >= this.nodes.length) break;
         const right = left + 1;
-        const child = right < this.nodes.length && (this.costs[right] ?? Infinity) < (this.costs[left] ?? Infinity) ? right : left;
+        const child =
+          right < this.nodes.length &&
+          (this.costs[right] ?? Infinity) < (this.costs[left] ?? Infinity)
+            ? right
+            : left;
         if ((this.costs[child] ?? Infinity) >= lastCost) break;
         this.nodes[index] = this.nodes[child] ?? NO_NODE;
         this.costs[index] = this.costs[child] ?? Infinity;
@@ -222,7 +226,8 @@ export class RoadGraph {
 
   /** A* over directed edges; returns node indices including both endpoints. */
   route(from: number, to: number, mode: AgentMode): number[] {
-    if (from === to || from < 0 || to < 0 || from >= this.nodeCount || to >= this.nodeCount) return [];
+    if (from === to || from < 0 || to < 0 || from >= this.nodeCount || to >= this.nodeCount)
+      return [];
     const generation = ++this.searchGeneration;
     this.heap.clear();
     this.costs[from] = 0;
@@ -236,12 +241,14 @@ export class RoadGraph {
       if (this.closed[current] === generation) continue;
       this.closed[current] = generation;
       if (current === to) return this.reconstruct(from, to);
-      const currentCost = this.costStamps[current] === generation ? this.costs[current] ?? Infinity : Infinity;
+      const currentCost =
+        this.costStamps[current] === generation ? (this.costs[current] ?? Infinity) : Infinity;
       for (const edge of this.outgoingEdges(current, mode)) {
         const next = this.edgeDestination(edge);
         if (next === NO_NODE || this.closed[next] === generation) continue;
         const cost = currentCost + this.edgeLength(edge);
-        const known = this.costStamps[next] === generation ? this.costs[next] ?? Infinity : Infinity;
+        const known =
+          this.costStamps[next] === generation ? (this.costs[next] ?? Infinity) : Infinity;
         if (cost >= known) continue;
         this.costs[next] = cost;
         this.costStamps[next] = generation;
@@ -256,7 +263,12 @@ export class RoadGraph {
     return mode === 'pedestrian' ? segment.walkable : segment.drivable;
   }
 
-  private projectOntoSegment(x: number, z: number, segment: GraphSegment, index: number): NearestSegment {
+  private projectOntoSegment(
+    x: number,
+    z: number,
+    segment: GraphSegment,
+    index: number,
+  ): NearestSegment {
     const ax = this.nodeX[segment.from] ?? 0;
     const az = this.nodeZ[segment.from] ?? 0;
     const bx = this.nodeX[segment.to] ?? 0;
@@ -264,7 +276,8 @@ export class RoadGraph {
     const dx = bx - ax;
     const dz = bz - az;
     const squared = dx * dx + dz * dz;
-    const progress = squared > 0 ? Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / squared)) : 0;
+    const progress =
+      squared > 0 ? Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / squared)) : 0;
     const pointX = ax + dx * progress;
     const pointZ = az + dz * progress;
     return {
