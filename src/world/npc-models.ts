@@ -80,6 +80,20 @@ function pedestrianGeometry(): THREE.BufferGeometry {
   return finish(parts, new THREE.CapsuleGeometry(0.25, 1.2, 4, 8));
 }
 
+function pedestrianOutfitGeometry(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  const jacket = new THREE.CylinderGeometry(0.215, 0.265, 0.58, 9, 1);
+  jacket.scale(1, 1, 0.78);
+  addPart(parts, jacket, 0xffffff, new THREE.Vector3(0, 1.15, 0));
+  for (const side of [-1, 1]) {
+    const sleeve = new THREE.CapsuleGeometry(0.09, 0.3, 3, 7);
+    sleeve.rotateZ(side * -0.12);
+    addPart(parts, sleeve, 0xffffff, new THREE.Vector3(side * 0.29, 1.14, 0));
+    addPart(parts, new THREE.CylinderGeometry(0.05, 0.06, 0.19, 7), 0xffffff, new THREE.Vector3(side * 0.32, 0.84, 0.015));
+  }
+  return finish(parts, new THREE.CapsuleGeometry(0.25, 1.2, 4, 8));
+}
+
 function paneGeometry(points: readonly (readonly [number, number, number])[]): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(points.flatMap((point) => point), 3));
@@ -294,14 +308,18 @@ function vehicleMaterial(): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.32, metalness: 0.48 });
 }
 
-export function createPedestrianMesh(capacity: number): THREE.InstancedMesh {
-  const mesh = new THREE.InstancedMesh(pedestrianGeometry(), pedestrianMaterial(), capacity);
-  mesh.name = 'pedestrians';
-  mesh.count = 0;
-  mesh.frustumCulled = false;
-  mesh.castShadow = true;
-  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  return mesh;
+export function createPedestrianMeshes(capacity: number): { readonly body: THREE.InstancedMesh; readonly outfit: THREE.InstancedMesh } {
+  const body = new THREE.InstancedMesh(pedestrianGeometry(), pedestrianMaterial(), capacity);
+  const outfit = new THREE.InstancedMesh(pedestrianOutfitGeometry(), pedestrianMaterial(), capacity);
+  for (const mesh of [body, outfit]) {
+    mesh.count = 0;
+    mesh.frustumCulled = false;
+    mesh.castShadow = true;
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  }
+  body.name = 'pedestrians';
+  outfit.name = 'pedestrian-outfits';
+  return { body, outfit };
 }
 
 export function createVehicleMesh(capacity: number): THREE.InstancedMesh {
