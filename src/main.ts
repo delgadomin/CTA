@@ -645,8 +645,8 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
       event.preventDefault();
       debugConsole.append(
         cityKitEnabled
-          ? 'F9: city kit GLB activo (?citykit=1). Recarga sin el parámetro para comparar.'
-          : 'F9: city kit desactivado. Añade ?citykit=1 a la URL para comparar.',
+          ? 'F9: city kit GLB activo. Añade ?citykit=0 para comparar con el mobiliario procedural.'
+          : 'F9: city kit desactivado (?citykit=0). Recarga sin ese parámetro para volver a los GLB.',
       );
       debugConsole.setOpen(true);
       break;

@@ -6,11 +6,11 @@ Este archivo es el inventario canónico de modelos 3D. Los datos geográficos y 
 
 | Asset | Archivos | Licencia | Origen | Uso |
 | --- | --- | --- | --- | --- |
-| City Kit — farola histórica | `public/models/citykit/street-lamp-lod{0,1}.glb` | CC0-1.0 | `tools/generate_citykit.py` (Blender 5.2, geometría y materiales originales) | Sustituye la farola procedural de `RoadRenderer` con `?citykit=1`. |
-| City Kit — encina mediterránea | `public/models/citykit/tree-lod{0,1}.glb` | CC0-1.0 | Ídem | Sustituye el árbol procedural con `?citykit=1`. |
-| City Kit — semáforo | `public/models/citykit/traffic-signals-lod{0,1}.glb` | CC0-1.0 | Ídem | Sustituye el semáforo procedural con `?citykit=1`. |
-| City Kit — señal de stop | `public/models/citykit/stop-sign-lod{0,1}.glb` | CC0-1.0 | Ídem | Sustituye la señal procedural con `?citykit=1`. |
-| City Kit — señal de ceda el paso | `public/models/citykit/give-way-sign-lod{0,1}.glb` | CC0-1.0 | Ídem | Sustituye la señal procedural con `?citykit=1`. |
+| City Kit — farola histórica | `public/models/citykit/street-lamp-lod{0,1}.glb` | CC0-1.0 | `tools/generate_citykit.py` (Blender 5.2, geometría y materiales originales) | Sustituye la farola procedural de `RoadRenderer` con el kit activo (por defecto). |
+| City Kit — encina mediterránea | `public/models/citykit/tree-lod{0,1}.glb` | CC0-1.0 | Ídem | Sustituye el árbol procedural con el kit activo (por defecto). |
+| City Kit — semáforo | `public/models/citykit/traffic-signals-lod{0,1}.glb` | CC0-1.0 | Ídem | Sustituye el semáforo procedural con el kit activo (por defecto). |
+| City Kit — señal de stop | `public/models/citykit/stop-sign-lod{0,1}.glb` | CC0-1.0 | Ídem | Sustituye la señal procedural con el kit activo (por defecto). |
+| City Kit — señal de ceda el paso | `public/models/citykit/give-way-sign-lod{0,1}.glb` | CC0-1.0 | Ídem | Sustituye la señal procedural con el kit activo (por defecto). |
 | City Kit — chimenea de ladrillo | `public/models/citykit/chimney-lod{0,1}.glb` | CC0-1.0 | Ídem | Detalle en `BuildingRoofAnchor` del casco histórico. |
 | City Kit — balcón de forja | `public/models/citykit/balcony-lod{0,1}.glb` | CC0-1.0 | Ídem | Detalle en `BuildingSignSlot` de fachadas comerciales. |
 

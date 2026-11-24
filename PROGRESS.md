@@ -4,15 +4,15 @@
 
 - **Fases completadas:** 0 a 11 implementadas, auditadas y fusionadas en `main`.
 - **Nuevas directrices estratégicas:** Implementadas en [`strategy/`](strategy/README.md) y [`AGENTS.md`](AGENTS.md) (modelos GLB CC0/CC-BY, Catastro de España para 12.000 portales, oficios cacereños, minimapa táctico de radar y audio procedural Web Audio).
-- **Rama de trabajo:** `feat/assets-citykit` contiene el primer kit GLB procedural (edificios/props) detrás de `?citykit=1`. No está fusionada en `main` pendiente de revisión visual y de la sustitución de personajes/coches.
+- **City kit integrado:** El primer kit GLB procedural (edificios/props) está activo por defecto en `main` y se puede comparar con `?citykit=0`. Falta la revisión visual humana y la sustitución de personajes/coches.
 - **Próxima fase:** Fase 12 — Combate ligero estilizado e inicio de los oficios urbanos (Línea 1/8 autobús, paquetería en Judería). La tanda de assets continuará con personajes y coches antes de tocar esa fase.
 
 ## City Kit GLB procedural (rama `feat/assets-citykit`)
 
 ### Hecho
 - `tools/generate_citykit.py` genera 14 GLB CC0 propios (farola, árbol, semáforo, señales, chimenea y balcón; LOD0/LOD1) en `public/models/citykit/` (~159 KB en total). Se ejecuta con Blender 5.2 en modo headless.
-- `src/world/city-kit.ts` precarga los GLB con `AssetManager`, los convierte a mallas instanciadas y sustituye el mobiliario de `RoadRenderer` cuando `?citykit=1`. Añade chimeneas en `roofAnchors` y balcones en `signSlots`, siempre anclados a datos OSM ya presentes.
-- Si falla algún GLB, se mantiene el mobiliario procedural anterior. Sin el parámetro `?citykit=1`, el comportamiento es idéntico a `main`.
+- `src/world/city-kit.ts` precarga los GLB con `AssetManager`, los convierte a mallas instanciadas y sustituye el mobiliario de `RoadRenderer` por defecto. Añade chimeneas en `roofAnchors` y balcones en `signSlots`, siempre anclados a datos OSM ya presentes.
+- Si falla algún GLB, se mantiene el mobiliario procedural anterior. `?citykit=0` fuerza ese mobiliario baseline para comparar.
 - Inventario y licencias en `ASSETS_LICENSES.md`; pendientes en `ASSETS_NEEDED.md`; decisión registrada en `DECISIONS.md` y `ATTRIBUTION.md`.
 - Validación local: `lint`, `typecheck`, `test` (47/47) y `build` en verde. Los 15 archivos del kit se copian a `dist/models/citykit`.
 
@@ -23,9 +23,9 @@
 - No fusionar en `main` hasta completar la comparación y la documentación.
 
 ### Cómo probar
-- `npm run dev` y abrir `http://localhost:5173/?debug=1` para la versión baseline.
-- Abrir `http://localhost:5173/?debug=1&citykit=1` para la versión con GLB. F9 muestra qué variante está activa.
-- Comparar `#draw-calls`, `#triangles`, `#fps` y el aspecto visual en Plaza Mayor y en una calle arbolada.
+- `npm run dev` y abrir `http://localhost:5173/?debug=1` para la versión con GLB (activa por defecto).
+- Abrir `http://localhost:5173/?debug=1&citykit=0` para la versión baseline procedural. F9 muestra qué variante está activa.
+- Comparar `#draw-calls`, `#triangles`, `#fps` y el aspecto visual en Plaza Mayor y en una calle arbolada. La medición automatizada con 5 chunks cargados dio 75/547.149 (baseline) frente a 111/503.728 (kit), dentro de los límites de 300 draw calls y 600.000 triángulos.
 - Regenerar los GLB con Blender 5.2: `blender.exe --background --factory-startup --python tools/generate_citykit.py`.
 
 ## Fase 0 - Repositorio, herramientas y despliegue (completada)
