@@ -32,11 +32,7 @@ const ROAD_KIT_NAMES: Record<RoadPropBatch['kind'], string> = {
   give_way: 'give-way-sign',
 };
 
-const KIT_NAMES = [
-  ...Object.values(ROAD_KIT_NAMES),
-  'chimney',
-  'balcony',
-] as const;
+const KIT_NAMES = [...Object.values(ROAD_KIT_NAMES), 'chimney', 'balcony'] as const;
 
 function partsFromGltf(gltf: GLTF): KitPart[] {
   gltf.scene.updateMatrixWorld(true);
@@ -213,10 +209,7 @@ export class CityKit {
     batch: RoadPropBatch,
     parts: readonly KitPart[],
   ): { parts: readonly KitPart[]; positions: Placement[] } {
-    const count = Math.min(
-      batch.positions.length / 3,
-      batch.headings.length,
-    );
+    const count = Math.min(batch.positions.length / 3, batch.headings.length);
     const positions: Placement[] = [];
     for (let index = 0; index < count; index += 1) {
       const offset = index * 3;

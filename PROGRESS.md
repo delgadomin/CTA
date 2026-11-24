@@ -6,6 +6,7 @@
 - **Nuevas directrices estratégicas:** Implementadas en [`strategy/`](strategy/README.md) y [`AGENTS.md`](AGENTS.md) (modelos GLB CC0/CC-BY, Catastro de España para 12.000 portales, oficios cacereños, minimapa táctico de radar y audio procedural Web Audio).
 - **City kit integrado:** El primer kit GLB procedural (edificios/props) está activo por defecto en `main` y se puede comparar con `?citykit=0`. Falta la revisión visual humana y la sustitución de personajes/coches.
 - **Próxima fase:** Fase 12 — Combate ligero estilizado e inicio de los oficios urbanos (Línea 1/8 autobús, paquetería en Judería). La tanda de assets continuará con personajes y coches antes de tocar esa fase.
+- **Despliegue corregido:** `format:check` volvió a pasar en GitHub Actions tras formatear `src/world/city-kit.ts`; el flujo de Pages ya puede publicar el build del city kit.
 
 ## City Kit GLB procedural (rama `feat/assets-citykit`)
 
