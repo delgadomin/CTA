@@ -264,3 +264,12 @@ Siguiendo las metodologías y directrices del repositorio `gamedev-skills` (`sou
     - Corregida la inestabilidad física del vehículo: se limita la velocidad vertical a ≤4,5 m/s y la velocidad angular a ≤3,0 rad/s para evitar que el chasis salga despedido al penetrar bordillos o uniones trimesh.
     - Preservación de color al cargar el modelo GLB: el vehículo reclamado/robado transfiere su color original al material de pintura (`paint`) del sedán GLB en `createMergedVehicleVisual`, erradicando el cambio brusco de color a gris al subir.
   - **Presentación comercial (HUD):** El panel de depuración F3 y los bordes de chunk se inicializan ocultos (`is-hidden`) por defecto, reservándose exclusivamente al parámetro `?debug=1` o a la tecla F3, ofreciendo un aspecto de juego comercial limpio con el minimapa táctico de radar activo.
+
+# City kit GLB procedural (noviembre de 2026)
+
+- Se genera un kit propio de 14 GLB (farola, árbol, semáforo, señal de stop, señal de cedaz, chimenea y balcón; LOD0/LOD1 de cada uno) con `tools/generate_citykit.py` ejecutado en Blender 5.2 headless. Toda la geometría y los materiales son originales y se publican como CC0-1.0; no hay descargas, texturas nilicencias de terceros.
+- No se añaden dependencias npm: los GLB son pequeños (~159 KB en total) y no usan texturas, así que no necesitan `gltf-transform`, meshopt ni KTX2. `AssetManager` ya soporta GLB y el pipeline existente loader se reutiliza sin cambios.
+- El kit es opt-in con `?citykit=1`. Sin el parámetro, `RoadRenderer` sigue dibujando el mobiliario procedural actual; con el parámetro, `CityKit` sustituye esas instancias por GLB y añade chimeneas en `roofAnchors` y balcones en `signSlots`. Todas las posiciones vienen de OSM ya procesado: no se inventa geografía.
+- Si falla cualquiera de los 14 GLB, `CityKit.isReady` queda a `false` y se conserva el mobiliario procedural como fallback; no se rompe el arranque.
+- Las geometrías GLB se marcan con `userData.sharedGeometry` para que `ChunkManager.unload()` no las destruya al descargar un chunk y puedan reutilizarse en otros. El LOD del kit se elige al crear cada chunk; el cambio de LOD dentro de un chunk ya cargado no reconstruye el mobiliario (mejora pendiente).
+- La sustitución de los modelos CC0 de persona y coche queda para la siguiente tanda; el usuario eligió «mixto» (procedural para edificios/props, CC0 con atribución para personajes/coches) y «sustituir los actuales».
