@@ -13,6 +13,7 @@ export class Vehicle {
   readonly group: THREE.Group;
   readonly chassisBody: RAPIER.RigidBody;
   readonly controller: RAPIER.DynamicRayCastVehicleController;
+  readonly color: number;
   private readonly wheels: THREE.Mesh[] = [];
   private readonly brakeLightMaterials: THREE.MeshStandardMaterial[] = [];
   private readonly proceduralParts: THREE.Object3D[] = [];
@@ -20,6 +21,7 @@ export class Vehicle {
 
   constructor(world: World, x: number, y: number, z: number, heading = 0, color = CAR_COLOR) {
     this.world = world;
+    this.color = color;
     this.group = new THREE.Group();
 
     // Chassis rigid body: placed at y + 0.82 so wheels rest gently on the ground
@@ -317,6 +319,23 @@ export class Vehicle {
     // and the kinematic agent colliders.
     this.world.step();
 
+    // Prevent physical launch into the sky on curb or trimesh penetration.
+    const linvel = this.chassisBody.linvel();
+    if (linvel.y > 4.5) {
+      this.chassisBody.setLinvel({ x: linvel.x, y: 4.5, z: linvel.z }, true);
+    }
+    const angvel = this.chassisBody.angvel();
+    if (Math.abs(angvel.x) > 3.0 || Math.abs(angvel.z) > 3.0) {
+      this.chassisBody.setAngvel(
+        {
+          x: THREE.MathUtils.clamp(angvel.x, -3.0, 3.0),
+          y: angvel.y,
+          z: THREE.MathUtils.clamp(angvel.z, -3.0, 3.0),
+        },
+        true,
+      );
+    }
+
     // Sync visual mesh.
     const t = this.chassisBody.translation();
     const r = this.chassisBody.rotation();
@@ -349,7 +368,7 @@ export class Vehicle {
 
   async loadModel(chunks: ChunkManager, url: string): Promise<void> {
     const gltf = await chunks.loadModel(url, 80);
-    const model = createMergedVehicleVisual(gltf);
+    const model = createMergedVehicleVisual(gltf, this.color);
     model.name = 'CC0 detailed graphite sedan';
     model.rotation.y = Math.PI / 2;
     model.traverse((object) => {
@@ -386,7 +405,7 @@ function taperedCabinGeometry(): THREE.BufferGeometry {
 }
 
 /** Clone the CC0 sedan and merge its 300+ meshes into one batch per material. */
-function createMergedVehicleVisual(gltf: GLTF): THREE.Group {
+function createMergedVehicleVisual(gltf: GLTF, paintColor?: number): THREE.Group {
   const source = gltf.scene.clone(true);
   source.updateMatrixWorld(true);
   const batches = new Map<
@@ -414,8 +433,17 @@ function createMergedVehicleVisual(gltf: GLTF): THREE.Group {
             },
           ];
     for (const group of groups) {
-      const material = materials[group.materialIndex ?? 0];
+      let material = materials[group.materialIndex ?? 0];
       if (!material) continue;
+      if (
+        paintColor !== undefined &&
+        material instanceof THREE.MeshStandardMaterial &&
+        (material.name.toLowerCase().includes('paint') ||
+          material.name.toLowerCase().includes('body'))
+      ) {
+        material = material.clone();
+        material.color.setHex(paintColor);
+      }
       const geometry = geometryForMaterialGroup(
         sourceGeometry,
         group.start,

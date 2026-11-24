@@ -49,7 +49,12 @@ const minimap = new Minimap(minimapCanvas);
 const audio = new AudioSystem();
 requiredElement<HTMLElement>('#wanted-label').textContent = t('hud.wanted');
 requiredElement<HTMLElement>('#controls-hint').textContent = t('controls.hint');
-const debugMode = new URLSearchParams(window.location.search).get('debug') === '1';
+const query = new URLSearchParams(window.location.search);
+const debugMode = query.get('debug') === '1';
+if (debugMode) {
+  debugPanel.classList.remove('is-hidden');
+}
+const cityKitEnabled = query.get('citykit') !== '0';
 const quality = QUALITY_PRESETS.high;
 const renderer = new THREE.WebGLRenderer({
   canvas,
@@ -200,8 +205,8 @@ let hornPressed = false;
 let previousStars = 0;
 const minimapVehicles: MinimapBlip[] = [];
 const minimapPolice: MinimapBlip[] = [];
-let showDebug = true;
-let showChunkBorders = true;
+let showDebug = debugMode;
+let showChunkBorders = debugMode;
 let showColliderWireframes = false;
 let showRoadWireframes = false;
 let showLodBounds = false;
@@ -359,7 +364,7 @@ function spawnDebugVehicle(): string {
 }
 
 function updateDebugModeLabel(): void {
-  debugModesLabel.textContent = `F5 colisiones ${showColliderWireframes ? 'ON' : 'OFF'} · F6 calzadas ${showRoadWireframes ? 'ON' : 'OFF'} · F7 LOD ${showLodBounds ? 'ON' : 'OFF'} · F8 sombras ${showShadows ? 'ON' : 'OFF'} · F9 postprocesado no configurado`;
+  debugModesLabel.textContent = `F5 colisiones ${showColliderWireframes ? 'ON' : 'OFF'} · F6 calzadas ${showRoadWireframes ? 'ON' : 'OFF'} · F7 LOD ${showLodBounds ? 'ON' : 'OFF'} · F8 sombras ${showShadows ? 'ON' : 'OFF'} · F9 city kit ${cityKitEnabled ? 'ON' : 'OFF'}`;
 }
 
 updateDebugModeLabel();
@@ -638,7 +643,11 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
       break;
     case 'F9':
       event.preventDefault();
-      debugConsole.append('F9: no hay efectos de postprocesado configurados en esta build.');
+      debugConsole.append(
+        cityKitEnabled
+          ? 'F9: city kit GLB activo (?citykit=1). Recarga sin el parámetro para comparar.'
+          : 'F9: city kit desactivado. Añade ?citykit=1 a la URL para comparar.',
+      );
       debugConsole.setOpen(true);
       break;
     case 'Backquote':
@@ -705,6 +714,8 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
           );
           vehicles.push(stolen);
           scene.add(stolen.group);
+          stolen.chassisBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+          stolen.chassisBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
           loadVehicleVisual(stolen);
           world.updateSceneQueries();
           nearest = stolen;
@@ -744,7 +755,7 @@ async function initializeWorld(): Promise<void> {
   agentColliders = new AgentColliders(world);
   const worldBaseUrl = new URL(import.meta.env.BASE_URL, window.location.href);
   const manifestUrl = new URL('world/cc-monumental/manifest.json', worldBaseUrl);
-  chunks = new ChunkManager(scene, world, manifestUrl, worldBaseUrl);
+  chunks = new ChunkManager(scene, world, manifestUrl, worldBaseUrl, cityKitEnabled);
   cameraRig.occlusion = (origin, dir, maxDist) =>
     chunks?.cameraOcclusion(origin, dir, maxDist) ?? maxDist;
   chunks.events.on('chunkLoaded', ({ id, lod }) =>

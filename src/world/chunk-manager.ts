@@ -7,6 +7,7 @@ import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { buildChunkBorderGeometry } from './chunk-debug';
 import { ChunkDebugOverlays } from './debug-overlays';
 import { BuildingRenderer } from './building-renderer';
+import { CityKit } from './city-kit';
 import { sampleHeight } from './road-geometry';
 import { RoadRenderer } from './road-renderer';
 import { RoadHeightIndex } from './road-height-index';
@@ -203,6 +204,7 @@ export class ChunkManager {
   });
   private readonly roadRenderer = new RoadRenderer();
   private readonly buildingRenderer = new BuildingRenderer();
+  private readonly cityKit: CityKit | undefined;
   private readonly debugOverlays: ChunkDebugOverlays;
   private readonly debugBorderMaterial = new THREE.LineBasicMaterial({
     color: '#f06d4e',
@@ -224,9 +226,16 @@ export class ChunkManager {
   private closed = false;
   private debugBordersVisible = false;
 
-  constructor(scene: THREE.Scene, physicsWorld: World, manifestUrl: URL, worldBaseUrl: URL) {
+  constructor(
+    scene: THREE.Scene,
+    physicsWorld: World,
+    manifestUrl: URL,
+    worldBaseUrl: URL,
+    cityKitEnabled = false,
+  ) {
     this.scene = scene;
     this.world = physicsWorld;
+    this.cityKit = cityKitEnabled ? new CityKit(worldBaseUrl) : undefined;
     this.debugOverlays = new ChunkDebugOverlays(scene);
     this.colliders = new TerrainColliders(physicsWorld);
     this.manifestUrl = manifestUrl;
@@ -250,6 +259,7 @@ export class ChunkManager {
       this.roadRenderer.prepare(renderer, this.scene, camera, this.material),
       this.buildingRenderer.prepare(renderer, this.scene, camera, this.material),
     ]);
+    if (this.cityKit) await this.cityKit.prepare((url, priority) => this.loadModel(url, priority));
   }
 
   loadModel(url: string, priority = 0): Promise<GLTF> {
@@ -445,6 +455,7 @@ export class ChunkManager {
     this.material.dispose();
     this.roadRenderer.dispose();
     this.buildingRenderer.dispose();
+    this.cityKit?.dispose();
     this.assets?.dispose();
     this.debugBorderMaterial.dispose();
     this.debugOverlays.dispose();
@@ -507,7 +518,24 @@ export class ChunkManager {
       });
       const activeMesh = meshes[record.lod];
       if (activeMesh) this.scene.add(activeMesh);
-      const decorationMeshes = this.roadRenderer.createMeshes(item.result.roads, centerX, centerZ);
+      const kitActive = this.cityKit?.isReady === true;
+      const decorationMeshes = this.roadRenderer.createMeshes(
+        item.result.roads,
+        centerX,
+        centerZ,
+        !kitActive,
+      );
+      if (kitActive && this.cityKit) {
+        decorationMeshes.push(
+          ...this.cityKit.createRoadPropMeshes(item.result.roads, centerX, centerZ, record.lod),
+          ...this.cityKit.createBuildingDetailMeshes(
+            item.result.buildings,
+            centerX,
+            centerZ,
+            record.lod,
+          ),
+        );
+      }
       for (const mesh of decorationMeshes) this.scene.add(mesh);
       const buildingMeshes = this.buildingRenderer.createMeshes(
         item.result.buildings,
@@ -740,7 +768,8 @@ export class ChunkManager {
     if (record.decorationMeshes) {
       for (const mesh of record.decorationMeshes) {
         this.scene.remove(mesh);
-        mesh.geometry.dispose();
+        // CityKit instances reuse geometry across chunks; only procedural meshes own it.
+        if (mesh.geometry.userData.sharedGeometry !== true) mesh.geometry.dispose();
       }
     }
     if (record.buildingMeshes) {

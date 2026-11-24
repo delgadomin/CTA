@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+﻿import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createRoadMaterials, createRoadPropMaterial } from './road-materials';
 import type { BuiltRoadChunk, RoadSurfaceGeometry } from './types';
@@ -131,7 +131,12 @@ export class RoadRenderer {
   );
   private readonly materials = new Map([...this.roadMaterials, ...this.propMaterials]);
 
-  createMeshes(roads: BuiltRoadChunk | undefined, centerX: number, centerZ: number): THREE.Mesh[] {
+  createMeshes(
+    roads: BuiltRoadChunk | undefined,
+    centerX: number,
+    centerZ: number,
+    includeProps = true,
+  ): THREE.Mesh[] {
     if (!roads) return [];
     const meshes: THREE.Mesh[] = [];
     for (const surface of roads.surfaces) {
@@ -146,70 +151,72 @@ export class RoadRenderer {
       markings.position.set(centerX, 0, centerZ);
       meshes.push(markings);
     }
-    const matrix = new THREE.Matrix4();
-    const rotation = new THREE.Quaternion();
-    const scale = new THREE.Vector3(1, 1, 1);
-    for (const batch of roads.props) {
-      if (batch.positions.length < 3) continue;
-      if (batch.kind === 'tree') {
-        const count = batch.positions.length / 3;
-        // Lush Mediterranean tree (holm oak / stone pine style)
-        const trunkGeo = createTreeTrunkGeometry();
-        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a3424, roughness: 0.94 });
-        const trunkMesh = new THREE.InstancedMesh(trunkGeo, trunkMat, count);
-        // Foliage cluster.
-        const foliageGeo = createTreeFoliageGeometry();
-        const foliageMat = new THREE.MeshStandardMaterial({
-          color: 0x3b6632,
-          roughness: 0.76,
-          metalness: 0.04,
-        });
-        const foliageMesh = new THREE.InstancedMesh(foliageGeo, foliageMat, count);
-        for (let index = 0; index < count; index += 1) {
-          const offset = index * 3;
-          const x = batch.positions[offset] ?? 0;
-          const y = batch.positions[offset + 1] ?? 0;
-          const z = batch.positions[offset + 2] ?? 0;
-          const s = 0.8 + ((index * 37) % 5) * 0.12;
-          scale.set(s, s, s);
-          rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), batch.headings[index] ?? 0);
-          matrix.compose(new THREE.Vector3(x, y, z), rotation, scale);
-          trunkMesh.setMatrixAt(index, matrix);
-          foliageMesh.setMatrixAt(index, matrix);
+    if (includeProps) {
+      const matrix = new THREE.Matrix4();
+      const rotation = new THREE.Quaternion();
+      const scale = new THREE.Vector3(1, 1, 1);
+      for (const batch of roads.props) {
+        if (batch.positions.length < 3) continue;
+        if (batch.kind === 'tree') {
+          const count = batch.positions.length / 3;
+          // Lush Mediterranean tree (holm oak / stone pine style)
+          const trunkGeo = createTreeTrunkGeometry();
+          const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a3424, roughness: 0.94 });
+          const trunkMesh = new THREE.InstancedMesh(trunkGeo, trunkMat, count);
+          // Foliage cluster.
+          const foliageGeo = createTreeFoliageGeometry();
+          const foliageMat = new THREE.MeshStandardMaterial({
+            color: 0x3b6632,
+            roughness: 0.76,
+            metalness: 0.04,
+          });
+          const foliageMesh = new THREE.InstancedMesh(foliageGeo, foliageMat, count);
+          for (let index = 0; index < count; index += 1) {
+            const offset = index * 3;
+            const x = batch.positions[offset] ?? 0;
+            const y = batch.positions[offset + 1] ?? 0;
+            const z = batch.positions[offset + 2] ?? 0;
+            const s = 0.8 + ((index * 37) % 5) * 0.12;
+            scale.set(s, s, s);
+            rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), batch.headings[index] ?? 0);
+            matrix.compose(new THREE.Vector3(x, y, z), rotation, scale);
+            trunkMesh.setMatrixAt(index, matrix);
+            foliageMesh.setMatrixAt(index, matrix);
+          }
+          trunkMesh.computeBoundingSphere();
+          foliageMesh.computeBoundingSphere();
+          trunkMesh.position.set(centerX, 0, centerZ);
+          foliageMesh.position.set(centerX, 0, centerZ);
+          trunkMesh.castShadow = true;
+          foliageMesh.castShadow = true;
+          meshes.push(trunkMesh, foliageMesh);
+          continue;
         }
-        trunkMesh.computeBoundingSphere();
-        foliageMesh.computeBoundingSphere();
-        trunkMesh.position.set(centerX, 0, centerZ);
-        foliageMesh.position.set(centerX, 0, centerZ);
-        trunkMesh.castShadow = true;
-        foliageMesh.castShadow = true;
-        meshes.push(trunkMesh, foliageMesh);
-        continue;
-      }
-      const mesh = new THREE.InstancedMesh(
-        propGeometry(batch.kind),
-        this.materials.get(batch.kind),
-        batch.positions.length / 3,
-      );
-      for (let index = 0; index < batch.positions.length / 3; index += 1) {
-        const offset = index * 3;
-        const height = 0;
-        rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), batch.headings[index] ?? 0);
-        matrix.compose(
-          new THREE.Vector3(
-            batch.positions[offset] ?? 0,
-            (batch.positions[offset + 1] ?? 0) + height,
-            batch.positions[offset + 2] ?? 0,
-          ),
-          rotation,
-          scale,
+        const mesh = new THREE.InstancedMesh(
+          propGeometry(batch.kind),
+          this.materials.get(batch.kind),
+          batch.positions.length / 3,
         );
-        mesh.setMatrixAt(index, matrix);
+        for (let index = 0; index < batch.positions.length / 3; index += 1) {
+          const offset = index * 3;
+          const height = 0;
+          rotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), batch.headings[index] ?? 0);
+          matrix.compose(
+            new THREE.Vector3(
+              batch.positions[offset] ?? 0,
+              (batch.positions[offset + 1] ?? 0) + height,
+              batch.positions[offset + 2] ?? 0,
+            ),
+            rotation,
+            scale,
+          );
+          mesh.setMatrixAt(index, matrix);
+        }
+        mesh.computeBoundingSphere();
+        mesh.position.set(centerX, 0, centerZ);
+        mesh.castShadow = true;
+        meshes.push(mesh);
       }
-      mesh.computeBoundingSphere();
-      mesh.position.set(centerX, 0, centerZ);
-      mesh.castShadow = true;
-      meshes.push(mesh);
     }
     return meshes;
   }

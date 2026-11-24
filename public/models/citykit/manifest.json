@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "generator": "tools/generate_citykit.py",
+  "licence": "CC0-1.0 (original procedural geometry)",
+  "models": {
+    "street-lamp-lod0": {
+      "path": "models/citykit/street-lamp-lod0.glb",
+      "triangles": 126,
+      "bytes": 12084
+    },
+    "street-lamp-lod1": {
+      "path": "models/citykit/street-lamp-lod1.glb",
+      "triangles": 72,
+      "bytes": 9348
+    },
+    "tree-lod0": {
+      "path": "models/citykit/tree-lod0.glb",
+      "triangles": 372,
+      "bytes": 40988
+    },
+    "tree-lod1": {
+      "path": "models/citykit/tree-lod1.glb",
+      "triangles": 92,
+      "bytes": 13840
+    },
+    "traffic-signals-lod0": {
+      "path": "models/citykit/traffic-signals-lod0.glb",
+      "triangles": 124,
+      "bytes": 12432
+    },
+    "traffic-signals-lod1": {
+      "path": "models/citykit/traffic-signals-lod1.glb",
+      "triangles": 88,
+      "bytes": 10868
+    },
+    "stop-sign-lod0": {
+      "path": "models/citykit/stop-sign-lod0.glb",
+      "triangles": 84,
+      "bytes": 8028
+    },
+    "stop-sign-lod1": {
+      "path": "models/citykit/stop-sign-lod1.glb",
+      "triangles": 56,
+      "bytes": 6860
+    },
+    "give-way-sign-lod0": {
+      "path": "models/citykit/give-way-sign-lod0.glb",
+      "triangles": 52,
+      "bytes": 6628
+    },
+    "give-way-sign-lod1": {
+      "path": "models/citykit/give-way-sign-lod1.glb",
+      "triangles": 40,
+      "bytes": 5976
+    },
+    "chimney-lod0": {
+      "path": "models/citykit/chimney-lod0.glb",
+      "triangles": 52,
+      "bytes": 6460
+    },
+    "chimney-lod1": {
+      "path": "models/citykit/chimney-lod1.glb",
+      "triangles": 24,
+      "bytes": 3712
+    },
+    "balcony-lod0": {
+      "path": "models/citykit/balcony-lod0.glb",
+      "triangles": 84,
+      "bytes": 11144
+    },
+    "balcony-lod1": {
+      "path": "models/citykit/balcony-lod1.glb",
+      "triangles": 60,
+      "bytes": 8180
+    }
+  }
+}

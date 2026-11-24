@@ -254,3 +254,13 @@ Siguiendo las metodologías y directrices del repositorio `gamedev-skills` (`sou
   3. **Desarrollo Gameplay-First con sabor cacereño:** En lugar de sobrecargar el motor con cinemáticas o sistemas complejos, se diseña un bucle de oficios locales (Autobús Urbano Líneas 1 y 8, Repartidor en la Judería, Guía Turístico patrimonial y Carreras urbanas) con economía en euros (€).
   4. **Presentación comercial:** Ocultar el panel de depuración F3 por defecto (activable solo con `?debug=1` o tecla F3), manteniendo en pantalla un HUD limpio con radar circular táctico, velocímetro y notificaciones.
 - La estrategia al completo queda documentada de forma canónica en la carpeta `strategy/` (`NEW_STRATEGY.md`, `GAMEPLAY_AND_MISSIONS.md`, `ASSET_AND_DATA_PIPELINE.md` y `README.md`) y referenciada en `AGENTS.md`.
+
+# Revisión y alineación global de fases 0 a 11 con AGENTS.md (noviembre de 2026)
+
+- Se revisa exhaustivamente el estado de todas las fases (0 a 11) para certificar su cumplimiento con `AGENTS.md` y `strategy/`:
+  - **Fases 0 a 3 (Base, motor, datos y terreno):** Verificados 900 chunks y 41.527 elementos sin inconsistencias. 60 FPS estables con bucle de paso fijo.
+  - **Fases 4 a 7 (Viales, edificios e hitos):** 17/17 tests en verde. Geometría PBR y catálogo de hitos preservados.
+  - **Fases 8 a 11 (Personaje, vehículos, tráfico y policía):**
+    - Corregida la inestabilidad física del vehículo: se limita la velocidad vertical a ≤4,5 m/s y la velocidad angular a ≤3,0 rad/s para evitar que el chasis salga despedido al penetrar bordillos o uniones trimesh.
+    - Preservación de color al cargar el modelo GLB: el vehículo reclamado/robado transfiere su color original al material de pintura (`paint`) del sedán GLB en `createMergedVehicleVisual`, erradicando el cambio brusco de color a gris al subir.
+  - **Presentación comercial (HUD):** El panel de depuración F3 y los bordes de chunk se inicializan ocultos (`is-hidden`) por defecto, reservándose exclusivamente al parámetro `?debug=1` o a la tecla F3, ofreciendo un aspecto de juego comercial limpio con el minimapa táctico de radar activo.

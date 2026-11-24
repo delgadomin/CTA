@@ -1,0 +1,237 @@
+import * as THREE from 'three';
+import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
+import type { BuiltBuildingChunk, BuiltRoadChunk, RoadPropBatch } from './types';
+
+type LoadModel = (url: string, priority?: number) => Promise<GLTF>;
+
+interface KitPart {
+  readonly geometry: THREE.BufferGeometry;
+  readonly material: THREE.Material;
+}
+
+interface KitModel {
+  readonly lod0: readonly KitPart[];
+  readonly lod1: readonly KitPart[];
+}
+
+interface Placement {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+  readonly heading: number;
+  readonly scale: number;
+}
+
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+
+const ROAD_KIT_NAMES: Record<RoadPropBatch['kind'], string> = {
+  street_lamp: 'street-lamp',
+  tree: 'tree',
+  traffic_signals: 'traffic-signals',
+  stop: 'stop-sign',
+  give_way: 'give-way-sign',
+};
+
+const KIT_NAMES = [
+  ...Object.values(ROAD_KIT_NAMES),
+  'chimney',
+  'balcony',
+] as const;
+
+function partsFromGltf(gltf: GLTF): KitPart[] {
+  gltf.scene.updateMatrixWorld(true);
+  const parts: KitPart[] = [];
+  gltf.scene.traverse((node) => {
+    if (!(node instanceof THREE.Mesh)) return;
+    const source = Array.isArray(node.material) ? node.material[0] : node.material;
+    if (!source) return;
+    const geometry = node.geometry.clone();
+    geometry.applyMatrix4(node.matrixWorld);
+    geometry.userData.sharedGeometry = true;
+    parts.push({ geometry, material: source });
+  });
+  return parts;
+}
+
+function hashId(id: string): number {
+  let hash = 7;
+  for (let index = 0; index < id.length; index += 1)
+    hash = (hash * 31 + (id.charCodeAt(index) | 0)) >>> 0;
+  return hash;
+}
+
+function instanceParts(
+  parts: readonly KitPart[],
+  placements: readonly Placement[],
+  centerX: number,
+  centerZ: number,
+  localCoordinates: boolean,
+): THREE.Mesh[] {
+  if (placements.length === 0) return [];
+  const matrix = new THREE.Matrix4();
+  const rotation = new THREE.Quaternion();
+  const position = new THREE.Vector3();
+  const scale = new THREE.Vector3();
+  const meshes: THREE.Mesh[] = [];
+  for (const part of parts) {
+    const mesh = new THREE.InstancedMesh(part.geometry, part.material, placements.length);
+    for (let index = 0; index < placements.length; index += 1) {
+      const placement = placements[index];
+      if (!placement) continue;
+      rotation.setFromAxisAngle(Y_AXIS, placement.heading);
+      scale.setScalar(placement.scale);
+      position.set(
+        placement.x + (localCoordinates ? centerX : 0),
+        placement.y,
+        placement.z + (localCoordinates ? centerZ : 0),
+      );
+      matrix.compose(position, rotation, scale);
+      mesh.setMatrixAt(index, matrix);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.computeBoundingSphere();
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    meshes.push(mesh);
+  }
+  return meshes;
+}
+
+/** GLB-based street furniture and building details for the optional city kit. */
+export class CityKit {
+  private readonly baseUrl: URL;
+  private readonly models = new Map<string, KitModel>();
+  private ready = false;
+
+  constructor(worldBaseUrl: URL) {
+    this.baseUrl = new URL('models/citykit/', worldBaseUrl);
+  }
+
+  get isReady(): boolean {
+    return this.ready;
+  }
+
+  async prepare(load: LoadModel): Promise<void> {
+    const lod0Parts = new Map<string, KitPart[]>();
+    const lod1Parts = new Map<string, KitPart[]>();
+    const requests: Promise<void>[] = [];
+    for (const name of KIT_NAMES) {
+      requests.push(
+        load(this.url(name, 0), 20).then((gltf) => {
+          lod0Parts.set(name, partsFromGltf(gltf));
+        }),
+        load(this.url(name, 1), 20).then((gltf) => {
+          lod1Parts.set(name, partsFromGltf(gltf));
+        }),
+      );
+    }
+    const results = await Promise.allSettled(requests);
+    const failures = results.filter((result) => result.status === 'rejected');
+    if (failures.length > 0)
+      console.warn(`[citykit] ${failures.length} model(s) failed to load; using baseline props.`);
+    this.models.clear();
+    for (const name of KIT_NAMES) {
+      this.models.set(name, {
+        lod0: lod0Parts.get(name) ?? [],
+        lod1: lod1Parts.get(name) ?? [],
+      });
+    }
+    this.ready = failures.length === 0;
+  }
+
+  createRoadPropMeshes(
+    roads: BuiltRoadChunk | undefined,
+    centerX: number,
+    centerZ: number,
+    lod: number,
+  ): THREE.Mesh[] {
+    if (!this.ready || !roads) return [];
+    const meshes: THREE.Mesh[] = [];
+    for (const batch of roads.props) {
+      const name = ROAD_KIT_NAMES[batch.kind];
+      const model = this.models.get(name);
+      if (!model) continue;
+      const placements = this.placementsFromBatch(batch, lod === 0 ? model.lod0 : model.lod1);
+      meshes.push(...instanceParts(placements.parts, placements.positions, centerX, centerZ, true));
+    }
+    return meshes;
+  }
+
+  createBuildingDetailMeshes(
+    buildings: BuiltBuildingChunk | undefined,
+    centerX: number,
+    centerZ: number,
+    lod: number,
+  ): THREE.Mesh[] {
+    if (!this.ready || !buildings || lod === 2) return [];
+    const meshes: THREE.Mesh[] = [];
+    const chimneys = this.models.get('chimney');
+    if (chimneys) {
+      const parts = lod === 0 ? chimneys.lod0 : chimneys.lod1;
+      const placements: Placement[] = [];
+      for (const anchor of buildings.roofAnchors) {
+        const hash = hashId(anchor.buildingId);
+        if (hash % 3 === 0) continue;
+        placements.push({
+          x: anchor.position[0],
+          y: anchor.position[1],
+          z: anchor.position[2],
+          heading: (hash % 8) * (Math.PI / 4),
+          scale: 0.85 + ((hash >>> 5) % 4) * 0.1,
+        });
+      }
+      meshes.push(...instanceParts(parts, placements, centerX, centerZ, false));
+    }
+    const balconies = this.models.get('balcony');
+    if (balconies) {
+      const parts = lod === 0 ? balconies.lod0 : balconies.lod1;
+      const placements: Placement[] = buildings.signSlots.map((slot) => ({
+        x: slot.position[0],
+        y: slot.position[1] - 1.1,
+        z: slot.position[2],
+        heading: slot.heading,
+        scale: THREE.MathUtils.clamp(slot.width / 1.3, 0.75, 1.5),
+      }));
+      meshes.push(...instanceParts(parts, placements, centerX, centerZ, false));
+    }
+    return meshes;
+  }
+
+  dispose(): void {
+    for (const model of this.models.values()) {
+      for (const part of [...model.lod0, ...model.lod1]) part.geometry.dispose();
+    }
+    this.models.clear();
+    this.ready = false;
+  }
+
+  private url(name: string, lod: number): string {
+    return new URL(`${name}-lod${lod}.glb`, this.baseUrl).href;
+  }
+
+  private placementsFromBatch(
+    batch: RoadPropBatch,
+    parts: readonly KitPart[],
+  ): { parts: readonly KitPart[]; positions: Placement[] } {
+    const count = Math.min(
+      batch.positions.length / 3,
+      batch.headings.length,
+    );
+    const positions: Placement[] = [];
+    for (let index = 0; index < count; index += 1) {
+      const offset = index * 3;
+      const x = batch.positions[offset];
+      const y = batch.positions[offset + 1];
+      const z = batch.positions[offset + 2];
+      if (x === undefined || y === undefined || z === undefined) continue;
+      positions.push({
+        x,
+        y,
+        z,
+        heading: batch.headings[index] ?? 0,
+        scale: batch.kind === 'tree' ? 0.82 + ((index * 37) % 5) * 0.1 : 1,
+      });
+    }
+    return { parts, positions };
+  }
+}

@@ -526,3 +526,20 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 ### Verificación
 - Documentación técnica y estratégica revisada y enlazada.
 - No se ha tocado código de producción conforme a la instrucción directa del usuario ("No toques código").
+
+## Revisión y alineación global de fases 0 a 11 con AGENTS.md (completada)
+
+### Hecho
+- **Revisión integral de arquitectura por fases (0 a 11):**
+  - **Fases 0 a 3:** Verificada la infraestructura de Vite, WebGL2, Worker de chunks y Rapier WASM. El dataset de 900 chunks y 41.527 elementos mantiene su integridad 100% verificada (`verify-world.mjs`).
+  - **Fases 4 a 7:** Red viaria con 4.144 conexiones navegables, edificios zonificados con atlas PBR y catálogo de hitos monumentales con 17/17 tests passing.
+  - **Fases 8 a 11:**
+    - Erradicado el salto violento y despegue de vehículos: limitado el impulso vertical a ≤4,5 m/s y el cabeceo angular a ≤3,0 rad/s en `Vehicle.update`, y reinicializada la velocidad a 0 al requisar vehículos.
+    - Preservado el color de carrocería en la carga del modelo GLB: el sedán transfiere el color del vehículo al material `paint`, eliminando el salto brusco a gris.
+  - **Presentación comercial (Pilar 4):** El panel de diagnóstico técnico y los bordes de chunks se ocultan por defecto (`is-hidden`), mostrándose únicamente bajo `?debug=1` o pulsación de F3. El HUD muestra de forma limpia el minimapa de radar táctico y las indicaciones del juego.
+
+### Verificación
+- `npm run lint`: sin errores.
+- `npm run typecheck`: sin errores de TypeScript.
+- `npm test`: 47/47 pruebas unitarias pasando (13/13 suites).
+- `npm run build`: compilación de producción exitosa en 5.3s.
