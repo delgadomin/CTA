@@ -579,8 +579,9 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 
 ### Verificación
 - `format:check` (con salto de fin de línea), `lint`, `typecheck`, `test` (53/53) y `build` pasan.
-- Navegador con 5 chunks: peatón y sedán responden 200, cero errores de consola, 111 draw calls y 447.755 triángulos a pie; 485.183 triángulos dentro del coche. El sedán se reexportó con `colormap.png` embebida para eliminar la única petición externa detectada.
-- Capturas para revisión humana: `reports/cc0-on-foot.png` y `reports/cc0-in-car.png` (fuera del repo). El FPS de la prueba (1–2) no es representativo porque Chromium usa WebGL por software.
+- Navegador con 6 chunks: peatón y sedán responden 200, cero errores de consola, 111 draw calls y 458.315 triángulos a pie; 143 draw calls y 530.025 triángulos dentro del coche. El sedán se reexportó con `colormap.png` embebida para eliminar la única petición externa detectada.
+- Corregido el peatón invisible: el material del FBX llegaba con alfa 0 y el exportador glTF descartaba la escala del rig; el generador ahora fuerza material opaco y escala el nodo raíz del GLB a 0,5 eliminando la pista de escala que la animación restauraba.
+- Render aislado del peatón con THREE en navegador: 21.971 píxeles no fondo, caja 163,159–476,488 en 640×640, coherente con 1,88 m a 4 m de cámara. Capturas: `reports/character-isolated.png`, `reports/cc0-on-foot-fixed.png` y `reports/cc0-in-car-fixed.png` (fuera del repo). El FPS de la prueba (2–3) no es representativo porque Chromium usa WebGL por software.
 
 ### Pendiente
 - Revisar visualmente la orientación del peatón, la altura de la carrocería y que no haya ruedas duplicadas.

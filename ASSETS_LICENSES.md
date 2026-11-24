@@ -46,5 +46,5 @@ Para regenerar los derivados (requiere Blender 5.x y los paquetes CC0 descargado
 
 ## Pendiente
 
-- Revisar en navegador la escala del peatón y la alineación del sedán con el colisionador y las ruedas animadas.
+- Revisar en navegador la orientación del peatón y la alineación del sedán con el colisionador y las ruedas animadas.
 - Valorar variantes adicionales de Kenney (taxi, patrulla) para tráfico ambiental sin romper el instanciado por color.
