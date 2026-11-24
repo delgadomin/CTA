@@ -217,3 +217,10 @@ Siguiendo las metodologías y directrices del repositorio `gamedev-skills` (`sou
 
 ## 3. Jugabilidad y respuesta cinemática de cámara (Trauma / Shake)
 - Se incorpora el modelo matemático de trauma cuadrático en `CameraRig.addTrauma()`: en impactos de tráfico o atropellos, la cámara experimenta una sacudida proporcional amortiguada en 3 ejes, dotando a la conducción de peso y fisicidad.
+
+
+## Dirección visual y atmósfera
+
+- Del repositorio `jhanva/gamedev-skills` se adapta la recomendación de mantener una paleta coherente y siluetas fáciles de leer. Sus instrucciones para Godot y pixel art no se aplican al juego 3D de Three.js.
+- El cielo de tarde, las nubes y el resplandor solar se generan con Canvas; la luz cálida proyecta sombras direccionales con el tamaño definido por el preset gráfico.
+- Los peatones separan el cuerpo y la ropa en mallas instanciadas. Una paleta terrosa varía las prendas sin teñir piel ni rostro; suma una llamada de dibujo.
