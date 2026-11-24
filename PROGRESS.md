@@ -362,3 +362,16 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - Las calles asfaltadas contrastan más con aceras y piedra. Los peatones conservan colores naturales de piel y ropa; coches y patrullas tienen cristales separados, detalles de rueda y carrocería.
 - El LOD lejano de edificios conserva la huella de calle original y la forma de cubierta, en lugar de usar rectángulos alineados al mapa.
 - Pendiente: comprobar visualmente en ejecución local y revisar CI. La web pública sigue mostrando `main`; este trabajo está en el PR de mejoras y no aparece hasta que se integre y Pages termine su despliegue.
+
+### Pasada de atmósfera y personajes
+
+- El cielo plano se sustituye por un cielo de tarde procedural con bandas de nubes y resplandor solar; la iluminación cálida activa sombras direccionales según el preset de calidad.
+- Los peatones usan prendas de color variable en una malla instanciada separada, conservando tonos de piel y rasgos faciales.
+- Pendiente: inspección visual en navegador y revisión de los checks de GitHub.
+
+### Modelos CC0 locales
+
+- Jugador: Casual Walker de Tevy en LOD0, con idle y walk; mantiene el modelo anterior como respaldo de carga.
+- Peatones ambientales: LOD1 del mismo modelo con una pose walk horneada y render instanciado para conservar un coste acotado.
+- Coches conducibles: sedán genérico de Innerscene con piezas agrupadas por material al cargar; coches ambientales y patrullas conservan su malla instanciada.
+- Los GLB se sirven desde `public/models/`; licencias, fuentes y dimensiones están en `ATTRIBUTION.md`.

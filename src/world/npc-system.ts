@@ -1,9 +1,10 @@
 import * as THREE from 'three';
+import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import type { Camera } from 'three';
 import type { AgentColliderSink } from './agent-colliders';
 import { RoadGraph } from './road-graph';
 import type { AgentMode } from './road-graph';
-import { createPedestrianMesh, createVehicleMesh, disposeAgentMesh } from './npc-models';
+import { createDetailedPedestrianGeometry, createPedestrianMeshes, createVehicleMesh, disposeAgentMesh } from './npc-models';
 
 export interface NpcWorld {
   groundHeightAt(x: number, z: number): number | undefined;
@@ -33,7 +34,7 @@ const LOD_MID_METERS = 210;
 /**
  * Ambient pedestrians and traffic driven by the OSM-derived road graph.
  * All agent state lives in typed arrays and instances are pooled, so the hot
- * loop performs no per-agent allocations and stays at two draw calls.
+ * loop performs no per-agent allocations and stays at three draw calls.
  */
 export class NpcSystem {
   readonly group = new THREE.Group();
@@ -41,6 +42,8 @@ export class NpcSystem {
   private readonly colliders: AgentColliderSink | undefined;
   private readonly colliderIds: Int32Array;
   private readonly pedestrianMesh: THREE.InstancedMesh;
+  private readonly pedestrianOutfitMesh: THREE.InstancedMesh;
+  private detailedPedestrianModel = false;
   private readonly vehicleMesh: THREE.InstancedMesh;
   private readonly pedestrianCapacity: number;
   private readonly vehicleCapacity: number;
@@ -69,7 +72,10 @@ export class NpcSystem {
   private readonly fleeZ: Float32Array;
   private readonly freePedestrians: number[] = [];
   private readonly freeVehicles: number[] = [];
-  private readonly pedestrianColors: THREE.Color[] = [];
+  private readonly pedestrianColors: THREE.Color[] = [
+    0x526c79, 0x8a5142, 0x68704f, 0xb19a76,
+    0x354958, 0x78545a, 0x8d8068, 0x53635d,
+  ].map((color) => new THREE.Color(color));
   private readonly vehicleColors: THREE.Color[] = [];
   private readonly dummy = new THREE.Object3D();
   private readonly cameraDirection = new THREE.Vector3();
@@ -91,9 +97,11 @@ export class NpcSystem {
     this.vehicleCapacity = Math.max(1, counts.vehicles);
     const capacity = this.pedestrianCapacity + this.vehicleCapacity;
     this.colliderIds = new Int32Array(capacity).fill(-1);
-    this.pedestrianMesh = createPedestrianMesh(this.pedestrianCapacity);
+    const pedestrianMeshes = createPedestrianMeshes(this.pedestrianCapacity);
+    this.pedestrianMesh = pedestrianMeshes.body;
+    this.pedestrianOutfitMesh = pedestrianMeshes.outfit;
     this.vehicleMesh = createVehicleMesh(this.vehicleCapacity);
-    this.group.add(this.pedestrianMesh, this.vehicleMesh);
+    this.group.add(this.pedestrianMesh, this.pedestrianOutfitMesh, this.vehicleMesh);
     this.active = new Uint8Array(capacity);
     this.kind = new Uint8Array(capacity);
     this.x = new Float32Array(capacity);
@@ -119,7 +127,6 @@ export class NpcSystem {
     this.fleeZ = new Float32Array(capacity);
     for (let slot = this.pedestrianCapacity - 1; slot >= 0; slot -= 1) this.freePedestrians.push(slot);
     for (let slot = capacity - 1; slot >= this.pedestrianCapacity; slot -= 1) this.freeVehicles.push(slot);
-    for (let i = 0; i < 8; i += 1) this.pedestrianColors.push(new THREE.Color().setHSL(i / 8, 0.45, 0.42 + (i % 2) * 0.12));
     for (let i = 0; i < 6; i += 1) this.vehicleColors.push(new THREE.Color().setHSL((i * 0.17) % 1, 0.52, 0.38 + (i % 3) * 0.09));
   }
 
@@ -134,6 +141,18 @@ export class NpcSystem {
 
   get diagnostics(): { readonly reroutes: number; readonly despawns: number } {
     return { reroutes: this.totalReroutes, despawns: this.totalDespawns };
+  }
+
+  setPedestrianModel(gltf: GLTF): void {
+    const detailed = createDetailedPedestrianGeometry(gltf);
+    this.pedestrianMesh.geometry.dispose();
+    const originalMaterial = this.pedestrianMesh.material;
+    if (Array.isArray(originalMaterial)) originalMaterial.forEach((item) => item.dispose());
+    else originalMaterial.dispose();
+    this.pedestrianMesh.geometry = detailed.geometry;
+    this.pedestrianMesh.material = detailed.material;
+    this.pedestrianOutfitMesh.visible = false;
+    this.detailedPedestrianModel = true;
   }
 
   /** Pedestrians within the radius run away and avoid the threat at junctions. */
@@ -240,10 +259,13 @@ export class NpcSystem {
       if (this.active[slot] === 1) this.render(slot);
     }
     this.pedestrianMesh.count = this.activePedestrians;
+    this.pedestrianOutfitMesh.count = this.activePedestrians;
     this.vehicleMesh.count = this.activeVehicles;
     this.pedestrianMesh.instanceMatrix.needsUpdate = true;
+    this.pedestrianOutfitMesh.instanceMatrix.needsUpdate = true;
     this.vehicleMesh.instanceMatrix.needsUpdate = true;
     if (this.pedestrianMesh.instanceColor) this.pedestrianMesh.instanceColor.needsUpdate = true;
+    if (this.pedestrianOutfitMesh.instanceColor) this.pedestrianOutfitMesh.instanceColor.needsUpdate = true;
     if (this.vehicleMesh.instanceColor) this.vehicleMesh.instanceColor.needsUpdate = true;
   }
 
@@ -251,8 +273,9 @@ export class NpcSystem {
     for (let slot = 0; slot < this.active.length; slot += 1) {
       if (this.active[slot] === 1) this.release(slot);
     }
-    this.group.remove(this.pedestrianMesh, this.vehicleMesh);
+    this.group.remove(this.pedestrianMesh, this.pedestrianOutfitMesh, this.vehicleMesh);
     disposeAgentMesh(this.pedestrianMesh);
+    disposeAgentMesh(this.pedestrianOutfitMesh);
     disposeAgentMesh(this.vehicleMesh);
   }
 
@@ -492,7 +515,8 @@ export class NpcSystem {
   }
 
   private render(slot: number): void {
-    const mesh = this.kind[slot] === 0 ? this.pedestrianMesh : this.vehicleMesh;
+    const isPedestrian = this.kind[slot] === 0;
+    const mesh = isPedestrian ? this.pedestrianMesh : this.vehicleMesh;
     const instance = this.kind[slot] === 0 ? slot : slot - this.pedestrianCapacity;
     const bob = this.kind[slot] === 0 ? Math.sin(this.elapsed * 8 + slot) * Math.min((this.speed[slot] ?? 0) / 8, 0.05) : 0;
     this.dummy.position.set(this.x[slot] ?? 0, (this.y[slot] ?? 0) + bob, this.z[slot] ?? 0);
@@ -500,11 +524,20 @@ export class NpcSystem {
     this.dummy.scale.setScalar(this.scale[slot] ?? 1);
     this.dummy.updateMatrix();
     mesh.setMatrixAt(instance, this.dummy.matrix);
-    const palette = this.kind[slot] === 0 ? this.pedestrianColors : this.vehicleColors;
+    if (isPedestrian) this.pedestrianOutfitMesh.setMatrixAt(instance, this.dummy.matrix);
+    const palette = isPedestrian ? this.pedestrianColors : this.vehicleColors;
     const color = palette[this.colorIndex[slot] ?? 0] ?? palette[0];
-    // Crowd vertex colors already separate skin, clothing and shoes. Applying
-    // one instance tint to the whole person colored every face and garment.
-    if (color && this.kind[slot] !== 0) mesh.setColorAt(instance, this.temporaryColor.copy(color));
+    // Instance colors provide clothing variation on the imported crowd model.
+    if (color) {
+      if (isPedestrian) {
+        this.temporaryColor.copy(color);
+        if (this.detailedPedestrianModel) this.temporaryColor.set(0xffffff);
+        this.pedestrianMesh.setColorAt(instance, this.temporaryColor);
+        if (this.pedestrianOutfitMesh.visible) this.pedestrianOutfitMesh.setColorAt(instance, this.temporaryColor.copy(color));
+      } else {
+        mesh.setColorAt(instance, this.temporaryColor.copy(color));
+      }
+    }
   }
 
   private release(slot: number): void {

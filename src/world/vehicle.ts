@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
 import type { World } from '@dimforge/rapier3d-compat';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
+import type { ChunkManager } from './chunk-manager';
+import { createSedanBodyGeometry, createWheelArchGeometry } from './npc-models';
 
 
 const CAR_COLOR = 0xc94a3a;
@@ -8,6 +12,7 @@ const WHEEL_COLOR = 0x1a1a1a;
 
 export class Vehicle {
   readonly group: THREE.Group;
+  private readonly proceduralVisual = new THREE.Group();
   readonly chassisBody: RAPIER.RigidBody;
   readonly controller: RAPIER.DynamicRayCastVehicleController;
   private readonly wheels: THREE.Mesh[] = [];
@@ -16,6 +21,7 @@ export class Vehicle {
   constructor(world: World, x: number, y: number, z: number) {
     this.world = world;
     this.group = new THREE.Group();
+    this.group.add(this.proceduralVisual);
 
     // Chassis rigid body.
     const chassisDesc = RAPIER.RigidBodyDesc.dynamic()
@@ -62,21 +68,18 @@ export class Vehicle {
     }
 
     // Visual mesh.
-    const bodyGeo = new THREE.CapsuleGeometry(0.78, 2.15, 4, 10);
-    bodyGeo.rotateX(Math.PI / 2);
-    bodyGeo.scale(1, 0.5, 1);
+    const bodyGeo = createSedanBodyGeometry();
     const bodyMat = new THREE.MeshStandardMaterial({ color: CAR_COLOR, roughness: 0.4, metalness: 0.3 });
     const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
-    bodyMesh.position.y = 0.32;
     bodyMesh.castShadow = true;
-    this.group.add(bodyMesh);
+    this.proceduralVisual.add(bodyMesh);
 
     const cabinGeo = taperedCabinGeometry();
     const cabinMat = new THREE.MeshStandardMaterial({ color: CAR_COLOR, roughness: 0.38, metalness: 0.18 });
     const cabin = new THREE.Mesh(cabinGeo, cabinMat);
     cabin.position.set(0, 0, -0.18);
     cabin.castShadow = true;
-    this.group.add(cabin);
+    this.proceduralVisual.add(cabin);
 
     const trimMat = new THREE.MeshStandardMaterial({ color: 0x34383b, roughness: 0.62, metalness: 0.22 });
     const lightMat = new THREE.MeshStandardMaterial({ color: 0xffefbb, emissive: 0x392a0b, roughness: 0.28 });
@@ -85,7 +88,7 @@ export class Vehicle {
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(x, y, z);
       mesh.castShadow = true;
-      this.group.add(mesh);
+      this.proceduralVisual.add(mesh);
     };
     const glassMat = new THREE.MeshStandardMaterial({ color: 0x263e4a, roughness: 0.2, metalness: 0.12, side: THREE.DoubleSide });
     const addPane = (points: readonly (readonly [number, number, number])[]) => {
@@ -101,14 +104,21 @@ export class Vehicle {
       addPane([[side * 0.731, 0.58, 0.72], [side * 0.731, 0.58, 0.04], [side * 0.535, 1.08, 0.04], [side * 0.535, 1.08, 0.42]]);
       addPane([[side * 0.731, 0.58, -0.04], [side * 0.731, 0.58, -0.68], [side * 0.535, 1.08, -0.48], [side * 0.535, 1.08, -0.04]]);
     }
-    addDetail(new THREE.BoxGeometry(1.9, 0.14, 0.16), trimMat, 0, 0.2, 2.02);
-    addDetail(new THREE.BoxGeometry(1.9, 0.14, 0.16), trimMat, 0, 0.2, -2.02);
-    addDetail(new THREE.BoxGeometry(0.62, 0.17, 0.045), trimMat, 0, 0.35, 2.02);
-    for (const x of [-0.2, 0, 0.2]) addDetail(new THREE.BoxGeometry(0.025, 0.14, 0.05), trimMat, x, 0.35, 2.05);
+    addDetail(new THREE.CapsuleGeometry(0.07, 1.74, 2, 8), trimMat, 0, 0.14, 2.02);
+    addDetail(new THREE.CapsuleGeometry(0.07, 1.74, 2, 8), trimMat, 0, 0.14, -2.02);
+    addDetail(new THREE.BoxGeometry(0.58, 0.13, 0.045), trimMat, 0, 0.3, 2.04);
+    for (const x of [-0.2, -0.1, 0, 0.1, 0.2]) addDetail(new THREE.BoxGeometry(0.018, 0.11, 0.05), trimMat, x, 0.3, 2.065);
     for (const side of [-1, 1]) {
       addDetail(new THREE.BoxGeometry(0.32, 0.2, 0.1), lightMat, side * 0.62, 0.4, 1.91);
       addDetail(new THREE.BoxGeometry(0.28, 0.17, 0.1), rearLightMat, side * 0.66, 0.42, -1.91);
       addDetail(new THREE.BoxGeometry(0.16, 0.12, 0.22), trimMat, side * 0.82, 0.83, 0.48);
+      for (const z of [-1.32, 1.32]) {
+        const arch = new THREE.Mesh(createWheelArchGeometry(side, z, 0), bodyMat);
+        arch.castShadow = true;
+        this.proceduralVisual.add(arch);
+      }
+      addDetail(new THREE.CapsuleGeometry(0.014, 0.34, 2, 6), trimMat, side * 0.86, 0.4, 0.12);
+      addDetail(new THREE.CapsuleGeometry(0.02, 0.08, 2, 6), trimMat, side * 0.86, 0.6, 0.38);
     }
 
     const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 12);
@@ -120,12 +130,26 @@ export class Vehicle {
     for (const wp of wheelPositions) {
       const w = new THREE.Mesh(wheelGeo, wheelMat);
       w.position.set(wp.x, 0.0, wp.z);
-      this.group.add(w);
+      this.proceduralVisual.add(w);
       this.wheels.push(w);
       const hub = new THREE.Mesh(hubGeo, hubMat);
       hub.position.x = 0.02;
       w.add(hub);
     }
+  }
+
+  async loadModel(chunks: ChunkManager, url: string): Promise<void> {
+    const gltf = await chunks.loadModel(url, 80);
+    const model = createMergedVehicleVisual(gltf);
+    model.name = 'CC0 detailed graphite sedan';
+    model.rotation.y = Math.PI / 2;
+    model.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      object.castShadow = true;
+      object.receiveShadow = true;
+    });
+    this.group.add(model);
+    this.proceduralVisual.visible = false;
   }
 
   update(deltaSeconds: number, input: { forward: boolean; backward: boolean; left: boolean; right: boolean; handbrake: boolean }): void {
@@ -179,6 +203,64 @@ export class Vehicle {
   dispose(): void {
     this.world.removeRigidBody(this.chassisBody);
   }
+}
+
+function createMergedVehicleVisual(gltf: GLTF): THREE.Group {
+  const source = gltf.scene.clone(true);
+  source.updateMatrixWorld(true);
+  const batches = new Map<string, { material: THREE.Material; geometries: THREE.BufferGeometry[] }>();
+  const bounds = new THREE.Box3().setFromObject(source);
+  if (bounds.isEmpty()) throw new Error('The sedan model has no renderable geometry.');
+  const center = bounds.getCenter(new THREE.Vector3());
+  const scale = new THREE.Vector3(0.84, 1.3, 0.98);
+
+  source.traverse((object) => {
+    if (!(object instanceof THREE.Mesh) || object instanceof THREE.SkinnedMesh) return;
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    const sourceGeometry = object.geometry;
+    const groups = sourceGeometry.groups.length > 0 ? sourceGeometry.groups : [{ start: 0, count: sourceGeometry.index?.count ?? sourceGeometry.getAttribute('position')?.count ?? 0, materialIndex: 0 }];
+    for (const group of groups) {
+      const material = materials[group.materialIndex ?? 0];
+      if (!material) continue;
+      const geometry = geometryForMaterialGroup(sourceGeometry, group.start, group.count, sourceGeometry.groups.length > 0);
+      geometry.applyMatrix4(object.matrixWorld);
+      geometry.translate(-center.x, -center.y, -center.z);
+      geometry.scale(scale.x, scale.y, scale.z);
+      const signature = Object.entries(geometry.attributes).map(([name, attribute]) => `${name}:${attribute.itemSize}:${attribute.normalized}`).sort().join('|');
+      const key = `${material.uuid}:${signature}:${Boolean(geometry.index)}`;
+      const batch = batches.get(key) ?? { material, geometries: [] };
+      batch.geometries.push(geometry);
+      batches.set(key, batch);
+    }
+  });
+
+  const result = new THREE.Group();
+  for (const batch of batches.values()) {
+    const geometry = mergeGeometries(batch.geometries, false);
+    for (const sourceGeometry of batch.geometries) sourceGeometry.dispose();
+    if (!geometry) continue;
+    geometry.computeBoundingSphere();
+    result.add(new THREE.Mesh(geometry, batch.material));
+  }
+  if (result.children.length === 0) throw new Error('The sedan model could not be combined into renderable meshes.');
+  return result;
+}
+
+function geometryForMaterialGroup(source: THREE.BufferGeometry, start: number, count: number, selectRange: boolean): THREE.BufferGeometry {
+  const geometry = source.clone();
+  geometry.clearGroups();
+  if (!selectRange) return geometry;
+  if (source.index) {
+    geometry.setIndex(new THREE.BufferAttribute(source.index.array.slice(start, start + count), 1));
+    return geometry;
+  }
+  for (const [name, attribute] of Object.entries(source.attributes)) {
+    const begin = start * attribute.itemSize;
+    const end = (start + count) * attribute.itemSize;
+    const array = attribute instanceof THREE.InterleavedBufferAttribute ? attribute.data.array : attribute.array;
+    geometry.setAttribute(name, new THREE.BufferAttribute(array.slice(begin, end), attribute.itemSize, attribute.normalized));
+  }
+  return geometry;
 }
 
 function taperedCabinGeometry(): THREE.BufferGeometry {

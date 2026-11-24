@@ -84,8 +84,14 @@
 
 - La colisión peatonal consulta la altura de las caras triangulares renderizadas de calzada, bordillo y acera, además de la altura MDT05. Se usa un índice espacial por chunk para mantener acotada la consulta; el desnivel visual del pavimento deja de hacer que el jugador se hunda bajo la calle.
 - Las fachadas conservan la huella OSM también en LOD lejano y las cubiertas mantienen la forma inferida, en vez de sustituir toda planta por la caja de su bounding box.
-- Los vehículos y peatones siguen siendo mallas procedurales originales de bajo poligonaje, ahora con cristales separados, detalles de rueda/carrocería y siluetas humanas con prendas diferenciadas. No se incorporan assets ni contenido de GTA/Rockstar.
+- Los vehículos ambientales y patrullas siguen siendo mallas procedurales instanciadas. El jugador y la multitud usan un personaje rigged CC0 en GLB local; los coches conducibles usan un sedán CC0 local agrupado por material para limitar llamadas de dibujo. No se incorpora contenido de GTA/Rockstar.
 - El asfalto usa un valor más oscuro que piedra, hormigón y acera para separar visualmente la calzada de los espacios peatonales sin inventar marcas viales.
+
+## Dirección visual y atmósfera
+
+- Se adapta del repositorio `jhanva/gamedev-skills` la recomendación de mantener una paleta coherente y siluetas fáciles de leer; sus instrucciones de Godot/pixel art no se aplican al juego 3D de Three.js.
+- El cielo de tarde, las nubes y el resplandor solar se generan con Canvas y geometría local. La luz cálida usa sombras direccionales con el tamaño de mapa definido por el preset gráfico; no se incorporan recursos externos.
+- Los peatones separan el cuerpo y la ropa en dos mallas instanciadas. Una paleta terrosa varía las prendas sin teñir piel ni rostro; el coste añade una llamada de dibujo.
 
 - El inventario usa los nombres orientativos de la guía del proyecto y separa los objetivos de `cc-monumental` de los que requieren una futura región de ciudad. Los nombres se comparan exactamente después de normalizar mayúsculas, espacios y tildes; no se aplican coincidencias difusas.
 - Un objetivo no encontrado se informa como ausente del extracto OSM de la región, no como inexistente. Los objetivos de ciudad se muestran fuera de alcance mientras se procesa `cc-monumental`.
@@ -134,13 +140,20 @@
 - `agentsByLod` cuenta agentes ambientales cercanos, intermedios y lejanos; no incluye patrullas. La población total de peatones y coches se muestra aparte en `agents`.
 - No se añaden dependencias: Playwright ya figuraba en `devDependencies` y los overlays usan Three.js.
 
+## Modelos externos de personajes y coches (noviembre de 2026)
+
+- Se incorporan dos assets CC0 con atribución en `ATTRIBUTION.md`: Casual Walker de Tevy y Graphite four-door sedan de Innerscene.
+- LOD0 del personaje (27.997 triángulos) se usa en el jugador con animaciones idle/walk; LOD1 (8.999 triángulos) se usa en los peatones ambientales tras hornear una pose, manteniendo instancing y variaciones de color.
+- El GLB del sedán contiene 304 mallas fuente. Se transforma a los ejes y escala del juego y se fusiona por material durante la carga, reduciendo el número de lotes de dibujo; la malla procedural permanece como respaldo de carga.
+- Coches ambientales y patrullas conservan la malla instanciada; el sedán detallado se aplica a los vehículos conducibles para mantener acotado el coste gráfico.
+
 # LOD de simulación de agentes (post integración del PR #4)
 
 ## Ajustes visuales y de movimiento (noviembre de 2026)
 
 - La colisión peatonal consulta la altura de las caras triangulares renderizadas de calzada, bordillo y acera, además de la altura MDT05. Se usa un índice espacial por chunk para mantener acotada la consulta; el desnivel visual del pavimento deja de hacer que el jugador se hunda bajo la calle.
 - Las fachadas conservan la huella OSM también en LOD lejano y las cubiertas mantienen la forma inferida, en vez de sustituir toda planta por la caja de su bounding box.
-- Los vehículos y peatones siguen siendo mallas procedurales originales de bajo poligonaje, ahora con cristales separados, detalles de rueda/carrocería y siluetas humanas con prendas diferenciadas. No se incorporan assets ni contenido de GTA/Rockstar.
+- Los vehículos ambientales y patrullas siguen siendo mallas procedurales instanciadas. El jugador y la multitud usan un personaje rigged CC0 en GLB local; los coches conducibles usan un sedán CC0 local agrupado por material para limitar llamadas de dibujo. No se incorpora contenido de GTA/Rockstar.
 - El asfalto usa un valor más oscuro que piedra, hormigón y acera para separar visualmente la calzada de los espacios peatonales sin inventar marcas viales.
 
 - El quinto commit del fork (`251c794`) proponía un LOD por distancia, pero estaba escrito contra un `NpcSystem` sin los colisionadores de la fase 11. Se adapta la idea al sistema actual en lugar de aplicar el parche tal cual.

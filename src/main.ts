@@ -15,6 +15,7 @@ import { PoliceSystem } from './world/police-system';
 import { RoadGraph } from './world/road-graph';
 import type { RoadNetwork } from './world/types';
 import { Vehicle } from './world/vehicle';
+import { createSkyDome } from './world/atmosphere';
 import { createPhysicsWorld } from './world/terrain-physics';
 import type { World } from '@dimforge/rapier3d-compat';
 import './style.css';
@@ -53,26 +54,14 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.setClearColor('#a9c2c4');
+renderer.setClearColor('#c6c9c1');
+renderer.toneMappingExposure = 1.08;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#b7d0d8');
-scene.fog = new THREE.Fog('#b7d0d8', quality.viewDistance * 0.4, quality.viewDistance);
-// Gradient sky sphere.
-const skyGeometry = new THREE.SphereGeometry(quality.viewDistance * 1.2, 32, 16);
-const skyPositions = skyGeometry.attributes.position as THREE.BufferAttribute;
-const skyColors = new Float32Array(skyPositions.count * 3);
-for (let i = 0; i < skyPositions.count; i += 1) {
-  const y = skyPositions.getY(i);
-  const t = Math.max(0, Math.min(1, (y + quality.viewDistance * 0.5) / (quality.viewDistance * 1.2)));
-  skyColors[i * 3] = 0.72 + t * 0.12;
-  skyColors[i * 3 + 1] = 0.82 + t * 0.1;
-  skyColors[i * 3 + 2] = 0.88 + t * 0.08;
-}
-skyGeometry.setAttribute('color', new THREE.BufferAttribute(skyColors, 3));
-const skyMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, depthWrite: false });
-const sky = new THREE.Mesh(skyGeometry, skyMaterial);
-scene.add(sky);
+const atmosphericHaze = '#c6c9c1';
+scene.background = new THREE.Color(atmosphericHaze);
+scene.fog = new THREE.Fog(atmosphericHaze, quality.viewDistance * 0.42, quality.viewDistance);
+scene.add(createSkyDome(quality.viewDistance * 1.2));
 const camera = new THREE.PerspectiveCamera(54, window.innerWidth / window.innerHeight, 0.5, quality.viewDistance + 50);
 camera.position.set(0, 570, 72);
 const input = new InputManager(canvas);
@@ -80,10 +69,22 @@ const cameraRig = new CameraRig(camera, input, 5.2, 0.002, 2.07, -0.12);
 cameraRig.mode = 'thirdPerson';
 const logger = new Logger('world', 'info');
 const character = new Character();
-scene.add(new THREE.HemisphereLight('#e7eff0', '#475447', 2.25));
+scene.add(new THREE.HemisphereLight('#c8dce2', '#4a4034', 1.75));
 scene.add(character.group);
-const sun = new THREE.DirectionalLight('#fff0d2', 3.0);
-sun.position.set(-320, 700, 250);
+const sun = new THREE.DirectionalLight('#ffd09b', 2.9);
+sun.position.set(-480, 430, 620);
+sun.castShadow = true;
+sun.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
+sun.shadow.camera.left = -360;
+sun.shadow.camera.right = 360;
+sun.shadow.camera.top = 360;
+sun.shadow.camera.bottom = -360;
+sun.shadow.camera.near = 1;
+sun.shadow.camera.far = 1500;
+sun.shadow.camera.updateProjectionMatrix();
+sun.shadow.bias = -0.00015;
+sun.shadow.normalBias = 0.025;
+sun.shadow.radius = 3;
 scene.add(sun);
 
 let world: World | undefined;
@@ -93,6 +94,16 @@ let npcs: NpcSystem | undefined;
 let police: PoliceSystem | undefined;
 const crime = new CrimeSystem();
 const vehicles: Vehicle[] = [];
+
+function loadVehicleVisual(vehicle: Vehicle): void {
+  if (!chunks) return;
+  const baseUrl = new URL(import.meta.env.BASE_URL, window.location.href);
+  const modelUrl = new URL('models/vehicles/graphite-sedan.glb', baseUrl);
+  void vehicle.loadModel(chunks, modelUrl.href).catch((error: unknown) => {
+    logger.warn('Detailed vehicle model failed to load; keeping the built-in vehicle', { error: String(error) });
+  });
+}
+
 let activeVehicle: Vehicle | null = null;
 let inVehicle = false;
 let spacePressed = false;
@@ -228,6 +239,7 @@ function spawnDebugVehicle(): string {
   const vehicle = new Vehicle(world, x, height, z);
   vehicles.push(vehicle);
   scene.add(vehicle.group);
+  loadVehicleVisual(vehicle);
   world.updateSceneQueries();
   return 'Vehículo de pruebas creado a 4 m del jugador.';
 }
@@ -487,6 +499,7 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
           const stolen = new Vehicle(world, claimed.x, claimed.y, claimed.z);
           vehicles.push(stolen);
           scene.add(stolen.group);
+          loadVehicleVisual(stolen);
           world.updateSceneQueries();
           nearest = stolen;
           if (crime.report('vehicleTheft', claimed.x, claimed.z)) {
@@ -540,6 +553,11 @@ async function initializeWorld(): Promise<void> {
     world.updateSceneQueries();
   }
   await chunks.prepareRenderer(renderer, camera);
+  const playerBaseUrl = new URL(import.meta.env.BASE_URL, window.location.href);
+  void character.loadModel(chunks, new URL('models/characters/casual-walker.glb', playerBaseUrl).href).catch((error: unknown) => {
+    logger.warn('Detailed player model failed to load; keeping the built-in character', { error: String(error) });
+  });
+  for (const vehicle of vehicles) loadVehicleVisual(vehicle);
   chunks.setDebugBorders(showDebug);
   statusLabel.textContent = 'Ciudad lista · WASD camina · clic captura el ratón';
   logger.info('World streaming initialized', { region: 'cc-monumental', stepHz: 60, lods: 3 });
@@ -561,6 +579,12 @@ async function initializeNpcs(worldBaseUrl: URL): Promise<void> {
     pedestrians: Math.round(150 * quality.populationDensity),
     vehicles: Math.round(60 * quality.populationDensity),
   }, agentColliders);
+  try {
+    const modelUrl = new URL('models/characters/casual-walker-lod1.glb', worldBaseUrl);
+    npcs.setPedestrianModel(await chunks!.loadModel(modelUrl.href, 60));
+  } catch (error) {
+    logger.warn('Detailed pedestrian crowd model failed to load; keeping built-in crowd models', { error: String(error) });
+  }
   scene.add(npcs.group);
   police = new PoliceSystem(graph, agentColliders);
   scene.add(police.group);
