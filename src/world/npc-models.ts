@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
+// Instanced crowds draw the same mesh for every agent: decorative capsules and
+// spheres use fewer sides so the visual pass stays inside the triangle budget.
+
 function colorPart(geometry: THREE.BufferGeometry, color: number): THREE.BufferGeometry {
   const count = geometry.getAttribute('position')?.count ?? 0;
   const tint = new THREE.Color(color);
@@ -232,12 +235,18 @@ function vehicleGeometry(police = false): THREE.BufferGeometry {
   return finish(parts, new THREE.BoxGeometry(1.9, 1, 4.1));
 }
 
-function material(): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.76, metalness: 0.08 });
+/** Cloth and skin look best with high roughness and near-zero metalness. */
+function pedestrianMaterial(): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.88, metalness: 0.02 });
+}
+
+/** Painted metal body panels catch light more sharply than fabric. */
+function vehicleMaterial(): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.32, metalness: 0.48 });
 }
 
 export function createPedestrianMesh(capacity: number): THREE.InstancedMesh {
-  const mesh = new THREE.InstancedMesh(pedestrianGeometry(), material(), capacity);
+  const mesh = new THREE.InstancedMesh(pedestrianGeometry(), pedestrianMaterial(), capacity);
   mesh.name = 'pedestrians';
   mesh.count = 0;
   mesh.frustumCulled = false;
@@ -247,7 +256,7 @@ export function createPedestrianMesh(capacity: number): THREE.InstancedMesh {
 }
 
 export function createVehicleMesh(capacity: number): THREE.InstancedMesh {
-  const mesh = new THREE.InstancedMesh(vehicleGeometry(), material(), capacity);
+  const mesh = new THREE.InstancedMesh(vehicleGeometry(), vehicleMaterial(), capacity);
   mesh.name = 'traffic';
   mesh.count = 0;
   mesh.frustumCulled = false;
@@ -257,7 +266,7 @@ export function createVehicleMesh(capacity: number): THREE.InstancedMesh {
 }
 
 export function createPoliceMesh(capacity: number): THREE.InstancedMesh {
-  const mesh = new THREE.InstancedMesh(vehicleGeometry(true), material(), capacity);
+  const mesh = new THREE.InstancedMesh(vehicleGeometry(true), vehicleMaterial(), capacity);
   mesh.name = 'police';
   mesh.count = 0;
   mesh.frustumCulled = false;

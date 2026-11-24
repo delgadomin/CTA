@@ -119,8 +119,9 @@ export class NpcSystem {
     this.fleeZ = new Float32Array(capacity);
     for (let slot = this.pedestrianCapacity - 1; slot >= 0; slot -= 1) this.freePedestrians.push(slot);
     for (let slot = capacity - 1; slot >= this.pedestrianCapacity; slot -= 1) this.freeVehicles.push(slot);
-    for (let i = 0; i < 8; i += 1) this.pedestrianColors.push(new THREE.Color().setHSL(i / 8, 0.45, 0.42 + (i % 2) * 0.12));
-    for (let i = 0; i < 6; i += 1) this.vehicleColors.push(new THREE.Color().setHSL((i * 0.17) % 1, 0.52, 0.38 + (i % 3) * 0.09));
+    // Wider palette so the crowd reads as individual people, not copies.
+    for (let i = 0; i < 20; i += 1) this.pedestrianColors.push(new THREE.Color().setHSL((i * 0.05) % 1, 0.22 + (i % 5) * 0.08, 0.32 + (i % 4) * 0.1));
+    for (let i = 0; i < 14; i += 1) this.vehicleColors.push(new THREE.Color().setHSL((i * 0.071) % 1, 0.38 + (i % 3) * 0.14, 0.3 + (i % 4) * 0.1));
   }
 
   get counts(): NpcCounts {
@@ -285,7 +286,9 @@ export class NpcSystem {
       const z = player.z + Math.sin(angle) * radius;
       const towardX = x - player.x;
       const towardZ = z - player.z;
-      if (towardX * (this.cameraDirection.x ?? 0) + towardZ * (this.cameraDirection.z ?? 0) > -radius * 0.15) continue;
+      // Stricter filter: agents only spawn well behind the camera so the player
+      // never catches a pop-in.
+      if (towardX * (this.cameraDirection.x ?? 0) + towardZ * (this.cameraDirection.z ?? 0) > -radius * 0.4) continue;
       const height = world.groundHeightAt(x, z);
       if (height === undefined || world.collidesWithBuilding(x, z, 1)) continue;
       const start = this.graph.nearestNode(x, z, mode);
@@ -299,7 +302,7 @@ export class NpcSystem {
       this.x[slot] = x;
       this.y[slot] = height;
       this.z[slot] = z;
-      this.scale[slot] = kind === 0 ? 0.92 + this.random() * 0.16 : 0.94 + this.random() * 0.12;
+      this.scale[slot] = kind === 0 ? 0.88 + this.random() * 0.24 : 0.92 + this.random() * 0.16;
       this.speed[slot] = 0;
       this.accumulatedUpdateSeconds[slot] = 0;
       this.edge[slot] = first;
@@ -346,7 +349,10 @@ export class NpcSystem {
     }
 
     const currentSpeed = this.speed[slot] ?? 0;
-    const nextSpeed = currentSpeed + (desired - currentSpeed) * Math.min(1, dt * 3.5);
+    // Accelerate gently, decelerate more decisively — cars and people look more
+    // natural when they ease into motion but stop with purpose.
+    const ramp = desired > currentSpeed ? dt * 2.0 : dt * 5.0;
+    const nextSpeed = currentSpeed + (desired - currentSpeed) * Math.min(1, ramp);
     this.speed[slot] = nextSpeed;
     if (nextSpeed < 0.2) this.stuckTime[slot] = (this.stuckTime[slot] ?? 0) + dt;
     else this.stuckTime[slot] = 0;
@@ -390,9 +396,22 @@ export class NpcSystem {
     if (this.kind[slot] === 0 && (this.fleeTime[slot] ?? 0) > 0) {
       const awayX = (this.x[slot] ?? 0) - (this.fleeX[slot] ?? 0);
       const awayZ = (this.z[slot] ?? 0) - (this.fleeZ[slot] ?? 0);
-      if (Math.hypot(awayX, awayZ) > 0.2) this.heading[slot] = Math.atan2(awayX, awayZ);
+      if (Math.hypot(awayX, awayZ) > 0.2) {
+        const fleeHeading = Math.atan2(awayX, awayZ);
+        let fleeDelta = fleeHeading - (this.heading[slot] ?? 0);
+        if (fleeDelta > Math.PI) fleeDelta -= Math.PI * 2;
+        if (fleeDelta < -Math.PI) fleeDelta += Math.PI * 2;
+        this.heading[slot] = (this.heading[slot] ?? 0) + fleeDelta * Math.min(1, dt * 10);
+      }
     } else if (nextSpeed > 0.05) {
-      this.heading[slot] = Math.atan2(bx - ax, bz - az);
+      // Smooth angular interpolation so agents turn gradually instead of
+      // snapping to the new edge direction.
+      const targetHeading = Math.atan2(bx - ax, bz - az);
+      let headingDelta = targetHeading - (this.heading[slot] ?? 0);
+      if (headingDelta > Math.PI) headingDelta -= Math.PI * 2;
+      if (headingDelta < -Math.PI) headingDelta += Math.PI * 2;
+      const turnRate = this.kind[slot] === 0 ? 8 : 5;
+      this.heading[slot] = (this.heading[slot] ?? 0) + headingDelta * Math.min(1, dt * turnRate);
     }
     this.colliders?.move(this.colliderIds[slot] ?? -1, this.x[slot] ?? 0, this.y[slot] ?? 0, this.z[slot] ?? 0, this.heading[slot] ?? 0);
   }
@@ -494,9 +513,12 @@ export class NpcSystem {
   private render(slot: number): void {
     const mesh = this.kind[slot] === 0 ? this.pedestrianMesh : this.vehicleMesh;
     const instance = this.kind[slot] === 0 ? slot : slot - this.pedestrianCapacity;
-    const bob = this.kind[slot] === 0 ? Math.sin(this.elapsed * 8 + slot) * Math.min((this.speed[slot] ?? 0) / 8, 0.05) : 0;
+    // Taller bob, offset by slot index to break the unison.
+    const walkSpeed = this.speed[slot] ?? 0;
+    const bob = this.kind[slot] === 0 ? Math.sin(this.elapsed * 9.5 + slot * 2.3) * Math.min(walkSpeed / 3, 0.12) : 0;
+    const pitch = this.kind[slot] === 0 ? Math.min(walkSpeed / 25, 0.12) : 0;
     this.dummy.position.set(this.x[slot] ?? 0, (this.y[slot] ?? 0) + bob, this.z[slot] ?? 0);
-    this.dummy.rotation.set(0, this.heading[slot] ?? 0, 0);
+    this.dummy.rotation.set(pitch, this.heading[slot] ?? 0, 0);
     this.dummy.scale.setScalar(this.scale[slot] ?? 1);
     this.dummy.updateMatrix();
     mesh.setMatrixAt(instance, this.dummy.matrix);

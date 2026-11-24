@@ -230,12 +230,16 @@ export class Character {
       this.group.position.y += this.vy * deltaSeconds;
     }
 
-    const swing = moving ? Math.sin(this.walkPhase) * 0.45 : 0;
+    const sprinting = input.isPressed('sprint');
+    const swing = moving ? Math.sin(this.walkPhase) * (sprinting ? 0.65 : 0.45) : 0;
     this.leftLeg.rotation.x = swing;
     this.rightLeg.rotation.x = -swing;
-    this.leftArm.rotation.x = -swing * 0.6;
-    this.rightArm.rotation.x = swing * 0.6;
-    this.body.position.y = 1.15 + (moving ? Math.abs(Math.sin(this.walkPhase * 2)) * 0.04 : 0);
+    this.leftArm.rotation.x = -swing * 0.75;
+    this.rightArm.rotation.x = swing * 0.75;
+    this.leftArm.rotation.z = -0.06 - (moving ? 0.05 : 0);
+    this.rightArm.rotation.z = 0.06 + (moving ? 0.05 : 0);
+    this.body.rotation.x = moving ? (sprinting ? 0.12 : 0.04) : 0;
+    this.body.position.y = 1.15 + (moving ? Math.abs(Math.sin(this.walkPhase * 2)) * 0.05 : 0);
   }
 
   get position(): THREE.Vector3 { return this.group.position; }

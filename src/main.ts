@@ -51,23 +51,25 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality.pixelRatio));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.08;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.setClearColor('#a9c2c4');
+const fogColor = '#bed3dc';
+renderer.setClearColor(fogColor);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#b7d0d8');
-scene.fog = new THREE.Fog('#b7d0d8', quality.viewDistance * 0.4, quality.viewDistance);
-// Gradient sky sphere.
+scene.background = new THREE.Color(fogColor);
+scene.fog = new THREE.Fog(fogColor, quality.viewDistance * 0.5, quality.viewDistance * 1.05);
+// Gradient sky sphere with warm Iberian horizon and rich azure zenith.
 const skyGeometry = new THREE.SphereGeometry(quality.viewDistance * 1.2, 32, 16);
 const skyPositions = skyGeometry.attributes.position as THREE.BufferAttribute;
 const skyColors = new Float32Array(skyPositions.count * 3);
 for (let i = 0; i < skyPositions.count; i += 1) {
   const y = skyPositions.getY(i);
-  const t = Math.max(0, Math.min(1, (y + quality.viewDistance * 0.5) / (quality.viewDistance * 1.2)));
-  skyColors[i * 3] = 0.72 + t * 0.12;
-  skyColors[i * 3 + 1] = 0.82 + t * 0.1;
-  skyColors[i * 3 + 2] = 0.88 + t * 0.08;
+  const t = Math.max(0, Math.min(1, (y + quality.viewDistance * 0.15) / (quality.viewDistance * 1.35)));
+  skyColors[i * 3] = THREE.MathUtils.lerp(0.86, 0.44, t);
+  skyColors[i * 3 + 1] = THREE.MathUtils.lerp(0.87, 0.67, t);
+  skyColors[i * 3 + 2] = THREE.MathUtils.lerp(0.85, 0.89, t);
 }
 skyGeometry.setAttribute('color', new THREE.BufferAttribute(skyColors, 3));
 const skyMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, depthWrite: false });
@@ -80,11 +82,24 @@ const cameraRig = new CameraRig(camera, input, 5.2, 0.002, 2.07, -0.12);
 cameraRig.mode = 'thirdPerson';
 const logger = new Logger('world', 'info');
 const character = new Character();
-scene.add(new THREE.HemisphereLight('#e7eff0', '#475447', 2.25));
+scene.add(new THREE.HemisphereLight('#deedf5', '#4d4638', 2.1));
 scene.add(character.group);
-const sun = new THREE.DirectionalLight('#fff0d2', 3.0);
-sun.position.set(-320, 700, 250);
+const sun = new THREE.DirectionalLight('#fff4de', 3.2);
+sun.position.set(-220, 520, 200);
+sun.castShadow = true;
+sun.shadow.mapSize.width = quality.shadowMapSize;
+sun.shadow.mapSize.height = quality.shadowMapSize;
+sun.shadow.camera.near = 100;
+sun.shadow.camera.far = 1100;
+const shadowSpan = 260;
+sun.shadow.camera.left = -shadowSpan;
+sun.shadow.camera.right = shadowSpan;
+sun.shadow.camera.top = shadowSpan;
+sun.shadow.camera.bottom = -shadowSpan;
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.04;
 scene.add(sun);
+scene.add(sun.target);
 
 let world: World | undefined;
 let chunks: ChunkManager | undefined;
@@ -301,6 +316,7 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
     };
     activeVehicle.update(frameSeconds, driveInput);
     cameraRig.mode = 'thirdPerson';
+    cameraRig.setSpeedFov(activeVehicle.speed);
     cameraRig.update(frameSeconds, activeVehicle.position);
     const vh = chunks?.groundHeightAt(camera.position.x, camera.position.z);
     if (vh !== undefined && camera.position.y < vh + 0.5) camera.position.y = vh + 0.5;
@@ -316,6 +332,7 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
       }
     }
   } else if (cameraRig.mode === 'thirdPerson') {
+    cameraRig.resetFov();
     character.update(frameSeconds, input, chunks, cameraRig.getYaw(), spacePressed);
     // The character is scripted (not a Rapier body), so resolve agent overlap here.
     npcs?.resolveCollision(character.position, 0.35);
@@ -356,6 +373,9 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
   previousFocus.copy(focus);
   focusInitialized = true;
   if (inVehicle && activeVehicle) playerSpeed = activeVehicle.speed;
+
+  sun.position.set(focus.x - 220, 520, focus.z + 200);
+  sun.target.position.set(focus.x, focus.y, focus.z);
 
   if (npcs && chunks) npcs.update(frameSeconds, focus, camera, chunks);
   if (police && chunks) {

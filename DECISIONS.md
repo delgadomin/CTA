@@ -155,3 +155,11 @@
 - `seededSequence()` genera los moteados del estuco. El PR #9 trataba `random` (un número devuelto por `seeded()`) como función, lo que rompía `typecheck` y `build`; la nueva secuencia mantiene la apariencia determinista sin llamadas aleatorias por fotograma.
 - `createSedanBodyGeometry()` y `createWheelArchGeometry()` generan `uv`. Sin ese atributo, `mergeGeometries()` volvía a descartar el coche instanciado y caía en la malla de reserva.
 - Las siluetas, prendas, ventanas arqueadas, contraventanas y detalles de coches siguen siendo geometría procedural original; no se añaden assets con copyright ni se modifica `public/world`.
+
+# Pasada de pulido de gráficos, atmósfera y comportamiento de NPCs (noviembre de 2026)
+
+- Iluminación y sombras direccionales: la luz solar (`sun`) activa sombras suaves PCF con caja ortográfica centrada en el jugador, desplazándose en cada fotograma para proyectar sombras nítidas sobre el terreno y las calles sin exceder el presupuesto de rendimiento.
+- Cúpula celeste y niebla: gradiente atmosférico cálido (horizonte ibérico dorado en transición a azul cenital) y niebla suavizada que empieza a 0.5× la distancia de visión para evitar el corte gris plano previo.
+- Materiales diferenciados: peatones con material textil mate (roughness 0.88, metalness 0.02) y vehículos con acabado automotriz pulido (roughness 0.28-0.32, metalness 0.48-0.55) con reflejos en carrocería y cristales.
+- Variedad y comportamiento de NPCs: paleta ampliada a 20 tonos de ropa/piel y 14 de vehículos; escalas humanas variadas (0.88-1.12); interpolación angular de giros (`turnRate`) y rampa suave de aceleración/frenado para erradicar movimientos robóticos; balanceo y ligera inclinación hacia adelante al caminar/correr.
+- Sensación de velocidad y cámara: interpolación suave de seguimiento con lerp en la cámara y apertura dinámica del FOV en vehículos según la velocidad punta. Postura de carrera en el personaje con inclinación de torso y braceo natural.

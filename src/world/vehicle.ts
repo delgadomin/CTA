@@ -62,15 +62,15 @@ export class Vehicle {
       this.controller.setWheelRadius(i, 0.35);
     }
 
-    // Visual mesh.
+    // Visual mesh with realistic automotive paint highlights.
     const bodyGeo = createSedanBodyGeometry();
-    const bodyMat = new THREE.MeshStandardMaterial({ color: CAR_COLOR, roughness: 0.4, metalness: 0.3 });
+    const bodyMat = new THREE.MeshStandardMaterial({ color: CAR_COLOR, roughness: 0.28, metalness: 0.55 });
     const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
     bodyMesh.castShadow = true;
     this.group.add(bodyMesh);
 
     const cabinGeo = taperedCabinGeometry();
-    const cabinMat = new THREE.MeshStandardMaterial({ color: CAR_COLOR, roughness: 0.38, metalness: 0.18 });
+    const cabinMat = new THREE.MeshStandardMaterial({ color: CAR_COLOR, roughness: 0.26, metalness: 0.45 });
     const cabin = new THREE.Mesh(cabinGeo, cabinMat);
     cabin.position.set(0, 0, -0.18);
     cabin.castShadow = true;
@@ -85,7 +85,7 @@ export class Vehicle {
       mesh.castShadow = true;
       this.group.add(mesh);
     };
-    const glassMat = new THREE.MeshStandardMaterial({ color: 0x263e4a, roughness: 0.2, metalness: 0.12, side: THREE.DoubleSide });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x1b2d36, roughness: 0.1, metalness: 0.72, side: THREE.DoubleSide });
     const addPane = (points: readonly (readonly [number, number, number])[]) => {
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute('position', new THREE.Float32BufferAttribute(points.flatMap((point) => point), 3));

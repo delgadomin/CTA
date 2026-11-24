@@ -1,12 +1,14 @@
 import * as THREE from 'three';
 import type { RoadSurfaceStyle } from './types';
 
+// Stronger contrast between surfaces so the player can read sidewalk edges,
+// crossings and intersections at a glance while driving.
 const ROAD_PALETTES: Record<Exclude<RoadSurfaceStyle, 'marking'>, readonly [number, number, number]> = {
-  asphalt: [67, 72, 76],
-  stone: [191, 178, 151],
-  sidewalk: [238, 232, 216],
-  concrete: [177, 178, 171],
-  earth: [183, 147, 109],
+  asphalt: [55, 58, 65],
+  stone: [200, 184, 153],
+  sidewalk: [225, 218, 198],
+  concrete: [165, 167, 160],
+  earth: [172, 134, 94],
 };
 
 export function createRoadMaterials(): Map<RoadSurfaceStyle, THREE.MeshStandardMaterial> {

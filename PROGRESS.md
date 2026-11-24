@@ -379,3 +379,41 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 
 ### Cómo probarlo
 - Abre `/?debug=1`, camina por el casco antiguo y conduce un coche; compara fachadas, peatones y vehículos con la versión anterior.
+
+
+## Pasada de gráficos, atmósfera y pulido de NPCs (completada)
+
+### Hecho
+- **Atmósfera e iluminación:**
+  - Luz solar direccional (`sun`) con sombras suaves PCF (`PCFSoftShadowMap`) que se desplaza junto al jugador manteniendo nítidas las sombras de edificios, árboles y vehículos.
+  - El terreno y las carreteras ahora reciben sombras arrojadas proyectadas de forma natural.
+  - Cúpula de cielo procedimental con gradiente atmosférico cálido (horizonte dorado y cenit azul intenso) y niebla de distancia ajustada para evitar desvanecimientos grises prematuros.
+  - Luz de hemisferio con rebote inferior cálido para sombras menos oscuras y más ricas en contraste.
+- **Materiales y estética:**
+  - Material textil específico para peatones (acabado mate, alta rugosidad, bajo metalness).
+  - Material automotriz específico para vehículos con brillo de chapa, reflejos y cristales tintados translúcidos.
+  - Contraste acentuado entre calzadas de asfalto, calzadas de piedra, aceras peatonales de losa y bordillos.
+- **Comportamiento y variedad de NPCs:**
+  - 20 variantes de color de indumentaria y 14 de vehículos (ampliando la variedad de la multitud).
+  - Escalas aleatorias variadas en peatones (entre 0.88 y 1.12) para alturas y siluetas humanas no uniformes.
+  - Rotaciones de agentes suavizadas con interpolación angular (`turnRate`), eliminando giros bruscos/robóticos en intersecciones.
+  - Rampa diferenciada de aceleración y frenado para peatones y vehículos.
+  - Paso de caminata con inclinación frontal según velocidad y balanceo corporal orgánico.
+  - Filtro estricto de generación angular detrás de la cámara para prevenir apariciones visibles.
+- **Cámara y jugabilidad:**
+  - Suavizado cinemático con interpolación (*lerp*) en el seguimiento de la cámara en 3ª persona.
+  - FOV dinámico que se abre gradualmente al acelerar en coche, aumentando la sensación de velocidad.
+  - Postura y animaciones de carrera del protagonista mejoradas con inclinación de torso y braceo.
+  - Avisos HUD y estrellas de búsqueda estilizados con mayor legibilidad.
+
+### Verificación
+- `npm run lint`: sin errores.
+- `npm run typecheck`: sin errores de TypeScript.
+- `npm test`: 43/43 pruebas unitarias pasando.
+- `npm run build`: compilación de producción en Vite exitosa.
+
+### Cómo probarlo
+- Iniciar `npm run dev` y moverse a pie o en vehículo:
+  - Observar las sombras proyectadas sobre el asfalto y el suelo.
+  - Acelerar en coche para apreciar la apertura dinámica del campo de visión (FOV) y la cámara suave.
+  - Observar cómo los peatones y el tráfico giran de manera natural y suave en las esquinas.

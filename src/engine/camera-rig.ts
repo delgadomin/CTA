@@ -20,6 +20,10 @@ export class CameraRig {
   private readonly input: InputManager;
   private readonly moveSpeed: number;
   private readonly mouseSensitivity: number;
+  private readonly smoothPosition = new Vector3();
+  private smoothInitialized = false;
+  private targetFov: number;
+  private readonly baseFov: number;
 
   constructor(
     camera: PerspectiveCamera,
@@ -36,6 +40,8 @@ export class CameraRig {
     this.yaw = initialYaw;
     this.pitch = MathUtils.clamp(initialPitch, -1.45, 1.45);
     this.camera.rotation.order = 'YXZ';
+    this.baseFov = camera.fov;
+    this.targetFov = camera.fov;
     this.syncRotation();
   }
 
@@ -45,6 +51,15 @@ export class CameraRig {
   }
 
   getYaw(): number { return this.yaw; }
+
+  /** Widens the field of view proportionally to driving speed. */
+  setSpeedFov(speed: number): void {
+    this.targetFov = this.baseFov + Math.min(speed * 0.35, 12);
+  }
+
+  resetFov(): void {
+    this.targetFov = this.baseFov;
+  }
 
   update(deltaSeconds: number, focus?: Vector3): void {
     this.input.sampleGamepad();
@@ -68,14 +83,19 @@ export class CameraRig {
           dir.normalize();
           const toi = this.occlusion(this.target, dir, maxDist);
           if (toi < maxDist - 0.2) {
-            this.camera.position.copy(this.target).addScaledVector(dir, Math.max(0.5, toi - 0.3));
-            this.camera.lookAt(this.target);
-            return;
+            desired.copy(this.target).addScaledVector(dir, Math.max(0.5, toi - 0.3));
           }
         }
       }
-      this.camera.position.copy(desired);
+      // Smooth follow instead of snapping; the camera glides toward the target.
+      if (!this.smoothInitialized) {
+        this.smoothPosition.copy(desired);
+        this.smoothInitialized = true;
+      }
+      this.smoothPosition.lerp(desired, Math.min(1, deltaSeconds * 7));
+      this.camera.position.copy(this.smoothPosition);
       this.camera.lookAt(this.target);
+      this.updateFov(deltaSeconds);
       return;
     }
 
@@ -83,6 +103,16 @@ export class CameraRig {
     this.direction.set(this.axes.horizontal, 0, -this.axes.vertical).applyAxisAngle(this.upAxis, this.yaw);
     const speedMultiplier = this.input.isPressed('sprint') ? 5 : 1;
     this.camera.position.addScaledVector(this.direction, this.moveSpeed * speedMultiplier * deltaSeconds);
+    this.updateFov(deltaSeconds);
+  }
+
+  /** Smoothly interpolates the camera FOV toward the target value. */
+  private updateFov(deltaSeconds: number): void {
+    const diff = this.targetFov - this.camera.fov;
+    if (Math.abs(diff) > 0.05) {
+      this.camera.fov += diff * Math.min(1, deltaSeconds * 4);
+      this.camera.updateProjectionMatrix();
+    }
   }
 
   private syncRotation(): void {

@@ -417,6 +417,7 @@ export class ChunkManager {
         const mesh = new THREE.Mesh(geometryForLod(level, item.result, this.manifest?.chunkMeters ?? 256), this.material);
         mesh.position.set(centerX, 0, centerZ);
         mesh.visible = level.level === record.lod;
+        mesh.receiveShadow = true;
         return mesh;
       });
       const activeMesh = meshes[record.lod];
