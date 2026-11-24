@@ -18,6 +18,8 @@ export class Character {
   private walkPhase = 0;
   private vy = 0;
   private onGround = true;
+  private prevCycle = 0;
+  stepTriggered = false;
 
   constructor() {
     this.group = new THREE.Group();
@@ -210,6 +212,7 @@ export class Character {
   }
 
   update(deltaSeconds: number, input: InputManager, chunks: ChunkManager | undefined, cameraYaw: number, jump: boolean): void {
+    this.stepTriggered = false;
     const axes: MovementAxes = { horizontal: 0, vertical: 0 };
     input.movement(axes);
     const moving = Math.hypot(axes.horizontal, axes.vertical) > 0.01;
@@ -243,6 +246,13 @@ export class Character {
       while (diff < -Math.PI) diff += Math.PI * 2;
       this.group.rotation.y += diff * Math.min(1, deltaSeconds * 12);
       this.walkPhase += deltaSeconds * (input.isPressed('sprint') ? 14 : 9);
+      if (this.onGround) {
+        const cycle = Math.floor(this.walkPhase / Math.PI);
+        if (cycle !== this.prevCycle) {
+          this.prevCycle = cycle;
+          this.stepTriggered = true;
+        }
+      }
     } else {
       this.walkPhase *= 0.85;
     }

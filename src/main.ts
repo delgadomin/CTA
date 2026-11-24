@@ -17,6 +17,8 @@ import type { RoadNetwork } from './world/types';
 import { Vehicle } from './world/vehicle';
 import { createPhysicsWorld } from './world/terrain-physics';
 import type { World } from '@dimforge/rapier3d-compat';
+import { AudioSystem } from './engine/audio-system';
+import { Minimap, type MinimapBlip } from './ui/minimap';
 import './style.css';
 
 function requiredElement<T extends Element>(selector: string): T {
@@ -42,6 +44,9 @@ const wantedLabel = requiredElement<HTMLElement>('#wanted');
 const noticeLabel = requiredElement<HTMLElement>('#notice');
 const statusLabel = requiredElement<HTMLElement>('#world-status');
 const debugPanel = requiredElement<HTMLElement>('.debug-panel');
+const minimapCanvas = requiredElement<HTMLCanvasElement>('#minimap');
+const minimap = new Minimap(minimapCanvas);
+const audio = new AudioSystem();
 requiredElement<HTMLElement>('#wanted-label').textContent = t('hud.wanted');
 requiredElement<HTMLElement>('#controls-hint').textContent = t('controls.hint');
 const debugMode = new URLSearchParams(window.location.search).get('debug') === '1';
@@ -141,6 +146,10 @@ const vehicles: Vehicle[] = [];
 let activeVehicle: Vehicle | null = null;
 let inVehicle = false;
 let spacePressed = false;
+let hornPressed = false;
+let previousStars = 0;
+const minimapVehicles: MinimapBlip[] = [];
+const minimapPolice: MinimapBlip[] = [];
 let showDebug = true;
 let showChunkBorders = true;
 let showColliderWireframes = false;
@@ -292,6 +301,8 @@ function showNotice(message: string, timestamp: number, durationMs = 3000): void
 function handleBust(timestamp: number): void {
   bustCooldownUntil = timestamp + 4000;
   crime.reset();
+  audio.playBusted();
+  cameraRig.addTrauma(0.5);
   inVehicle = false;
   activeVehicle = null;
   character.group.visible = true;
@@ -345,6 +356,10 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
       handbrake: spacePressed,
     };
     activeVehicle.update(frameSeconds, driveInput);
+    audio.updateVehicleEngine(true, activeVehicle.speed, driveInput.forward || driveInput.backward);
+    const isSkidding = (driveInput.handbrake && activeVehicle.speed > 3) || ((driveInput.left || driveInput.right) && activeVehicle.speed > 9);
+    audio.updateSkid(isSkidding);
+    audio.setHorn(hornPressed);
     cameraRig.mode = 'thirdPerson';
     cameraRig.setSpeedFov(activeVehicle.speed);
     cameraRig.update(frameSeconds, activeVehicle.position);
@@ -363,7 +378,11 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
     }
   } else if (cameraRig.mode === 'thirdPerson') {
     cameraRig.resetFov();
+    audio.updateVehicleEngine(false, 0, false);
+    audio.updateSkid(false);
+    audio.setHorn(false);
     character.update(frameSeconds, input, chunks, cameraRig.getYaw(), spacePressed);
+    if (character.stepTriggered) audio.playFootstep();
     // The character is scripted (not a Rapier body), so resolve agent overlap here.
     npcs?.resolveCollision(character.position, 0.35);
     police?.resolveCollision(character.position, 0.35);
@@ -385,6 +404,9 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
       if (ch2 !== undefined && camera.position.y < ch2 + 0.5) camera.position.y = ch2 + 0.5;
     }
   } else {
+    audio.updateVehicleEngine(false, 0, false);
+    audio.updateSkid(false);
+    audio.setHorn(false);
     cameraRig.update(frameSeconds);
     character.position.copy(camera.position);
     const characterGround = chunks?.groundHeightAt(character.position.x, character.position.z);
@@ -416,11 +438,18 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
     crime.update(frameSeconds, police.nearestDistance(focus), playerSpeed);
     if (crime.busted && timestamp > bustCooldownUntil) handleBust(timestamp);
   }
+  if (crime.stars > previousStars) {
+    audio.playCrimeAlert();
+  }
+  previousStars = crime.stars;
+  audio.updatePoliceSiren(crime.stars, police ? police.nearestDistance(focus) : 999);
 
   if (npcs && inVehicle && activeVehicle && activeVehicle.speed > 6 && npcs.checkVehicleImpact(activeVehicle.position)) {
     if (crime.report('pedestrianImpact', activeVehicle.position.x, activeVehicle.position.z)) {
       npcs.alarm(activeVehicle.position.x, activeVehicle.position.z);
       showNotice(t('notice.pedestrianImpact'), timestamp);
+      audio.playCollision(0.8);
+      cameraRig.addTrauma(0.55);
     }
   }
   if (inVehicle && activeVehicle && activeVehicle.speed > 16) {
@@ -429,6 +458,19 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
   } else {
     recklessSeconds = 0;
   }
+
+  if (npcs) npcs.getVehiclePositions(minimapVehicles);
+  if (police) police.getPatrolPositions(minimapPolice);
+  minimap.update(
+    focus.x,
+    focus.z,
+    cameraRig.getYaw(),
+    inVehicle,
+    crime.stars,
+    minimapVehicles,
+    minimapPolice,
+    frameSeconds,
+  );
 
   systemStart = debugMode ? performance.now() : 0;
   chunks?.update(camera, timestamp);
@@ -513,8 +555,18 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
   updateDebugModeLabel();
 });
 
-canvas.addEventListener('click', () => input.requestPointerLock());
+canvas.addEventListener('click', () => {
+  input.requestPointerLock();
+  audio.resume();
+});
+window.addEventListener('pointerdown', () => audio.resume(), { once: true });
 window.addEventListener('keydown', (event: KeyboardEvent) => {
+  audio.resume();
+  if (event.code === 'KeyH') hornPressed = true;
+  if (event.code === 'KeyM') {
+    const isMuted = audio.toggleMute();
+    showNotice(isMuted ? t('notice.audioMuted') : t('notice.audioUnmuted'), performance.now());
+  }
   if (event.code === 'Space') { spacePressed = true; event.preventDefault(); }
   if (event.code === 'KeyE') {
     if (inVehicle && activeVehicle) {
@@ -565,6 +617,7 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
 });
 window.addEventListener('keyup', (event: KeyboardEvent) => {
   if (event.code === 'Space') spacePressed = false;
+  if (event.code === 'KeyH') hornPressed = false;
 });
 window.addEventListener('pagehide', () => {
   loop.stop();

@@ -24,6 +24,7 @@ export class CameraRig {
   private smoothInitialized = false;
   private targetFov: number;
   private readonly baseFov: number;
+  private trauma = 0;
 
   constructor(
     camera: PerspectiveCamera,
@@ -61,6 +62,11 @@ export class CameraRig {
     this.targetFov = this.baseFov;
   }
 
+  /** Adds rotational and positional trauma for impacts and crashes. */
+  addTrauma(amount: number): void {
+    this.trauma = MathUtils.clamp(this.trauma + amount, 0, 1);
+  }
+
   update(deltaSeconds: number, focus?: Vector3): void {
     this.input.sampleGamepad();
     if (this.input.consumePressed('lookToggle')) this.toggleMode();
@@ -94,6 +100,13 @@ export class CameraRig {
       }
       this.smoothPosition.lerp(desired, Math.min(1, deltaSeconds * 7));
       this.camera.position.copy(this.smoothPosition);
+      if (this.trauma > 0) {
+        const shake = this.trauma * this.trauma;
+        this.camera.position.x += (Math.random() - 0.5) * 0.45 * shake;
+        this.camera.position.y += (Math.random() - 0.5) * 0.35 * shake;
+        this.camera.position.z += (Math.random() - 0.5) * 0.45 * shake;
+        this.trauma = Math.max(0, this.trauma - deltaSeconds * 2.8);
+      }
       this.camera.lookAt(this.target);
       this.updateFov(deltaSeconds);
       return;

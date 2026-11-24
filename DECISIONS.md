@@ -194,3 +194,26 @@
 - **Sol radiante y halo en el cielo:** Incorporación de un disco solar luminoso y corona cálida translúcida en la cúpula celeste que se desplazan sincronizados con el jugador.
 - **Cúpula celeste ibérica:** Gradiente tricromático cálido con tono melocotón/ámbar en el horizonte, transición a azul celeste y cenit zafiro profundo, sincronizado con niebla atmosférica (`#c8d7df`) y exposición fílmica ACES a 1.14.
 - **Ajustes de sombras:** Reducción de la distancia de cámara de sombras (`near: 50, far: 850`) y calibración de `normalBias = 0.035` para erradicar el *shadow acne* y maximizar la precisión de profundidad.
+
+# Integración de estándares gamedev-skills (audio procedural, minimapa y game feel)
+
+Siguiendo las metodologías y directrices del repositorio `gamedev-skills` (`sound-brief`, `design-system`, `game-arch` y `smoke-test`):
+
+## 1. Arquitectura de audio procedural Web Audio API (`src/engine/audio-system.ts`)
+- **Jerarquía de buses sin assets externos:** Para respetar la regla de no incorporar ficheros con copyright ni sobrecargar la red, todo el sonido se sintetiza en tiempo real mediante la Web Audio API estándar:
+  - **Motor de vehículo:** Oscilador en diente de sierra modulado dinámicamente con filtro pasobajo. El tono sube de 42 Hz (ralentí) hasta 200 Hz según la velocidad y aceleración, con volumen continuo.
+  - **Derrapes y frenadas:** Generador de ruido blanco procedural filtrado en paso banda (~850 Hz) que se activa suavemente al frenar con espacio o girar bruscamente a velocidad.
+  - **Claxon europeo:** Oscilador bitonal armónico (420 Hz + 525 Hz) accionado con la tecla `H`.
+  - **Sirena policial:** Oscilador sinusoidal modulado por un LFO a 1.1 Hz (barrido de 420 Hz a 780 Hz), cuyo volumen se atenúa proporcionalmente a la distancia de la patrulla más cercana al jugador.
+  - **Pisadas:** Ráfagas cortas de ruido filtrado sincronizadas con el medio ciclo de zancada (`stepTriggered`) del personaje al caminar y correr.
+  - **Impactos:** Golpe con caída exponencial de tono (140 Hz a 32 Hz) y crujido de baja frecuencia en choques y atropellos.
+  - **Alertas y detención:** Arpegio ascendente al subir estrellas de calor y fanfarria descendente al ser detenido.
+  - **Muteo accesible:** Tecla `M` conmuta el volumen maestro con aviso en pantalla. Desbloqueo automático tras primer clic/tecla.
+
+## 2. Minimapa de radar táctico (`src/ui/minimap.ts`)
+- Radar circular estilo mundo abierto en esquina inferior izquierda, renderizado sobre canvas 2D con rotación solidaria a la orientación de cámara y aguja indicadora de Norte ("N").
+- Marcadores de posición (blips): flecha direccional del jugador, puntos ámbar para tráfico circundante, y estroboscopios parpadeantes azul/rojo para vehículos policiales en persecución.
+- Borde dinámico con animación pulsante de persecución activa durante niveles de búsqueda.
+
+## 3. Jugabilidad y respuesta cinemática de cámara (Trauma / Shake)
+- Se incorpora el modelo matemático de trauma cuadrático en `CameraRig.addTrauma()`: en impactos de tráfico o atropellos, la cámara experimenta una sacudida proporcional amortiguada en 3 ejes, dotando a la conducción de peso y fisicidad.

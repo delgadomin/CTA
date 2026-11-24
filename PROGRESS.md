@@ -456,3 +456,29 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - `npm run typecheck`: sin errores de TypeScript.
 - `npm test`: 43/43 pruebas unitarias pasando.
 - `npm run build`: compilación de producción exitosa en 2.18s.
+
+## Integración gamedev-skills: Motor de audio procedural, minimapa y respuesta de cámara (completada)
+
+### Hecho
+- **Motor de audio procedural Web Audio API (`src/engine/audio-system.ts`):**
+  - Sistema de audio 100% procedural en tiempo real (cero archivos de audio externos, cero consumo de ancho de banda).
+  - Sonido dinámico de motor con oscilador sawtooth y filtro pasobajo reactivo a la velocidad y aceleración del coche.
+  - Generador de chirrido/derrape de neumáticos con ruido blanco filtrado en paso banda al usar freno de mano o giros a velocidad.
+  - Claxon vehicular bitonal armónico europeo con tecla `H`.
+  - Sirena de policía con modulación LFO bifásica y atenuación espacial según distancia a la patrulla más cercana.
+  - Efectos de pisadas por zancada (`stepTriggered`), crujido de impacto en colisiones y avisos sonoros de búsqueda/detención.
+  - Silenciado/activación de audio con tecla `M` y desbloqueo seguro de AudioContext por interacción de usuario.
+- **Minimapa de radar circular (`src/ui/minimap.ts`):**
+  - Radar táctico en esquina inferior izquierda con rotación según cámara, cuadrícula métrica y aguja indicadora de Norte ("N").
+  - Marcadores de posición en tiempo real para jugador, tráfico ambiental y patrullas policiales con estroboscopio rojo/azul.
+  - Borde con efecto pulsante animado durante persecuciones policiales activas.
+- **Impacto y sacudida de cámara (Trauma cuadrático):**
+  - Sacudida cinemática de cámara en 3 ejes ante colisiones y atropellos mediante `CameraRig.addTrauma()`.
+- **Controles y textos:**
+  - Actualizados los avisos y el hint de controles en HUD con las nuevas acciones (`H` claxon, `M` audio, `Espacio` freno de mano).
+
+### Verificación
+- `npm run lint`: sin errores.
+- `npm run typecheck`: sin errores de TypeScript.
+- `npm test`: 47/47 pruebas unitarias pasando (13/13 suites, incluyendo `tests/audio-and-ui.test.ts`).
+- `npm run build`: compilación de producción exitosa en 2.11s.

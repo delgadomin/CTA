@@ -148,6 +148,16 @@ export class NpcSystem {
     return { reroutes: this.totalReroutes, despawns: this.totalDespawns };
   }
 
+  getVehiclePositions(result: { x: number; z: number }[]): void {
+    result.length = 0;
+    const capacity = this.pedestrianCapacity + this.vehicleCapacity;
+    for (let slot = this.pedestrianCapacity; slot < capacity; slot += 1) {
+      if (this.active[slot] === 1) {
+        result.push({ x: this.x[slot] ?? 0, z: this.z[slot] ?? 0 });
+      }
+    }
+  }
+
   /** Pedestrians within the radius run away and avoid the threat at junctions. */
   alarm(x: number, z: number, radius = 65): number {
     const squared = radius * radius;
