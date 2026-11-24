@@ -1,17 +1,12 @@
 # Progreso del proyecto
 
-## Fase actual: 0 - Repositorio, herramientas y despliegue (revisión reiniciada)
+## Estado actual del proyecto
 
-La revisión solicitada recorre las fases desde la 0. Los resultados y estados antiguos que siguen abajo describen trabajo previo; no se consideran revalidados hasta revisar sus criterios en orden. Se conserva el juego existente mientras se audita cada fase.
+- **Fases completadas:** 0 a 11 implementadas, auditadas y fusionadas en `main`.
+- **Nuevas directrices estratégicas:** Implementadas en [`strategy/`](strategy/README.md) y [`AGENTS.md`](AGENTS.md) (modelos GLB CC0/CC-BY, Catastro de España para 12.000 portales, oficios cacereños, minimapa táctico de radar y audio procedural Web Audio).
+- **Próxima fase:** Fase 12 — Combate ligero estilizado e inicio de los oficios urbanos (Línea 1/8 autobús, paquetería en Judería).
 
-### Revisión de fase 0
-- El proyecto ya tenía Vite, TypeScript estricto, Three.js, Vitest, ESLint, GitHub Pages, documentación y URLs relativas. Se conservaron las fases posteriores existentes.
-- Se añadió Prettier con formato aplicado al código y check automatizado. Se separó CI de PR del despliegue de Pages para que cada PR ejecute checks.
-- Se actualizó el runner de pruebas vulnerable y la instalación limpia con `npm ci` quedó sin vulnerabilidades. La revisión parte de `upstream/main` (`302c401`), que ya contiene las correcciones recientes de modelos y LOD.
-- La estructura evolucionó respecto al esqueleto del PDF: mantiene `src/engine`, `src/ui` y `src/world`, más `data`, `tools`, `public/world`, `reports` y las guías en la raíz. No se recrean carpetas vacías `src/game` o `docs` ni se sustituye el mundo ya jugable por el cubo de diagnóstico inicial.
-- Corregida la ayuda de controles del README: F4 muestra el panel de diagnóstico normal; F3 queda reservado al modo avanzado `?debug=1`.
-- Validación tras sincronizar y corregir la ayuda: formato, lint, typecheck, 47 pruebas y build pasan; auditoría sin vulnerabilidades. Dev, `/debug/map.html` y el sitio publicado responden HTTP 200. El build mantiene el aviso de chunk mayor de 500 kB, por debajo del presupuesto de descarga del proyecto.
-- Pendiente para cerrar la aceptación remota: crear una PR con una base actualizada sin conflictos y confirmar el check de GitHub. La rama publicada ahora muestra conflicto contra `main`, así que no se considera lista para revisión. El sitio público seguirá dependiendo de que se integre en `main`.
+## Fase 0 - Repositorio, herramientas y despliegue (completada)
 
 ### Hecho
 - Repositorio inicializado desde `hhg-ptm/CTA`.
