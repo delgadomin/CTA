@@ -75,7 +75,18 @@ function buildLod(chunk: RawTerrainChunk, heights: Float32Array, surfaces: reado
       const southEast = southWest + 1;
       const northWest = southWest + size;
       const northEast = northWest + 1;
-      indices.set([southWest, northWest, southEast, southEast, northWest, northEast], indexOffset);
+      const southWestHeight = heights[(row * sampleStep) * chunk.terrain.samples + column * sampleStep] ?? 0;
+      const southEastHeight = heights[(row * sampleStep) * chunk.terrain.samples + (column + 1) * sampleStep] ?? southWestHeight;
+      const northWestHeight = heights[((row + 1) * sampleStep) * chunk.terrain.samples + column * sampleStep] ?? southWestHeight;
+      const northEastHeight = heights[((row + 1) * sampleStep) * chunk.terrain.samples + (column + 1) * sampleStep] ?? southWestHeight;
+
+      // Choose the shorter 3D diagonal so each two-triangle cell follows the
+      // measured relief with less interpolation error, without changing heights.
+      if (Math.abs(southWestHeight - northEastHeight) <= Math.abs(southEastHeight - northWestHeight)) {
+        indices.set([southWest, northWest, southEast, southEast, northWest, northEast], indexOffset);
+      } else {
+        indices.set([southWest, northWest, northEast, southWest, northEast, southEast], indexOffset);
+      }
       indexOffset += 6;
     }
   }

@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
-import type { World } from '@dimforge/rapier3d-compat';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
+import type { World } from '@dimforge/rapier3d-compat';
 import type { ChunkManager } from './chunk-manager';
 import { createSedanBodyGeometry, createWheelArchGeometry } from './npc-models';
 
@@ -12,25 +12,32 @@ const WHEEL_COLOR = 0x1a1a1a;
 
 export class Vehicle {
   readonly group: THREE.Group;
-  private readonly proceduralVisual = new THREE.Group();
   readonly chassisBody: RAPIER.RigidBody;
   readonly controller: RAPIER.DynamicRayCastVehicleController;
   private readonly wheels: THREE.Mesh[] = [];
+  private readonly brakeLightMaterials: THREE.MeshStandardMaterial[] = [];
+  private readonly proceduralParts: THREE.Object3D[] = [];
   private readonly world: World;
 
-  constructor(world: World, x: number, y: number, z: number) {
+  constructor(world: World, x: number, y: number, z: number, heading = 0, color = CAR_COLOR) {
     this.world = world;
     this.group = new THREE.Group();
-    this.group.add(this.proceduralVisual);
 
-    // Chassis rigid body.
+    // Chassis rigid body: placed at y + 0.82 so wheels rest gently on the ground
+    // without compressing the suspension into the floor on frame 0. Heading rotates
+    // the chassis along the street direction to prevent trimesh wall penetration.
+    const half = heading * 0.5;
     const chassisDesc = RAPIER.RigidBodyDesc.dynamic()
-      .setTranslation(x, y + 0.6, z)
-      .setLinearDamping(0.3)
-      .setAngularDamping(2.5);
+      .setTranslation(x, y + 0.82, z)
+      .setRotation({ x: 0, y: Math.sin(half), z: 0, w: Math.cos(half) })
+      .setLinearDamping(0.8)
+      .setAngularDamping(4.0);
     this.chassisBody = world.createRigidBody(chassisDesc);
     const colliderDesc = RAPIER.ColliderDesc.cuboid(0.9, 0.35, 2.0).setMass(1200).setFriction(0.7);
     world.createCollider(colliderDesc, this.chassisBody);
+
+    this.group.position.set(x, y + 0.82, z);
+    this.group.quaternion.set(0, Math.sin(half), 0, Math.cos(half));
 
     this.controller = new RAPIER.DynamicRayCastVehicleController(
       this.chassisBody,
@@ -57,40 +64,45 @@ export class Vehicle {
       );
     }
     for (let i = 0; i < 4; i += 1) {
-      this.controller.setWheelSuspensionStiffness(i, 30);
-      this.controller.setWheelMaxSuspensionTravel(i, 0.3);
+      this.controller.setWheelSuspensionStiffness(i, 28);
+      this.controller.setWheelMaxSuspensionTravel(i, 0.28);
       this.controller.setWheelSuspensionCompression(i, 4.4);
       this.controller.setWheelSuspensionRelaxation(i, 2.3);
-      this.controller.setWheelFrictionSlip(i, 5);
+      this.controller.setWheelFrictionSlip(i, 4.5);
       this.controller.setWheelSideFrictionStiffness(i, 2.0);
       this.controller.setWheelMaxSuspensionForce(i, 6000);
       this.controller.setWheelRadius(i, 0.35);
     }
 
-    // Visual mesh.
+    // Visual mesh with matching color and glossy clearcoat automotive finish.
     const bodyGeo = createSedanBodyGeometry();
-    const bodyMat = new THREE.MeshStandardMaterial({ color: CAR_COLOR, roughness: 0.4, metalness: 0.3 });
+    const bodyMat = new THREE.MeshStandardMaterial({ color, roughness: 0.16, metalness: 0.65 });
     const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
     bodyMesh.castShadow = true;
-    this.proceduralVisual.add(bodyMesh);
+    this.group.add(bodyMesh);
 
     const cabinGeo = taperedCabinGeometry();
-    const cabinMat = new THREE.MeshStandardMaterial({ color: CAR_COLOR, roughness: 0.38, metalness: 0.18 });
+    const cabinMat = new THREE.MeshStandardMaterial({ color, roughness: 0.18, metalness: 0.55 });
     const cabin = new THREE.Mesh(cabinGeo, cabinMat);
     cabin.position.set(0, 0, -0.18);
     cabin.castShadow = true;
-    this.proceduralVisual.add(cabin);
+    this.group.add(cabin);
 
     const trimMat = new THREE.MeshStandardMaterial({ color: 0x34383b, roughness: 0.62, metalness: 0.22 });
-    const lightMat = new THREE.MeshStandardMaterial({ color: 0xffefbb, emissive: 0x392a0b, roughness: 0.28 });
-    const rearLightMat = new THREE.MeshStandardMaterial({ color: 0xb7352d, emissive: 0x30100c, roughness: 0.35 });
+    const lightMat = new THREE.MeshStandardMaterial({ color: 0xfffae8, emissive: 0xffefb8, emissiveIntensity: 1.2, roughness: 0.15 });
+    const rearLightMat = new THREE.MeshStandardMaterial({ color: 0x8f211c, roughness: 0.26, metalness: 0.08 });
+    const brakeLightMat = new THREE.MeshStandardMaterial({ color: 0xf13327, emissive: 0xc91c12, emissiveIntensity: 0.12, roughness: 0.18 });
+    const plateMat = new THREE.MeshStandardMaterial({ color: 0xf4f4f4, roughness: 0.6 });
+    const euMat = new THREE.MeshStandardMaterial({ color: 0x154ca0, roughness: 0.5 });
+    const chromeMat = new THREE.MeshStandardMaterial({ color: 0xd8dcd0, roughness: 0.18, metalness: 0.9 });
+
     const addDetail = (geometry: THREE.BufferGeometry, material: THREE.Material, x: number, y: number, z: number) => {
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(x, y, z);
       mesh.castShadow = true;
-      this.proceduralVisual.add(mesh);
+      this.group.add(mesh);
     };
-    const glassMat = new THREE.MeshStandardMaterial({ color: 0x263e4a, roughness: 0.2, metalness: 0.12, side: THREE.DoubleSide });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x1b2d36, roughness: 0.1, metalness: 0.72, side: THREE.DoubleSide });
     const addPane = (points: readonly (readonly [number, number, number])[]) => {
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute('position', new THREE.Float32BufferAttribute(points.flatMap((point) => point), 3));
@@ -111,45 +123,94 @@ export class Vehicle {
     for (const side of [-1, 1]) {
       addDetail(new THREE.BoxGeometry(0.32, 0.2, 0.1), lightMat, side * 0.62, 0.4, 1.91);
       addDetail(new THREE.BoxGeometry(0.28, 0.17, 0.1), rearLightMat, side * 0.66, 0.42, -1.91);
+      const brake = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.08, 0.035), brakeLightMat);
+      brake.position.set(side * 0.66, 0.42, -1.97);
+      this.group.add(brake);
+      this.brakeLightMaterials.push(brakeLightMat);
       addDetail(new THREE.BoxGeometry(0.16, 0.12, 0.22), trimMat, side * 0.82, 0.83, 0.48);
       for (const z of [-1.32, 1.32]) {
         const arch = new THREE.Mesh(createWheelArchGeometry(side, z, 0), bodyMat);
         arch.castShadow = true;
-        this.proceduralVisual.add(arch);
+        this.group.add(arch);
       }
       addDetail(new THREE.CapsuleGeometry(0.014, 0.34, 2, 6), trimMat, side * 0.86, 0.4, 0.12);
       addDetail(new THREE.CapsuleGeometry(0.02, 0.08, 2, 6), trimMat, side * 0.86, 0.6, 0.38);
     }
 
+    // Cabin forms add a visible interior through the glass at close range.
+    addDetail(new THREE.BoxGeometry(1.16, 0.12, 0.3), trimMat, 0, 0.69, 0.61);
+    const steeringWheel = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.018, 6, 16), trimMat);
+    steeringWheel.position.set(-0.28, 0.84, 0.53);
+    this.group.add(steeringWheel);
+    for (const seatX of [-0.3, 0.3]) {
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.38, 0.28), trimMat);
+      seat.position.set(seatX, 0.75, -0.22);
+      seat.castShadow = true;
+      this.group.add(seat);
+    }
+
+    // Door shut lines clarify the car body silhouette without adding many draw calls.
+    const seamGeometry = new THREE.BufferGeometry();
+    seamGeometry.setAttribute('position', new THREE.Float32BufferAttribute([
+      -0.87, 0.58, 0.02, -0.87, 0.58, -0.7, -0.87, 0.58, -0.7, -0.68, 1.02, -0.48,
+      0.87, 0.58, 0.02, 0.87, 0.58, -0.7, 0.87, 0.58, -0.7, 0.68, 1.02, -0.48,
+    ], 3));
+    const seamMaterial = new THREE.LineBasicMaterial({ color: 0x652b25, transparent: true, opacity: 0.58 });
+    this.group.add(new THREE.LineSegments(seamGeometry, seamMaterial));
+
+    // Spanish / European format license plates
+    addDetail(new THREE.BoxGeometry(0.42, 0.11, 0.03), plateMat, 0, 0.05, 2.06);
+    addDetail(new THREE.BoxGeometry(0.06, 0.11, 0.032), euMat, -0.18, 0.05, 2.062);
+    addDetail(new THREE.BoxGeometry(0.42, 0.11, 0.03), plateMat, 0, 0.07, -2.06);
+    addDetail(new THREE.BoxGeometry(0.06, 0.11, 0.032), euMat, -0.18, 0.07, -2.062);
+
+    // Dual chrome exhaust pipes at rear
+    for (const exX of [-0.52, -0.42]) {
+      const pipeGeo = new THREE.CylinderGeometry(0.036, 0.036, 0.16, 8);
+      pipeGeo.rotateX(Math.PI / 2);
+      addDetail(pipeGeo, chromeMat, exX, 0.02, -2.08);
+    }
+
     const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 12);
     wheelGeo.rotateZ(Math.PI / 2);
-    const wheelMat = new THREE.MeshStandardMaterial({ color: WHEEL_COLOR, roughness: 0.8 });
-    const hubGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.27, 10);
+    const wheelMat = new THREE.MeshStandardMaterial({ color: WHEEL_COLOR, roughness: 0.85 });
+    const rimGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.258, 12);
+    rimGeo.rotateZ(Math.PI / 2);
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0xd0d4d8, roughness: 0.25, metalness: 0.85 });
+    const discGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.252, 8);
+    discGeo.rotateZ(Math.PI / 2);
+    const discMat = new THREE.MeshStandardMaterial({ color: 0x2a2b2d, roughness: 0.65 });
+    const hubGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.264, 8);
     hubGeo.rotateZ(Math.PI / 2);
-    const hubMat = new THREE.MeshStandardMaterial({ color: 0xa7a9a5, roughness: 0.35, metalness: 0.65 });
+    const spokeGeo = new THREE.BoxGeometry(0.02, 0.23, 0.028);
+
+    // The CC0 sedan replaces the body details; wheels stay visible and animated.
+    this.proceduralParts.push(...this.group.children);
     for (const wp of wheelPositions) {
       const w = new THREE.Mesh(wheelGeo, wheelMat);
       w.position.set(wp.x, 0.0, wp.z);
-      this.proceduralVisual.add(w);
+      this.group.add(w);
       this.wheels.push(w);
-      const hub = new THREE.Mesh(hubGeo, hubMat);
-      hub.position.x = 0.02;
-      w.add(hub);
-    }
-  }
 
-  async loadModel(chunks: ChunkManager, url: string): Promise<void> {
-    const gltf = await chunks.loadModel(url, 80);
-    const model = createMergedVehicleVisual(gltf);
-    model.name = 'CC0 detailed graphite sedan';
-    model.rotation.y = Math.PI / 2;
-    model.traverse((object) => {
-      if (!(object instanceof THREE.Mesh)) return;
-      object.castShadow = true;
-      object.receiveShadow = true;
-    });
-    this.group.add(model);
-    this.proceduralVisual.visible = false;
+      const rim = new THREE.Mesh(rimGeo, rimMat);
+      rim.position.x = 0.01;
+      w.add(rim);
+
+      const disc = new THREE.Mesh(discGeo, discMat);
+      disc.position.x = 0.005;
+      w.add(disc);
+
+      const hub = new THREE.Mesh(hubGeo, rimMat);
+      hub.position.x = 0.015;
+      w.add(hub);
+
+      for (let s = 0; s < 5; s += 1) {
+        const spoke = new THREE.Mesh(spokeGeo, rimMat);
+        spoke.rotation.x = (s * Math.PI * 2) / 5;
+        spoke.position.x = 0.015;
+        w.add(spoke);
+      }
+    }
   }
 
   update(deltaSeconds: number, input: { forward: boolean; backward: boolean; left: boolean; right: boolean; handbrake: boolean }): void {
@@ -166,6 +227,8 @@ export class Vehicle {
     for (let i = 0; i < 4; i += 1) this.controller.setWheelBrake(i, brake);
 
     this.controller.updateVehicle(deltaSeconds);
+    const braking = input.handbrake || (input.backward && !input.forward);
+    for (const material of this.brakeLightMaterials) material.emissiveIntensity = braking ? 2.2 : 0.12;
     // Rapier's vehicle controller only changes velocities; stepping the world is
     // what integrates the chassis and resolves contacts with terrain, buildings
     // and the kinematic agent colliders.
@@ -195,6 +258,20 @@ export class Vehicle {
 
   get position(): THREE.Vector3 { return this.group.position; }
 
+  async loadModel(chunks: ChunkManager, url: string): Promise<void> {
+    const gltf = await chunks.loadModel(url, 80);
+    const model = createMergedVehicleVisual(gltf);
+    model.name = 'CC0 detailed graphite sedan';
+    model.rotation.y = Math.PI / 2;
+    model.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      object.castShadow = true;
+      object.receiveShadow = true;
+    });
+    this.group.add(model);
+    for (const part of this.proceduralParts) part.visible = false;
+  }
+
   get speed(): number {
     const velocity = this.chassisBody.linvel();
     return Math.hypot(velocity.x, velocity.y, velocity.z);
@@ -205,6 +282,19 @@ export class Vehicle {
   }
 }
 
+function taperedCabinGeometry(): THREE.BufferGeometry {
+  const positions = new Float32Array([
+    -0.75, 0.56, 0.82,  0.75, 0.56, 0.82,  0.75, 0.56, -0.78, -0.75, 0.56, -0.78,
+    -0.53, 1.1, 0.42,   0.53, 1.1, 0.42,   0.53, 1.1, -0.48,  -0.53, 1.1, -0.48,
+  ]);
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setIndex([0, 1, 4, 1, 5, 4, 1, 2, 5, 2, 6, 5, 2, 3, 6, 3, 7, 6, 3, 0, 7, 0, 4, 7, 4, 5, 6, 4, 6, 7]);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+/** Clone the CC0 sedan and merge its 300+ meshes into one batch per material. */
 function createMergedVehicleVisual(gltf: GLTF): THREE.Group {
   const source = gltf.scene.clone(true);
   source.updateMatrixWorld(true);
@@ -218,7 +308,9 @@ function createMergedVehicleVisual(gltf: GLTF): THREE.Group {
     if (!(object instanceof THREE.Mesh) || object instanceof THREE.SkinnedMesh) return;
     const materials = Array.isArray(object.material) ? object.material : [object.material];
     const sourceGeometry = object.geometry;
-    const groups = sourceGeometry.groups.length > 0 ? sourceGeometry.groups : [{ start: 0, count: sourceGeometry.index?.count ?? sourceGeometry.getAttribute('position')?.count ?? 0, materialIndex: 0 }];
+    const groups = sourceGeometry.groups.length > 0
+      ? sourceGeometry.groups
+      : [{ start: 0, count: sourceGeometry.index?.count ?? sourceGeometry.getAttribute('position')?.count ?? 0, materialIndex: 0 }];
     for (const group of groups) {
       const material = materials[group.materialIndex ?? 0];
       if (!material) continue;
@@ -226,9 +318,12 @@ function createMergedVehicleVisual(gltf: GLTF): THREE.Group {
       geometry.applyMatrix4(object.matrixWorld);
       geometry.translate(-center.x, -center.y, -center.z);
       geometry.scale(scale.x, scale.y, scale.z);
-      const signature = Object.entries(geometry.attributes).map(([name, attribute]) => `${name}:${attribute.itemSize}:${attribute.normalized}`).sort().join('|');
+      const signature = Object.entries(geometry.attributes)
+        .map(([name, attribute]) => `${name}:${attribute.itemSize}:${attribute.normalized}`)
+        .sort()
+        .join('|');
       const key = `${material.uuid}:${signature}:${Boolean(geometry.index)}`;
-      const batch = batches.get(key) ?? { material, geometries: [] };
+      const batch: { material: THREE.Material; geometries: THREE.BufferGeometry[] } = batches.get(key) ?? { material, geometries: [] };
       batch.geometries.push(geometry);
       batches.set(key, batch);
     }
@@ -260,17 +355,5 @@ function geometryForMaterialGroup(source: THREE.BufferGeometry, start: number, c
     const array = attribute instanceof THREE.InterleavedBufferAttribute ? attribute.data.array : attribute.array;
     geometry.setAttribute(name, new THREE.BufferAttribute(array.slice(begin, end), attribute.itemSize, attribute.normalized));
   }
-  return geometry;
-}
-
-function taperedCabinGeometry(): THREE.BufferGeometry {
-  const positions = new Float32Array([
-    -0.75, 0.56, 0.82,  0.75, 0.56, 0.82,  0.75, 0.56, -0.78, -0.75, 0.56, -0.78,
-    -0.53, 1.1, 0.42,   0.53, 1.1, 0.42,   0.53, 1.1, -0.48,  -0.53, 1.1, -0.48,
-  ]);
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geometry.setIndex([0, 1, 4, 1, 5, 4, 1, 2, 5, 2, 6, 5, 2, 3, 6, 3, 7, 6, 3, 0, 7, 0, 4, 7, 4, 5, 6, 4, 6, 7]);
-  geometry.computeVertexNormals();
   return geometry;
 }

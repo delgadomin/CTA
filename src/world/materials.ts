@@ -1,3 +1,5 @@
+import * as THREE from 'three';
+
 export type GroundMaterial = 'grass' | 'stone' | 'asphalt' | 'soil' | 'rock' | 'water';
 
 export const GROUND_COLORS: Readonly<Record<GroundMaterial, readonly [number, number, number]>> = {
@@ -8,6 +10,57 @@ export const GROUND_COLORS: Readonly<Record<GroundMaterial, readonly [number, nu
   rock: [0.47, 0.46, 0.42],
   water: [0.18, 0.32, 0.37],
 };
+
+export function createTerrainDetailTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Could not create terrain detail canvas.');
+
+  // Base neutral tone for clean vertex color modulation
+  context.fillStyle = '#dcd7ce';
+  context.fillRect(0, 0, 512, 512);
+
+  // Multi-frequency noise and surface flecks
+  let seed = 0x7a39b2;
+  const rnd = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+
+  // Broad organic patches
+  for (let i = 0; i < 400; i += 1) {
+    const x = rnd() * 512;
+    const y = rnd() * 512;
+    const r = 8 + rnd() * 24;
+    const shade = rnd() > 0.5 ? 245 : 190;
+    context.fillStyle = `rgb(${shade} ${shade - 6} ${shade - 14} / 0.12)`;
+    context.beginPath();
+    context.arc(x, y, r, 0, Math.PI * 2);
+    context.fill();
+  }
+
+  // Micro gravel, stone chips and blade marks
+  for (let i = 0; i < 4000; i += 1) {
+    const x = rnd() * 512;
+    const y = rnd() * 512;
+    const isDark = rnd() > 0.45;
+    const val = isDark ? 60 + rnd() * 50 : 220 + rnd() * 35;
+    const alpha = 0.08 + rnd() * 0.16;
+    context.fillStyle = `rgb(${val} ${val - 4} ${val - 10} / ${alpha})`;
+    const size = 1 + rnd() * 2.5;
+    context.fillRect(x, y, size, size);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  texture.needsUpdate = true;
+  return texture;
+}
 
 export function classifyGround(kind: string | undefined, value: string | undefined, surface: string | undefined): GroundMaterial {
   const surfaceName = surface?.toLowerCase() ?? '';

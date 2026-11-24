@@ -2,6 +2,9 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 
+// Instanced crowds draw the same mesh for every agent: decorative capsules and
+// spheres use fewer sides so the visual pass stays inside the triangle budget.
+
 function colorPart(geometry: THREE.BufferGeometry, color: number): THREE.BufferGeometry {
   const count = geometry.getAttribute('position')?.count ?? 0;
   const tint = new THREE.Color(color);
@@ -21,24 +24,13 @@ function finish(parts: THREE.BufferGeometry[], fallback: THREE.BufferGeometry): 
 }
 
 /** Low-poly but shaped crowd models, merged so each agent category stays one draw call. */
-function pedestrianGeometry(outfitOnly = false): THREE.BufferGeometry {
+function pedestrianGeometry(): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
   const skin = 0xe8bd9b;
-  if (outfitOnly) {
-    const jacket = new THREE.CylinderGeometry(0.215, 0.265, 0.58, 9, 1);
-    jacket.scale(1, 1, 0.78);
-    addPart(parts, jacket, 0xffffff, new THREE.Vector3(0, 1.15, 0));
-    for (const side of [-1, 1]) {
-      const sleeve = new THREE.CapsuleGeometry(0.09, 0.3, 3, 7);
-      sleeve.rotateZ(side * -0.12);
-      addPart(parts, sleeve, 0xffffff, new THREE.Vector3(side * 0.29, 1.14, 0));
-      addPart(parts, new THREE.CylinderGeometry(0.05, 0.06, 0.19, 7), 0xffffff, new THREE.Vector3(side * 0.32, 0.84, 0.015));
-    }
-    return finish(parts, new THREE.CapsuleGeometry(0.25, 1.2, 4, 8));
-  }
+  const jacket = 0x536c76;
   const torso = new THREE.CylinderGeometry(0.2, 0.25, 0.56, 9, 1);
   torso.scale(1, 1, 0.78);
-  addPart(parts, torso, 0xd8d0c4, new THREE.Vector3(0, 1.15, 0));
+  addPart(parts, torso, jacket, new THREE.Vector3(0, 1.15, 0));
   addPart(parts, new THREE.CylinderGeometry(0.105, 0.13, 0.11, 8), skin, new THREE.Vector3(0, 1.49, 0));
   addPart(parts, new THREE.CylinderGeometry(0.2, 0.22, 0.27, 9), 0x353a43, new THREE.Vector3(0, 0.78, 0));
   // Cloth panels and a belt add contrast without the old flat, box-like torso.
@@ -58,17 +50,34 @@ function pedestrianGeometry(outfitOnly = false): THREE.BufferGeometry {
     addPart(parts, new THREE.SphereGeometry(0.035, 6, 4), 0x38271f, new THREE.Vector3(side * 0.15, 1.78, 0.015));
   }
   for (const side of [-1, 1]) {
+    const arm = new THREE.CapsuleGeometry(0.085, 0.3, 3, 7);
+    arm.rotateZ(side * -0.12);
+    addPart(parts, arm, jacket, new THREE.Vector3(side * 0.29, 1.14, 0));
+    addPart(parts, new THREE.CylinderGeometry(0.045, 0.058, 0.19, 7), jacket, new THREE.Vector3(side * 0.32, 0.84, 0.015));
     addPart(parts, new THREE.SphereGeometry(0.058, 7, 5), skin, new THREE.Vector3(side * 0.32, 0.71, 0.025));
     const leg = new THREE.CapsuleGeometry(0.09, 0.4, 3, 7);
     addPart(parts, leg, 0x353a43, new THREE.Vector3(side * 0.12, 0.48, 0));
     const shoe = new THREE.SphereGeometry(0.13, 9, 6);
     shoe.scale(1, 0.55, 1.55);
     addPart(parts, shoe, 0x282522, new THREE.Vector3(side * 0.12, 0.08, 0.055));
+    // Crisp sneaker midsole (white sidewall) and dark tread
+    const midsole = new THREE.SphereGeometry(0.132, 8, 5);
+    midsole.scale(1, 0.22, 1.52);
+    addPart(parts, midsole, 0xf0f2f5, new THREE.Vector3(side * 0.12, 0.042, 0.055));
     const sole = new THREE.SphereGeometry(0.13, 8, 5);
-    sole.scale(1, 0.18, 1.5);
-    addPart(parts, sole, 0x111315, new THREE.Vector3(side * 0.12, 0.025, 0.055));
+    sole.scale(1, 0.16, 1.5);
+    addPart(parts, sole, 0x111315, new THREE.Vector3(side * 0.12, 0.018, 0.055));
     addPart(parts, new THREE.CapsuleGeometry(0.035, 0.08, 2, 5), 0x282522, new THREE.Vector3(side * 0.15, 0.91, 0.12));
   }
+  // Sunglasses for urban character flair
+  const glasses = new THREE.BoxGeometry(0.18, 0.038, 0.04);
+  addPart(parts, glasses, 0x18181a, new THREE.Vector3(0, 1.685, 0.145));
+  // Crossbody leather bag strap and hip satchel
+  const satchel = new THREE.BoxGeometry(0.16, 0.18, 0.08);
+  addPart(parts, satchel, 0x483427, new THREE.Vector3(0.24, 0.88, 0.06));
+  const strap = new THREE.CapsuleGeometry(0.016, 0.65, 2, 5);
+  strap.rotateZ(0.5);
+  addPart(parts, strap, 0x483427, new THREE.Vector3(0.04, 1.18, 0.16));
   return finish(parts, new THREE.CapsuleGeometry(0.25, 1.2, 4, 8));
 }
 
@@ -120,7 +129,15 @@ export function createSedanBodyGeometry(): THREE.BufferGeometry {
     [0, section.top], [-section.width * 0.82, section.top - 0.08],
     [-section.width, section.shoulder],
   ];
-  const positions = sections.flatMap((section) => ring(section).flatMap(([x, y]) => [x, y, section.z]));
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  sections.forEach((section, row) => {
+    ring(section).forEach(([x, y], point) => {
+      positions.push(x, y, section.z);
+      // Primitives merged into the car carry uv; keep the attribute set identical.
+      uvs.push(point / 6, row / (sections.length - 1));
+    });
+  });
   const indices: number[] = [];
   const pointsPerRing = 7;
   for (let row = 0; row < sections.length - 1; row += 1) {
@@ -137,6 +154,7 @@ export function createSedanBodyGeometry(): THREE.BufferGeometry {
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   return geometry;
@@ -145,6 +163,7 @@ export function createSedanBodyGeometry(): THREE.BufferGeometry {
 export function createWheelArchGeometry(side: number, centerZ: number, centerY = 0.36): THREE.BufferGeometry {
   const positions: number[] = [];
   const indices: number[] = [];
+  const uvs: number[] = [];
   const segments = 10;
   const inner = 0.37;
   const outer = 0.48;
@@ -152,8 +171,10 @@ export function createWheelArchGeometry(side: number, centerZ: number, centerY =
     const angle = (segment / segments) * Math.PI;
     const zOffset = Math.cos(angle);
     const yOffset = Math.sin(angle);
+    const u = segment / segments;
     positions.push(side * 0.885, centerY + yOffset * inner, centerZ + zOffset * inner);
     positions.push(side * 0.885, centerY + yOffset * outer, centerZ + zOffset * outer);
+    uvs.push(u, 0, u, 1);
   }
   for (let segment = 0; segment < segments; segment += 1) {
     const a = segment * 2;
@@ -161,6 +182,7 @@ export function createWheelArchGeometry(side: number, centerZ: number, centerY =
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   return geometry;
@@ -204,14 +226,41 @@ function vehicleGeometry(police = false): THREE.BufferGeometry {
     rearWheel.rotateZ(Math.PI / 2);
     addPart(parts, rearWheel, 0x25272a, new THREE.Vector3(side * 0.89, 0.36, -1.32));
     for (const z of [1.32, -1.32]) {
-      const hub = new THREE.CylinderGeometry(0.15, 0.15, 0.23, 8);
+      // Alloy rim outer lip
+      const rim = new THREE.CylinderGeometry(0.24, 0.24, 0.23, 10);
+      rim.rotateZ(Math.PI / 2);
+      addPart(parts, rim, 0xd0d4d8, new THREE.Vector3(side * 0.9, 0.36, z));
+      // Dark brake disc
+      const disc = new THREE.CylinderGeometry(0.18, 0.18, 0.222, 8);
+      disc.rotateZ(Math.PI / 2);
+      addPart(parts, disc, 0x2c2e30, new THREE.Vector3(side * 0.895, 0.36, z));
+      // Center hub
+      const hub = new THREE.CylinderGeometry(0.09, 0.09, 0.235, 8);
       hub.rotateZ(Math.PI / 2);
-      addPart(parts, hub, 0x9da2a5, new THREE.Vector3(side * 0.9, 0.36, z));
+      addPart(parts, hub, 0x9da2a5, new THREE.Vector3(side * 0.902, 0.36, z));
+      // 5-spoke alloy wheels
+      for (let s = 0; s < 5; s += 1) {
+        const spokeAngle = (s * Math.PI * 2) / 5;
+        const spoke = new THREE.BoxGeometry(0.02, 0.22, 0.028);
+        spoke.rotateX(spokeAngle);
+        addPart(parts, spoke, 0xd0d4d8, new THREE.Vector3(side * 0.905, 0.36, z));
+      }
     }
     for (const z of [0.18, -0.88]) {
       addPart(parts, new THREE.CapsuleGeometry(0.012, 0.34, 2, 5), 0x3e4244, new THREE.Vector3(side * 0.85, 0.59, z));
       addPart(parts, new THREE.CapsuleGeometry(0.015, 0.095, 2, 5), 0x85898a, new THREE.Vector3(side * 0.86, 0.77, z + 0.21));
     }
+  }
+  // Front and rear Spanish / European license plates (white with blue EU band)
+  addPart(parts, new THREE.BoxGeometry(0.42, 0.11, 0.03), 0xf4f4f4, new THREE.Vector3(0, 0.25, 2.06));
+  addPart(parts, new THREE.BoxGeometry(0.06, 0.11, 0.032), 0x154ca0, new THREE.Vector3(-0.18, 0.25, 2.062));
+  addPart(parts, new THREE.BoxGeometry(0.42, 0.11, 0.03), 0xf4f4f4, new THREE.Vector3(0, 0.27, -2.06));
+  addPart(parts, new THREE.BoxGeometry(0.06, 0.11, 0.032), 0x154ca0, new THREE.Vector3(-0.18, 0.27, -2.062));
+  // Dual chrome exhaust tips at rear
+  for (const exX of [-0.52, -0.42]) {
+    const pipe = new THREE.CylinderGeometry(0.036, 0.036, 0.16, 8);
+    pipe.rotateX(Math.PI / 2);
+    addPart(parts, pipe, 0xd0d4d8, new THREE.Vector3(exX, 0.22, -2.08));
   }
   // Front seats and dashboard are visible through the glass at close range.
   for (const x of [-0.28, 0.28]) {
@@ -220,29 +269,40 @@ function vehicleGeometry(police = false): THREE.BufferGeometry {
   }
   addPart(parts, new THREE.CapsuleGeometry(0.07, 1.15, 2, 6), 0x333638, new THREE.Vector3(0, 0.81, 0.64));
   if (police) {
-    addPart(parts, new THREE.BoxGeometry(0.9, 0.12, 0.25), 0x202c37, new THREE.Vector3(0, 1.42, -0.05));
-    addPart(parts, new THREE.BoxGeometry(0.36, 0.12, 0.23), 0x3b8dff, new THREE.Vector3(-0.24, 1.51, -0.05));
-    addPart(parts, new THREE.BoxGeometry(0.36, 0.12, 0.23), 0xe34d4d, new THREE.Vector3(0.24, 1.51, -0.05));
+    // Aerodynamic emergency lightbar
+    addPart(parts, new THREE.BoxGeometry(0.82, 0.04, 0.14), 0x181a1c, new THREE.Vector3(0, 1.38, -0.05));
+    addPart(parts, new THREE.BoxGeometry(0.38, 0.11, 0.22), 0x2979ff, new THREE.Vector3(-0.24, 1.46, -0.05));
+    addPart(parts, new THREE.BoxGeometry(0.38, 0.11, 0.22), 0xff2a2a, new THREE.Vector3(0.24, 1.46, -0.05));
+    const siren = new THREE.CylinderGeometry(0.045, 0.045, 0.12, 8);
+    siren.rotateX(Math.PI / 2);
+    addPart(parts, siren, 0xcccccc, new THREE.Vector3(0, 1.46, -0.05));
+    // Spanish police flank livery striping
+    for (const side of [-1, 1]) {
+      addPart(parts, new THREE.BoxGeometry(0.02, 0.14, 1.8), 0x18488a, new THREE.Vector3(side * 0.895, 0.62, 0));
+      addPart(parts, new THREE.BoxGeometry(0.02, 0.05, 1.8), 0x1e824c, new THREE.Vector3(side * 0.896, 0.52, 0));
+    }
   }
   return finish(parts, new THREE.BoxGeometry(1.9, 1, 4.1));
 }
 
-function material(): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.76, metalness: 0.08 });
+/** Cloth and skin look best with high roughness and near-zero metalness. */
+function pedestrianMaterial(): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.88, metalness: 0.02 });
 }
 
-export function createPedestrianMeshes(capacity: number): { readonly body: THREE.InstancedMesh; readonly outfit: THREE.InstancedMesh } {
-  const body = new THREE.InstancedMesh(pedestrianGeometry(), material(), capacity);
-  const outfit = new THREE.InstancedMesh(pedestrianGeometry(true), material(), capacity);
-  for (const mesh of [body, outfit]) {
-    mesh.count = 0;
-    mesh.frustumCulled = false;
-    mesh.castShadow = true;
-    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  }
-  body.name = 'pedestrian-bodies';
-  outfit.name = 'pedestrian-outfits';
-  return { body, outfit };
+/** Painted metal body panels catch light more sharply than fabric. */
+function vehicleMaterial(): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.32, metalness: 0.48 });
+}
+
+export function createPedestrianMesh(capacity: number): THREE.InstancedMesh {
+  const mesh = new THREE.InstancedMesh(pedestrianGeometry(), pedestrianMaterial(), capacity);
+  mesh.name = 'pedestrians';
+  mesh.count = 0;
+  mesh.frustumCulled = false;
+  mesh.castShadow = true;
+  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  return mesh;
 }
 
 /** Bake one walk pose from the rigged CC0 pedestrian into geometry for crowd instancing. */
@@ -277,7 +337,7 @@ export function createDetailedPedestrianGeometry(gltf: GLTF): { readonly geometr
 }
 
 export function createVehicleMesh(capacity: number): THREE.InstancedMesh {
-  const mesh = new THREE.InstancedMesh(vehicleGeometry(), material(), capacity);
+  const mesh = new THREE.InstancedMesh(vehicleGeometry(), vehicleMaterial(), capacity);
   mesh.name = 'traffic';
   mesh.count = 0;
   mesh.frustumCulled = false;
@@ -287,7 +347,7 @@ export function createVehicleMesh(capacity: number): THREE.InstancedMesh {
 }
 
 export function createPoliceMesh(capacity: number): THREE.InstancedMesh {
-  const mesh = new THREE.InstancedMesh(vehicleGeometry(true), material(), capacity);
+  const mesh = new THREE.InstancedMesh(vehicleGeometry(true), vehicleMaterial(), capacity);
   mesh.name = 'police';
   mesh.count = 0;
   mesh.frustumCulled = false;

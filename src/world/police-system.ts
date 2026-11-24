@@ -59,6 +59,15 @@ export class PoliceSystem {
     return this.activeCount;
   }
 
+  getPatrolPositions(result: { x: number; z: number }[]): void {
+    result.length = 0;
+    for (let slot = 0; slot < CAPACITY; slot += 1) {
+      if (this.active[slot] === 1) {
+        result.push({ x: this.x[slot] ?? 0, z: this.z[slot] ?? 0 });
+      }
+    }
+  }
+
   nearestDistance(target: THREE.Vector3): number {
     let nearest = Infinity;
     for (let slot = 0; slot < CAPACITY; slot += 1) {

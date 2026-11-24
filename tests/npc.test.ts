@@ -110,10 +110,10 @@ describe('road graph for ambient agents', () => {
     try {
       for (let frame = 0; frame < 240; frame += 1) system.update(1 / 60, player, camera, world);
       const meshes = system.group.children as THREE.InstancedMesh[];
-      for (const mesh of meshes) {
-        expect(mesh.geometry.getAttribute('color')).toBeDefined();
-        expect(mesh.instanceColor).not.toBeNull();
-      }
+      expect(meshes[0]?.geometry.getAttribute('color')).toBeDefined();
+      expect(meshes[1]?.geometry.getAttribute('color')).toBeDefined();
+      // Pedestrians carry skin/clothing colours in vertices; only cars are tinted per instance.
+      expect(meshes[1]?.instanceColor).not.toBeNull();
       const occupied = tracked.values().next().value;
       expect(occupied).toBeDefined();
       if (!occupied) return;
