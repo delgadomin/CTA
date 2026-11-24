@@ -14,7 +14,7 @@
 - `src/world/city-kit.ts` precarga los GLB con `AssetManager`, los convierte a mallas instanciadas y sustituye el mobiliario de `RoadRenderer` por defecto. Añade chimeneas en `roofAnchors` y balcones en `signSlots`, siempre anclados a datos OSM ya presentes.
 - Si falla algún GLB, se mantiene el mobiliario procedural anterior. `?citykit=0` fuerza ese mobiliario baseline para comparar.
 - Inventario y licencias en `ASSETS_LICENSES.md`; pendientes en `ASSETS_NEEDED.md`; decisión registrada en `DECISIONS.md` y `ATTRIBUTION.md`.
-- Validación local: `lint`, `typecheck`, `test` (47/47) y `build` en verde. Los 15 archivos del kit se copian a `dist/models/citykit`.
+- Validación local: `lint`, `typecheck`, `test` (53/53) y `build` en verde. Los 15 archivos del kit se copian a `dist/models/citykit`.
 
 ### Pendiente
 - Revisión visual humana de escala/orientación de farolas, árboles, chimeneas y balcones.
