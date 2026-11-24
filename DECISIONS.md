@@ -219,3 +219,13 @@ Siguiendo las metodologías y directrices del repositorio `gamedev-skills` (`sou
 - Se incorpora el modelo matemático de trauma cuadrático en `CameraRig.addTrauma()`: en impactos de tráfico o atropellos, la cámara experimenta una sacudida proporcional amortiguada en 3 ejes, dotando a la conducción de peso y fisicidad.
 
 - Las celdas de terreno conservan las alturas MDT originales y el mismo presupuesto de triángulos; la diagonal se elige según la menor diferencia vertical para reducir el error de interpolación local.
+
+# Integración de los PR #11 y #14 - modelos CC0 locales (noviembre de 2026)
+
+- El PR #14 resultó ser un superset del PR #11 y partía de una base antigua. Se integra resolviendo el merge sobre `main` para conservar las correcciones de `uv`, colisión, LOD, audio, minimapa y cámara ya aceptadas. El PR #11 se cierra como supersedido acreditando a `delgadomin`.
+- Se incorporan tres GLB CC0 servidos desde `public/models/`: «Casual Walker» de Tevy (LOD0 para el jugador, LOD1 para la multitud) y «Graphite four-door sedan» de Innerscene para los vehículos manejables. Licencias y URLs en `ATTRIBUTION.md`. No se usa contenido de GTA/Rockstar ni se modifican los hashes de `public/world`.
+- El jugador sustituye su malla procedural cuando termina de cargar el GLB y reproduce las animaciones `idle`/`walk` del asset; el disparo de pisadas sigue ligado a `stepTriggered`. La geometría original se oculta, no se elimina, para servir de fallback ante un fallo de carga.
+- La multitud usa una pose `walk` horneada del LOD1 en un único `InstancedMesh`. Se descarta el teñido por instancia del PR porque coloreaba por igual piel y ropa; los coches ambientales y las patrullas siguen siendo geometría original instanciada.
+- El sedán CC0 se agrupa por material al cargarlo para limitar las llamadas de dibujo. El chasis, el colisionador y la cota de spawn (`y + 0.82`) siguen siendo los de `main`; el modelo no altera la física.
+- La cúpula procedural del PR #11 (`atmosphere.ts`) se descarta: `main` ya aporta gradiente ibérico, disco solar y corona con exposición ACES 1.14. Dos cielos simultáneos duplicarían dibujo y romperían la paleta actual.
+- Coste: ~7,52 MB de GLB con texturas embebidas, cargados de forma diferida tras `prepareRenderer()`; dentro del objetivo de <25 MB de carga inicial y sin URIs externos en tiempo de ejecución.

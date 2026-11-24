@@ -20,6 +20,11 @@ export class Character {
   private onGround = true;
   private prevCycle = 0;
   stepTriggered = false;
+  private readonly proceduralParts: THREE.Object3D[] = [];
+  private mixer: THREE.AnimationMixer | undefined;
+  private idleAction: THREE.AnimationAction | undefined;
+  private walkAction: THREE.AnimationAction | undefined;
+  private activeAction: THREE.AnimationAction | undefined;
 
   constructor() {
     this.group = new THREE.Group();
@@ -208,6 +213,30 @@ export class Character {
     this.rightLeg.add(rightSole);
     this.rightLeg.position.set(0.14, 0.75, 0);
     this.group.add(this.rightLeg);
+    // The CC0 character replaces these parts once its GLB finishes loading.
+    this.proceduralParts.push(...this.group.children);
+  }
+
+  async loadModel(chunks: ChunkManager, url: string): Promise<void> {
+    const gltf = await chunks.loadModel(url, 100);
+    const idleClip = gltf.animations.find((clip) => clip.name.toLowerCase() === 'idle') ?? gltf.animations[0];
+    if (!idleClip) throw new Error('The player model has no animations.');
+    const walkClip = gltf.animations.find((clip) => clip.name.toLowerCase() === 'walk') ?? idleClip;
+    const model = gltf.scene;
+    model.name = 'CC0 detailed player character';
+    model.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      object.castShadow = true;
+      object.receiveShadow = true;
+    });
+    this.group.add(model);
+    for (const part of this.proceduralParts) part.visible = false;
+    this.mixer = new THREE.AnimationMixer(model);
+    const idle = this.mixer.clipAction(idleClip);
+    this.idleAction = idle;
+    this.walkAction = this.mixer.clipAction(walkClip);
+    this.activeAction = idle;
+    idle.play();
   }
 
   update(deltaSeconds: number, input: InputManager, chunks: ChunkManager | undefined, cameraYaw: number, jump: boolean): void {
@@ -279,6 +308,17 @@ export class Character {
     } else {
       this.vy -= 18 * deltaSeconds;
       this.group.position.y += this.vy * deltaSeconds;
+    }
+
+    if (this.mixer) {
+      const next = moving ? this.walkAction : this.idleAction;
+      if (next && next !== this.activeAction) {
+        this.activeAction?.fadeOut(0.18);
+        next.reset().fadeIn(0.18).play();
+        this.activeAction = next;
+      }
+      this.mixer.update(deltaSeconds);
+      return;
     }
 
     const sprinting = input.isPressed('sprint');

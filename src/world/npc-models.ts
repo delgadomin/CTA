@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 
 // Instanced crowds draw the same mesh for every agent: decorative capsules and
 // spheres use fewer sides so the visual pass stays inside the triangle budget.
@@ -302,6 +303,37 @@ export function createPedestrianMesh(capacity: number): THREE.InstancedMesh {
   mesh.castShadow = true;
   mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   return mesh;
+}
+
+/** Bake one walk pose from the rigged CC0 pedestrian into geometry for crowd instancing. */
+export function createDetailedPedestrianGeometry(gltf: GLTF): { readonly geometry: THREE.BufferGeometry; readonly material: THREE.Material } {
+  const root = gltf.scene;
+  const mixer = new THREE.AnimationMixer(root);
+  const walking = gltf.animations.find((clip) => clip.name.toLowerCase() === 'walk') ?? gltf.animations[0];
+  if (walking) mixer.clipAction(walking).play();
+  mixer.update(0.28);
+  root.updateMatrixWorld(true);
+  const skinnedMeshes: THREE.SkinnedMesh[] = [];
+  root.traverse((object) => { if (object instanceof THREE.SkinnedMesh) skinnedMeshes.push(object); });
+  const skinned = skinnedMeshes[0];
+  if (!skinned) throw new Error('The pedestrian asset does not contain a rigged mesh.');
+  skinned.skeleton.update();
+
+  const geometry = skinned.geometry.clone();
+  const positions = geometry.getAttribute('position');
+  const point = new THREE.Vector3();
+  for (let index = 0; index < positions.count; index += 1) {
+    point.fromBufferAttribute(positions, index);
+    skinned.applyBoneTransform(index, point).applyMatrix4(skinned.matrixWorld);
+    positions.setXYZ(index, point.x, point.y, point.z);
+  }
+  positions.needsUpdate = true;
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  const material = Array.isArray(skinned.material) ? skinned.material[0]?.clone() : skinned.material.clone();
+  if (!material) throw new Error('The pedestrian asset has no material.');
+  return { geometry, material };
 }
 
 export function createVehicleMesh(capacity: number): THREE.InstancedMesh {

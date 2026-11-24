@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import type { Camera } from 'three';
+import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import type { AgentColliderSink } from './agent-colliders';
 import { RoadGraph } from './road-graph';
 import type { AgentMode } from './road-graph';
-import { createPedestrianMesh, createVehicleMesh, disposeAgentMesh } from './npc-models';
+import { createDetailedPedestrianGeometry, createPedestrianMesh, createVehicleMesh, disposeAgentMesh } from './npc-models';
 
 export interface NpcWorld {
   groundHeightAt(x: number, z: number): number | undefined;
@@ -156,6 +157,17 @@ export class NpcSystem {
         result.push({ x: this.x[slot] ?? 0, z: this.z[slot] ?? 0 });
       }
     }
+  }
+
+  /** Replace the low-poly crowd with one baked walk pose from the CC0 rigged asset. */
+  setPedestrianModel(gltf: GLTF): void {
+    const detailed = createDetailedPedestrianGeometry(gltf);
+    this.pedestrianMesh.geometry.dispose();
+    const previousMaterial = this.pedestrianMesh.material;
+    if (Array.isArray(previousMaterial)) previousMaterial.forEach((item) => item.dispose());
+    else previousMaterial.dispose();
+    this.pedestrianMesh.geometry = detailed.geometry;
+    this.pedestrianMesh.material = detailed.material;
   }
 
   /** Pedestrians within the radius run away and avoid the threat at junctions. */

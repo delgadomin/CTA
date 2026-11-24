@@ -143,6 +143,19 @@ let npcs: NpcSystem | undefined;
 let police: PoliceSystem | undefined;
 const crime = new CrimeSystem();
 const vehicles: Vehicle[] = [];
+
+function modelUrl(path: string): string {
+  const baseUrl = new URL(import.meta.env.BASE_URL, window.location.href);
+  return new URL(path, baseUrl).href;
+}
+
+function loadVehicleVisual(vehicle: Vehicle): void {
+  if (!chunks) return;
+  void vehicle.loadModel(chunks, modelUrl('models/vehicles/graphite-sedan.glb')).catch((error: unknown) => {
+    logger.warn('Detailed vehicle model failed to load; keeping the built-in vehicle', { error: String(error) });
+  });
+}
+
 let activeVehicle: Vehicle | null = null;
 let inVehicle = false;
 let spacePressed = false;
@@ -282,6 +295,7 @@ function spawnDebugVehicle(): string {
   const vehicle = new Vehicle(world, x, height, z, cameraRig.getYaw());
   vehicles.push(vehicle);
   scene.add(vehicle.group);
+  loadVehicleVisual(vehicle);
   world.updateSceneQueries();
   return 'Vehículo de pruebas creado a 4 m del jugador.';
 }
@@ -596,6 +610,7 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
           const stolen = new Vehicle(world, claimed.x, claimed.y, claimed.z, claimed.heading, claimed.color);
           vehicles.push(stolen);
           scene.add(stolen.group);
+          loadVehicleVisual(stolen);
           world.updateSceneQueries();
           nearest = stolen;
           if (crime.report('vehicleTheft', claimed.x, claimed.z)) {
@@ -651,6 +666,10 @@ async function initializeWorld(): Promise<void> {
   }
   await chunks.prepareRenderer(renderer, camera);
   chunks.setDebugBorders(showDebug);
+  void character.loadModel(chunks, modelUrl('models/characters/casual-walker.glb')).catch((error: unknown) => {
+    logger.warn('Detailed player model failed to load; keeping the built-in character', { error: String(error) });
+  });
+  for (const vehicle of vehicles) loadVehicleVisual(vehicle);
   statusLabel.textContent = 'Ciudad lista · WASD camina · clic captura el ratón';
   logger.info('World streaming initialized', { region: 'cc-monumental', stepHz: 60, lods: 3 });
   void initializeNpcs(worldBaseUrl).catch((error: unknown) => {
@@ -672,6 +691,13 @@ async function initializeNpcs(worldBaseUrl: URL): Promise<void> {
     vehicles: Math.round(60 * quality.populationDensity),
   }, agentColliders);
   scene.add(npcs.group);
+  if (chunks) {
+    void chunks.loadModel(modelUrl('models/characters/casual-walker-lod1.glb'), 60)
+      .then((gltf) => npcs?.setPedestrianModel(gltf))
+      .catch((error: unknown) => {
+        logger.warn('Detailed pedestrian model failed to load; keeping the built-in crowd', { error: String(error) });
+      });
+  }
   police = new PoliceSystem(graph, agentColliders);
   scene.add(police.group);
   logger.info('Traffic and pedestrians initialized', {

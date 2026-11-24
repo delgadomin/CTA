@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import type { World } from '@dimforge/rapier3d-compat';
+import type { ChunkManager } from './chunk-manager';
 import { createSedanBodyGeometry, createWheelArchGeometry } from './npc-models';
 
 
@@ -13,6 +16,7 @@ export class Vehicle {
   readonly controller: RAPIER.DynamicRayCastVehicleController;
   private readonly wheels: THREE.Mesh[] = [];
   private readonly brakeLightMaterials: THREE.MeshStandardMaterial[] = [];
+  private readonly proceduralParts: THREE.Object3D[] = [];
   private readonly world: World;
 
   constructor(world: World, x: number, y: number, z: number, heading = 0, color = CAR_COLOR) {
@@ -180,6 +184,8 @@ export class Vehicle {
     hubGeo.rotateZ(Math.PI / 2);
     const spokeGeo = new THREE.BoxGeometry(0.02, 0.23, 0.028);
 
+    // The CC0 sedan replaces the body details; wheels stay visible and animated.
+    this.proceduralParts.push(...this.group.children);
     for (const wp of wheelPositions) {
       const w = new THREE.Mesh(wheelGeo, wheelMat);
       w.position.set(wp.x, 0.0, wp.z);
@@ -252,6 +258,20 @@ export class Vehicle {
 
   get position(): THREE.Vector3 { return this.group.position; }
 
+  async loadModel(chunks: ChunkManager, url: string): Promise<void> {
+    const gltf = await chunks.loadModel(url, 80);
+    const model = createMergedVehicleVisual(gltf);
+    model.name = 'CC0 detailed graphite sedan';
+    model.rotation.y = Math.PI / 2;
+    model.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      object.castShadow = true;
+      object.receiveShadow = true;
+    });
+    this.group.add(model);
+    for (const part of this.proceduralParts) part.visible = false;
+  }
+
   get speed(): number {
     const velocity = this.chassisBody.linvel();
     return Math.hypot(velocity.x, velocity.y, velocity.z);
@@ -271,5 +291,69 @@ function taperedCabinGeometry(): THREE.BufferGeometry {
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.setIndex([0, 1, 4, 1, 5, 4, 1, 2, 5, 2, 6, 5, 2, 3, 6, 3, 7, 6, 3, 0, 7, 0, 4, 7, 4, 5, 6, 4, 6, 7]);
   geometry.computeVertexNormals();
+  return geometry;
+}
+
+/** Clone the CC0 sedan and merge its 300+ meshes into one batch per material. */
+function createMergedVehicleVisual(gltf: GLTF): THREE.Group {
+  const source = gltf.scene.clone(true);
+  source.updateMatrixWorld(true);
+  const batches = new Map<string, { material: THREE.Material; geometries: THREE.BufferGeometry[] }>();
+  const bounds = new THREE.Box3().setFromObject(source);
+  if (bounds.isEmpty()) throw new Error('The sedan model has no renderable geometry.');
+  const center = bounds.getCenter(new THREE.Vector3());
+  const scale = new THREE.Vector3(0.84, 1.3, 0.98);
+
+  source.traverse((object) => {
+    if (!(object instanceof THREE.Mesh) || object instanceof THREE.SkinnedMesh) return;
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    const sourceGeometry = object.geometry;
+    const groups = sourceGeometry.groups.length > 0
+      ? sourceGeometry.groups
+      : [{ start: 0, count: sourceGeometry.index?.count ?? sourceGeometry.getAttribute('position')?.count ?? 0, materialIndex: 0 }];
+    for (const group of groups) {
+      const material = materials[group.materialIndex ?? 0];
+      if (!material) continue;
+      const geometry = geometryForMaterialGroup(sourceGeometry, group.start, group.count, sourceGeometry.groups.length > 0);
+      geometry.applyMatrix4(object.matrixWorld);
+      geometry.translate(-center.x, -center.y, -center.z);
+      geometry.scale(scale.x, scale.y, scale.z);
+      const signature = Object.entries(geometry.attributes)
+        .map(([name, attribute]) => `${name}:${attribute.itemSize}:${attribute.normalized}`)
+        .sort()
+        .join('|');
+      const key = `${material.uuid}:${signature}:${Boolean(geometry.index)}`;
+      const batch: { material: THREE.Material; geometries: THREE.BufferGeometry[] } = batches.get(key) ?? { material, geometries: [] };
+      batch.geometries.push(geometry);
+      batches.set(key, batch);
+    }
+  });
+
+  const result = new THREE.Group();
+  for (const batch of batches.values()) {
+    const geometry = mergeGeometries(batch.geometries, false);
+    for (const sourceGeometry of batch.geometries) sourceGeometry.dispose();
+    if (!geometry) continue;
+    geometry.computeBoundingSphere();
+    result.add(new THREE.Mesh(geometry, batch.material));
+  }
+  if (result.children.length === 0) throw new Error('The sedan model could not be combined into renderable meshes.');
+  return result;
+}
+
+function geometryForMaterialGroup(source: THREE.BufferGeometry, start: number, count: number, selectRange: boolean): THREE.BufferGeometry {
+  const geometry = source.clone();
+  geometry.clearGroups();
+  if (!selectRange) return geometry;
+  if (source.index) {
+    geometry.setIndex(new THREE.BufferAttribute(source.index.array.slice(start, start + count), 1));
+    return geometry;
+  }
+  for (const [name, attribute] of Object.entries(source.attributes)) {
+    const begin = start * attribute.itemSize;
+    const end = (start + count) * attribute.itemSize;
+    const array = attribute instanceof THREE.InterleavedBufferAttribute ? attribute.data.array : attribute.array;
+    geometry.setAttribute(name, new THREE.BufferAttribute(array.slice(begin, end), attribute.itemSize, attribute.normalized));
+  }
   return geometry;
 }

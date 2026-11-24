@@ -484,3 +484,18 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - `npm run build`: compilación de producción exitosa en 2.11s.
 
 - La triangulación de cada celda compara ambas diagonales y usa la más corta en 3D, adaptando la malla a las cotas MDT sin desplazar ni inventar alturas.
+
+## Integración de los PR #11 y #14 - modelos CC0 (completada)
+
+### Hecho
+- Se resuelve localmente el merge del PR #14 sobre `main` conservando las correcciones de los PR #10, #12 y #13; se añaden solo los modelos CC0 y su documentación. El PR #11 queda supersedido por el #14.
+- Jugador: GLB «Casual Walker» de Tevy con animaciones `idle`/`walk` y fallback procedural si falla la carga. Peatones: pose de marcha horneada del LOD1 en una sola malla instanciada, sin teñido por instancia. Coches manejables: sedán CC0 de Innerscene agrupado por material; los coches ambientales y patrullas siguen siendo procedurales.
+- Se descarta `atmosphere.ts` porque el cielo, el disco solar y la corona ya presentes en `main` cubren esa función con la paleta actual. No se toca `public/world` ni se introducen assets con copyright.
+- Atribuciones en `ATTRIBUTION.md`; decisiones de integración en `DECISIONS.md`.
+
+### Verificación
+- `npm run lint`: sin errores.
+- `npm run typecheck`: sin errores de TypeScript.
+- `npm test`: 47/47 pruebas unitarias pasando (13/13 suites).
+- `npm run build`: compilación de producción exitosa; solo el aviso preexistente de tamaño de chunks de Rapier/Three.
+- Pendiente de inspección visual en navegador: escala del sedán, orientación del personaje y ausencia de avisos de `mergeGeometries()`.

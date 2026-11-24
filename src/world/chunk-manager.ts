@@ -213,6 +213,11 @@ export class ChunkManager {
     ]);
   }
 
+  loadModel(url: string, priority = 0): Promise<GLTF> {
+    if (!this.assets) return Promise.reject(new Error('The renderer must be prepared before loading models.'));
+    return this.assets.loadModel(url, priority);
+  }
+
   update(camera: THREE.Camera, now: number): void {
     if (this.closed || !this.manifest) return;
     this.processCompleted();
