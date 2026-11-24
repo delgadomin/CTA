@@ -217,3 +217,5 @@ Siguiendo las metodologías y directrices del repositorio `gamedev-skills` (`sou
 
 ## 3. Jugabilidad y respuesta cinemática de cámara (Trauma / Shake)
 - Se incorpora el modelo matemático de trauma cuadrático en `CameraRig.addTrauma()`: en impactos de tráfico o atropellos, la cámara experimenta una sacudida proporcional amortiguada en 3 ejes, dotando a la conducción de peso y fisicidad.
+
+- Las celdas de terreno conservan las alturas MDT originales y el mismo presupuesto de triángulos; la diagonal se elige según la menor diferencia vertical para reducir el error de interpolación local.
