@@ -482,3 +482,5 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - `npm run typecheck`: sin errores de TypeScript.
 - `npm test`: 47/47 pruebas unitarias pasando (13/13 suites, incluyendo `tests/audio-and-ui.test.ts`).
 - `npm run build`: compilación de producción exitosa en 2.11s.
+
+- La triangulación de cada celda compara ambas diagonales y usa la más corta en 3D, adaptando la malla a las cotas MDT sin desplazar ni inventar alturas.
