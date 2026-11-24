@@ -28,7 +28,7 @@ Origen UTM fijado en Plaza Mayor: E 726089.228 m, N 4372723.106 m.
 | Geometrías en superposición OSM | 7876 vías · 7148 huellas |
 | Edificios sin altura/planta OSM | 7096 |
 | Muestras MDT05 ausentes | 0 |
-| Comercios pendientes de revisión de marca | 657 |
+| Comercios pendientes de revisión de marca | 569 |
 
 Los atributos de altura y plantas ausentes permanecen nulos en los datos fuente. La altura visual usa height=* → building:levels × 3 m → planta visual por zona/tipo; las fachadas conservan el número fuente y el valor inferido por separado.
 El inspector 2D ofrece una superposición cian/magenta de la geometría OSM original frente a los chunks procesados. La herramienta `npm run fidelity` compara cada vértice de las vías y huellas fuente que intersectan el mundo con una tolerancia máxima de 1 m.

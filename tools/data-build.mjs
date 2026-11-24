@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, readdir, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { deflateSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
@@ -12,11 +12,11 @@ import { buildWalkRoute } from './walk-route.mjs';
 import { discoverLandmarkModels } from './landmark-assets.mjs';
 import { auditLandmarks, formatLandmarkAudit } from './landmark-audit.mjs';
 import { buildLandmarkDataset, writeLandmarkDataset } from './landmark-catalog.mjs';
+import { optionValue } from './cli-args.mjs';
+import { writeIfChanged } from './write-if-changed.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const regionName =
-  process.argv.find((argument) => argument.startsWith('--region='))?.split('=')[1] ??
-  'cc-monumental';
+const regionName = optionValue(process.argv.slice(2), '--region', 'cc-monumental');
 const forceDownload = process.argv.includes('--fresh');
 const config = JSON.parse(await readFile(path.join(ROOT, 'tools/config/regions.json'), 'utf8'));
 const regionDefinition = config[regionName];
@@ -143,14 +143,14 @@ const sourceGeometry = {
     .map(({ id, points }) => ({ id, featureType: 'building', points })),
 };
 const sourceGeometryBytes = Buffer.from(`${JSON.stringify(sourceGeometry)}\n`, 'utf8');
-await writeFile(path.join(destination, 'source-fidelity.json'), sourceGeometryBytes);
+await writeIfChanged(path.join(destination, 'source-fidelity.json'), sourceGeometryBytes);
 const roadNetworkBytes = Buffer.from(`${JSON.stringify(roadNetwork)}\n`, 'utf8');
 const roadNetworkPath = path.join(destination, 'road-network.json');
-await writeFile(roadNetworkPath, roadNetworkBytes);
+await writeIfChanged(roadNetworkPath, roadNetworkBytes);
 let walkRouteMetadata;
 if (walkRoute) {
   const routeBytes = Buffer.from(`${JSON.stringify(walkRoute)}\n`, 'utf8');
-  await writeFile(path.join(destination, 'walk-route.json'), routeBytes);
+  await writeIfChanged(path.join(destination, 'walk-route.json'), routeBytes);
   walkRouteMetadata = {
     path: 'walk-route.json',
     bytes: routeBytes.length,
@@ -179,7 +179,7 @@ for (const chunk of data.chunks) {
   binary.writeUInt32LE(payload.length, 8);
   compressed.copy(binary, 12);
   const fileName = `${chunk.id}.bin`;
-  await writeFile(path.join(destination, fileName), binary);
+  await writeIfChanged(path.join(destination, fileName), binary);
   chunkManifest.push({
     id: chunk.id,
     path: fileName,
@@ -252,11 +252,15 @@ const manifest = {
   ...(walkRouteMetadata ? { walkRoute: walkRouteMetadata } : {}),
   chunks: chunkManifest,
 };
-await writeFile(
+await writeIfChanged(
   path.join(destination, 'manifest.json'),
   `${JSON.stringify(manifest, null, 2)}\n`,
-  'utf8',
 );
+const currentChunkFiles = new Set(chunkManifest.map((chunk) => chunk.path));
+const staleChunks = (await readdir(destination)).filter(
+  (fileName) => /^-?\d+_-?\d+\.bin$/.test(fileName) && !currentChunkFiles.has(fileName),
+);
+await Promise.all(staleChunks.map((fileName) => unlink(path.join(destination, fileName))));
 
 const brandLines = [
   '# Revisión de marcas',
@@ -325,6 +329,6 @@ const fidelityLines = [
   '',
 ];
 await mkdir(path.join(ROOT, 'reports'), { recursive: true });
-await writeFile(path.join(ROOT, 'reports/brands.md'), `${brandLines.join('\n')}\n`, 'utf8');
-await writeFile(path.join(ROOT, 'reports/fidelity.md'), `${fidelityLines.join('\n')}\n`, 'utf8');
+await writeIfChanged(path.join(ROOT, 'reports/brands.md'), `${brandLines.join('\n')}\n`);
+await writeIfChanged(path.join(ROOT, 'reports/fidelity.md'), `${fidelityLines.join('\n')}\n`);
 console.info(`Built ${chunkManifest.length} deterministic chunks for ${regionName}.`);

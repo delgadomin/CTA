@@ -1,4 +1,4 @@
-import { rm, writeFile } from 'node:fs/promises';
+import { readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -6,6 +6,9 @@ import { loadAsciiElevation } from '../tools/elevation.mjs';
 import { normalizeOsm } from '../tools/normalize-data.mjs';
 import { projectEtrs89Utm29, unprojectEtrs89Utm29 } from '../tools/projection.mjs';
 import { makeOverpassQuery } from '../tools/fetch-osm.mjs';
+import { optionValue } from '../tools/cli-args.mjs';
+import { requestWithRetry } from '../tools/request-retry.mjs';
+import { writeIfChanged } from '../tools/write-if-changed.mjs';
 
 const region = {
   origin: { lat: 39.474414, lon: -6.371556 },
@@ -30,6 +33,43 @@ describe('EPSG:25829 projection helpers', () => {
     expect(restored.lat).toBeCloseTo(region.origin.lat, 7);
     expect(projected.easting).toBeGreaterThan(500000);
     expect(projected.northing).toBeGreaterThan(4000000);
+  });
+});
+
+describe('pipeline command and request helpers', () => {
+  it('accepts both documented region argument forms', () => {
+    expect(optionValue(['--region', 'cc-monumental'], '--region', 'fallback')).toBe(
+      'cc-monumental',
+    );
+    expect(optionValue(['--region=centro'], '--region', 'fallback')).toBe('centro');
+    expect(optionValue(['--region'], '--region', 'fallback')).toBe('fallback');
+  });
+
+  it('honors Retry-After when a service temporarily rejects a request', async () => {
+    const delays: number[] = [];
+    let calls = 0;
+    const response = await requestWithRetry(
+      async () => {
+        calls += 1;
+        return calls === 1
+          ? new Response('busy', { status: 503, headers: { 'retry-after': '2' } })
+          : new Response('ready', { status: 200 });
+      },
+      { wait: async (milliseconds) => delays.push(milliseconds) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(calls).toBe(2);
+    expect(delays).toEqual([2000]);
+  });
+
+  it('writes generated files atomically and skips identical content', async () => {
+    const filePath = path.join(os.tmpdir(), `caceres-output-${Date.now()}.txt`);
+    temporaryFiles.push(filePath);
+
+    expect(await writeIfChanged(filePath, 'stable output')).toBe(true);
+    expect(await writeIfChanged(filePath, 'stable output')).toBe(false);
+    expect(await readFile(filePath, 'utf8')).toBe('stable output');
   });
 });
 

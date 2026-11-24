@@ -8,6 +8,15 @@
 
 ## Fase 0 - Repositorio, herramientas y despliegue (completada)
 
+### Revisión de fase 2 (en curso)
+- Se corrigió el parseo de `--region` para aceptar tanto `--region=cc-monumental` como `--region cc-monumental`, según la guía.
+- Overpass y el WCS de elevación comparten reintentos acotados, respetan `Retry-After`, limitan la respuesta y no descargan teselas de elevación demasiado deprisa.
+- Las salidas se escriben atómicamente solo cuando cambian; el constructor elimina chunks obsoletos y el verificador detecta chunks huérfanos.
+- Regenerada la región desde cachés locales: 900 chunks y 41.527 registros de elementos; los 15.024 tramos OSM incluidos en el informe de fidelidad coinciden con la geometría fuente con desviación máxima de 0 m. No se detectaron nombres de negocios bloqueados y la repetición produjo los mismos hashes.
+- Catastro INSPIRE aún no está integrado: una consulta de prueba de 100 × 100 m sí respondió en GML, pero una de 500 × 500 m agotó el tiempo de espera. Falta una descarga regional acotada, su transformación y el registro de atribución/licencia; la respuesta WFS original no se añadirá a `public/`.
+- El inspector 2D se abrió y se verificó visualmente: representa las huellas y calles del extracto sobre la capa de comparación OSM. Muestra 7.148 edificios, 7.894 calles y 41.527 elementos en EPSG:25829.
+- La fase permanece abierta hasta integrar una fuente Catastro descargable de forma compatible con su licencia; no se declara completada solo por pasar los checks automatizados.
+
 ### Hecho
 - Repositorio inicializado desde `hhg-ptm/CTA`.
 - Leída la guía de fases: comienza con una base Vite/TypeScript y no añade juego todavía.
@@ -31,7 +40,7 @@
 - `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`
 - Despliegue en GitHub Actions a Pages tras habilitar Pages desde Actions en la configuración del repositorio.
 
-## Fase 2 - Pipeline de datos geográficos (completada)
+## Fase 2 - Pipeline de datos geográficos (estado previo; revisión actual en curso)
 
 ### Plan
 - Definir `cc-monumental` alrededor de Plaza Mayor en EPSG:25829 y documentar OpenStreetMap ODbL y CNIG MDT05 CC BY 4.0.

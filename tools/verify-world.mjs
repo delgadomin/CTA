@@ -1,16 +1,21 @@
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inflateSync } from 'node:zlib';
+import { optionValue } from './cli-args.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MAX_ROAD_NETWORK_BYTES = 64 * 1024 * 1024;
-const regionName =
-  process.argv.find((argument) => argument.startsWith('--region='))?.split('=')[1] ??
-  'cc-monumental';
+const regionName = optionValue(process.argv.slice(2), '--region', 'cc-monumental');
 const directory = path.join(ROOT, 'public/world', regionName);
 const manifest = JSON.parse(await readFile(path.join(directory, 'manifest.json'), 'utf8'));
+const listedChunks = new Set(manifest.chunks.map((chunk) => chunk.path));
+const staleChunks = (await readdir(directory)).filter(
+  (fileName) => /^-?\d+_-?\d+\.bin$/.test(fileName) && !listedChunks.has(fileName),
+);
+if (staleChunks.length > 0)
+  throw new Error(`World contains ${staleChunks.length} unreferenced chunk files.`);
 const sourceGeometryMetadata = manifest.sourceGeometry;
 if (
   !sourceGeometryMetadata ||

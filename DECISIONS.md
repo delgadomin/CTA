@@ -51,6 +51,13 @@
 - El WCS oficial IGN/CNIG sirve `Elevacion25830_5` recortada y reproyectada a EPSG:25829 como ASCII Grid; se conserva su hash, tamaño de celda y fecha en metadatos locales.
 - El proveedor WCS entrega `dx` y `dy` independientes sin siempre incluir `NODATA_value`; el lector admite ambos formatos y clampa al centro de celda en el borde para cubrir la malla solicitada sin huecos.
 
+## 2026-11-24 - Auditoría reiniciada de fase 2
+- Overpass y WCS usan una política común de reintentos con `Retry-After`, límite de intentos y espera incremental. La descarga WCS serializa las teselas y limita el tamaño de la respuesta.
+- Los artefactos se reemplazan atómicamente solo si cambian. El manifiesto se escribe antes de retirar chunks antiguos; el verificador falla si encuentra archivos binarios sin referencia.
+- La salida regenerada corrige el desfase con los filtros y el catálogo actuales. El Catastro INSPIRE queda pendiente: antes de distribuir cualquier derivado debe transformarse conforme a sus términos y conservarse la atribución; no se publica la respuesta original del WFS.
+- El inspector 2D se verificó visualmente con la geometría reconstruida y la superposición de comparación OSM.
+- El WFS BU del Catastro respondió en GML para una caja de 100 × 100 m; una consulta de 500 × 500 m agotó el tiempo de espera. No se guardó ninguna respuesta: hace falta una descarga regional por teselas y transformación antes de integrar datos derivados.
+
 # Fase 3 - terreno y streaming
 
 - `@dimforge/rapier3d-compat` 0.12.0 se declara como dependencia de ejecución para crear heightfields; su licencia Apache-2.0 se revisó en los metadatos oficiales del paquete.
