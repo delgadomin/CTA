@@ -3,7 +3,7 @@ import type { Camera } from 'three';
 import type { AgentColliderSink } from './agent-colliders';
 import { RoadGraph } from './road-graph';
 import type { AgentMode } from './road-graph';
-import { createPedestrianMesh, createVehicleMesh, disposeAgentMesh } from './npc-models';
+import { createPedestrianMeshes, createVehicleMesh, disposeAgentMesh } from './npc-models';
 
 export interface NpcWorld {
   groundHeightAt(x: number, z: number): number | undefined;
@@ -34,7 +34,7 @@ const LOD_MID_METERS = 210;
 /**
  * Ambient pedestrians and traffic driven by the OSM-derived road graph.
  * All agent state lives in typed arrays and instances are pooled, so the hot
- * loop performs no per-agent allocations and stays at two draw calls.
+ * loop performs no per-agent allocations and stays at three draw calls.
  */
 export class NpcSystem {
   readonly group = new THREE.Group();
@@ -42,6 +42,7 @@ export class NpcSystem {
   private readonly colliders: AgentColliderSink | undefined;
   private readonly colliderIds: Int32Array;
   private readonly pedestrianMesh: THREE.InstancedMesh;
+  private readonly pedestrianOutfitMesh: THREE.InstancedMesh;
   private readonly vehicleMesh: THREE.InstancedMesh;
   private readonly pedestrianCapacity: number;
   private readonly vehicleCapacity: number;
@@ -92,9 +93,11 @@ export class NpcSystem {
     this.vehicleCapacity = Math.max(1, counts.vehicles);
     const capacity = this.pedestrianCapacity + this.vehicleCapacity;
     this.colliderIds = new Int32Array(capacity).fill(-1);
-    this.pedestrianMesh = createPedestrianMesh(this.pedestrianCapacity);
+    const pedestrianMeshes = createPedestrianMeshes(this.pedestrianCapacity);
+    this.pedestrianMesh = pedestrianMeshes.body;
+    this.pedestrianOutfitMesh = pedestrianMeshes.outfit;
     this.vehicleMesh = createVehicleMesh(this.vehicleCapacity);
-    this.group.add(this.pedestrianMesh, this.vehicleMesh);
+    this.group.add(this.pedestrianMesh, this.pedestrianOutfitMesh, this.vehicleMesh);
     this.active = new Uint8Array(capacity);
     this.kind = new Uint8Array(capacity);
     this.x = new Float32Array(capacity);
@@ -265,10 +268,13 @@ export class NpcSystem {
       if (this.active[slot] === 1) this.render(slot);
     }
     this.pedestrianMesh.count = this.activePedestrians;
+    this.pedestrianOutfitMesh.count = this.activePedestrians;
     this.vehicleMesh.count = this.activeVehicles;
     this.pedestrianMesh.instanceMatrix.needsUpdate = true;
+    this.pedestrianOutfitMesh.instanceMatrix.needsUpdate = true;
     this.vehicleMesh.instanceMatrix.needsUpdate = true;
     if (this.pedestrianMesh.instanceColor) this.pedestrianMesh.instanceColor.needsUpdate = true;
+    if (this.pedestrianOutfitMesh.instanceColor) this.pedestrianOutfitMesh.instanceColor.needsUpdate = true;
     if (this.vehicleMesh.instanceColor) this.vehicleMesh.instanceColor.needsUpdate = true;
   }
 
@@ -276,8 +282,9 @@ export class NpcSystem {
     for (let slot = 0; slot < this.active.length; slot += 1) {
       if (this.active[slot] === 1) this.release(slot);
     }
-    this.group.remove(this.pedestrianMesh, this.vehicleMesh);
+    this.group.remove(this.pedestrianMesh, this.pedestrianOutfitMesh, this.vehicleMesh);
     disposeAgentMesh(this.pedestrianMesh);
+    disposeAgentMesh(this.pedestrianOutfitMesh);
     disposeAgentMesh(this.vehicleMesh);
   }
 
@@ -535,8 +542,9 @@ export class NpcSystem {
   }
 
   private render(slot: number): void {
-    const mesh = this.kind[slot] === 0 ? this.pedestrianMesh : this.vehicleMesh;
-    const instance = this.kind[slot] === 0 ? slot : slot - this.pedestrianCapacity;
+    const isPedestrian = this.kind[slot] === 0;
+    const mesh = isPedestrian ? this.pedestrianMesh : this.vehicleMesh;
+    const instance = isPedestrian ? slot : slot - this.pedestrianCapacity;
     // Taller bob, offset by slot index to break the unison.
     const walkSpeed = this.speed[slot] ?? 0;
     const bob = this.kind[slot] === 0 ? Math.sin(this.elapsed * 9.5 + slot * 2.3) * Math.min(walkSpeed / 3, 0.12) : 0;
@@ -546,11 +554,14 @@ export class NpcSystem {
     this.dummy.scale.setScalar(this.scale[slot] ?? 1);
     this.dummy.updateMatrix();
     mesh.setMatrixAt(instance, this.dummy.matrix);
-    const palette = this.kind[slot] === 0 ? this.pedestrianColors : this.vehicleColors;
+    if (isPedestrian) this.pedestrianOutfitMesh.setMatrixAt(instance, this.dummy.matrix);
+    const palette = isPedestrian ? this.pedestrianColors : this.vehicleColors;
     const color = palette[this.colorIndex[slot] ?? 0] ?? palette[0];
-    // Crowd vertex colors already separate skin, clothing and shoes. Applying
-    // one instance tint to the whole person colored every face and garment.
-    if (color && this.kind[slot] !== 0) mesh.setColorAt(instance, this.temporaryColor.copy(color));
+    // Keep faces and skin neutral while each pedestrian gets a muted outfit color.
+    if (color) {
+      if (isPedestrian) this.pedestrianOutfitMesh.setColorAt(instance, this.temporaryColor.copy(color));
+      else mesh.setColorAt(instance, this.temporaryColor.copy(color));
+    }
   }
 
   private release(slot: number): void {
@@ -570,6 +581,10 @@ export class NpcSystem {
     this.dummy.updateMatrix();
     mesh.setMatrixAt(instance, this.dummy.matrix);
     mesh.instanceMatrix.needsUpdate = true;
+    if (isPedestrian) {
+      this.pedestrianOutfitMesh.setMatrixAt(instance, this.dummy.matrix);
+      this.pedestrianOutfitMesh.instanceMatrix.needsUpdate = true;
+    }
 
     if (isPedestrian) {
       this.activePedestrians -= 1;
