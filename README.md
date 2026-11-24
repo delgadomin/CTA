@@ -38,8 +38,8 @@ npm run preview      # sirve dist/ localmente
 - `Shift`: sprint.
 - `E`: entrar/salir del vehículo más cercano.
 - `Espacio`: freno de mano (al conducir).
-- `F3`: mostrar/ocultar contadores de diagnóstico.
-- `F4`: mostrar/ocultar bordes de chunk.
+- `F4`: mostrar/ocultar el panel de diagnóstico y los bordes de chunk.
+- `F3`: mostrar/ocultar el panel de diagnóstico en modo avanzado (`?debug=1`).
 
 En tercera persona se controla el personaje; al acercarse a un vehículo y pulsar `E` se conduce. Pulsa `E` de nuevo para salir.
 

@@ -13,6 +13,7 @@
 - Prettier se añade como dependencia de desarrollo para mantener formato reproducible; no forma parte del bundle del juego.
 - Vitest se actualiza a la versión 5 porque la versión bloqueada anterior tenía vulnerabilidades críticas en el entorno de pruebas; la instalación limpia queda sin avisos de auditoría.
 - La validación de pull requests se separa del despliegue: CI comprueba formato, lint, tipos, pruebas y build al abrir o actualizar una PR; Pages conserva el despliegue desde `main`.
+- Se conserva la arquitectura evolucionada (`src/engine`, `src/ui`, `src/world`) y el mundo actual; no se crean directorios vacíos del esqueleto inicial ni se restaura el cubo de diagnóstico. El README describe F4 como acceso normal al panel y F3 como acceso del modo `?debug=1`.
 # Fase 6 - hitos y fidelidad (actualización)
 
 - Los soportales de Plaza Mayor se aproximan con pilares y losa plana sobre el polígono OSM; las medidas (espaciado 4,5 m, altura 3,1 m) son fallback visual pendiente de foto.
