@@ -21,10 +21,13 @@ export class AgentColliders implements AgentColliderSink {
   }
 
   create(kind: AgentKind, x: number, y: number, z: number, heading: number): number {
-    const body = this.world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(x, y, z));
-    const shape = kind === 'pedestrian'
-      ? RAPIER.ColliderDesc.capsule(0.52, 0.26).setTranslation(0, 0.82, 0)
-      : RAPIER.ColliderDesc.cuboid(0.95, 0.55, 2.05).setTranslation(0, 0.6, 0);
+    const body = this.world.createRigidBody(
+      RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(x, y, z),
+    );
+    const shape =
+      kind === 'pedestrian'
+        ? RAPIER.ColliderDesc.capsule(0.52, 0.26).setTranslation(0, 0.82, 0)
+        : RAPIER.ColliderDesc.cuboid(0.95, 0.55, 2.05).setTranslation(0, 0.6, 0);
     this.world.createCollider(shape, body);
     const id = this.nextId;
     this.nextId += 1;

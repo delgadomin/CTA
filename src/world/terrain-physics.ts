@@ -3,7 +3,8 @@ import type { World } from '@dimforge/rapier3d-compat';
 import type { ProjectedBounds } from './types';
 
 export function toRapierColumnMajor(heights: Float32Array, samples: number): Float32Array {
-  if (heights.length !== samples * samples) throw new Error('Terrain collider height count does not match its grid.');
+  if (heights.length !== samples * samples)
+    throw new Error('Terrain collider height count does not match its grid.');
   const result = new Float32Array(heights.length);
   for (let row = 0; row < samples; row += 1) {
     for (let column = 0; column < samples; column += 1) {
@@ -29,18 +30,32 @@ export class TerrainColliders {
     this.world = world;
   }
 
-  add(id: string, bounds: ProjectedBounds, chunkMeters: number, heights: Float32Array, samples: number): void {
+  add(
+    id: string,
+    bounds: ProjectedBounds,
+    chunkMeters: number,
+    heights: Float32Array,
+    samples: number,
+  ): void {
     if (this.colliders.has(id)) return;
     const descriptor = RAPIER.ColliderDesc.heightfield(
       samples - 1,
       samples - 1,
       toRapierColumnMajor(heights, samples),
       new RAPIER.Vector3(chunkMeters, 1, chunkMeters),
-    ).setTranslation((bounds.minX + bounds.maxX) / 2, 0, (bounds.minZ + bounds.maxZ) / 2).setFriction(0.85);
+    )
+      .setTranslation((bounds.minX + bounds.maxX) / 2, 0, (bounds.minZ + bounds.maxZ) / 2)
+      .setFriction(0.85);
     this.addCollider(id, this.world.createCollider(descriptor));
   }
 
-  addRoads(id: string, centerX: number, centerZ: number, positions: Float32Array, indices: Uint32Array): void {
+  addRoads(
+    id: string,
+    centerX: number,
+    centerZ: number,
+    positions: Float32Array,
+    indices: Uint32Array,
+  ): void {
     if (positions.length < 9 || indices.length < 3) return;
     const descriptor = RAPIER.ColliderDesc.trimesh(positions, indices)
       .setTranslation(centerX, 0, centerZ)
@@ -48,7 +63,13 @@ export class TerrainColliders {
     this.addCollider(id, this.world.createCollider(descriptor));
   }
 
-  addBuildings(id: string, centerX: number, centerZ: number, positions: Float32Array, indices: Uint32Array): void {
+  addBuildings(
+    id: string,
+    centerX: number,
+    centerZ: number,
+    positions: Float32Array,
+    indices: Uint32Array,
+  ): void {
     if (positions.length < 9 || indices.length < 3) return;
     const descriptor = RAPIER.ColliderDesc.trimesh(positions, indices)
       .setTranslation(centerX, 0, centerZ)

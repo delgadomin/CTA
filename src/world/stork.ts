@@ -9,7 +9,10 @@ const legGeometry = new THREE.CylinderGeometry(0.025, 0.025, 0.68, 5);
 const whiteMaterial = new THREE.MeshStandardMaterial({ color: '#f4f0e7', roughness: 0.9 });
 const blackMaterial = new THREE.MeshStandardMaterial({ color: '#252a2b', roughness: 0.92 });
 const legMaterial = new THREE.MeshStandardMaterial({ color: '#bd5b2b', roughness: 0.8 });
-const flight = new WeakMap<THREE.Group, { start: THREE.Vector3; direction: THREE.Vector3; began: number }>();
+const flight = new WeakMap<
+  THREE.Group,
+  { start: THREE.Vector3; direction: THREE.Vector3; began: number }
+>();
 
 export function createStork(): THREE.Group {
   const stork = new THREE.Group();

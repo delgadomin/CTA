@@ -30,7 +30,11 @@ export class AssetManager {
   private activeModelLoads = 0;
   private nextSequence = 0;
 
-  constructor(renderer: WebGLRenderer, onProgress?: (progress: AssetProgress) => void, maxConcurrentModels = 4) {
+  constructor(
+    renderer: WebGLRenderer,
+    onProgress?: (progress: AssetProgress) => void,
+    maxConcurrentModels = 4,
+  ) {
     if (!Number.isInteger(maxConcurrentModels) || maxConcurrentModels < 1) {
       throw new RangeError('At least one concurrent model load must be allowed.');
     }
@@ -47,7 +51,9 @@ export class AssetManager {
     const request = new Promise<GLTF>((resolve, reject) => {
       this.modelQueue.push({ url, priority, sequence: this.nextSequence, resolve, reject });
       this.nextSequence += 1;
-      this.modelQueue.sort((left, right) => right.priority - left.priority || left.sequence - right.sequence);
+      this.modelQueue.sort(
+        (left, right) => right.priority - left.priority || left.sequence - right.sequence,
+      );
     });
     this.models.set(url, request);
     void request.catch(() => this.models.delete(url));
@@ -67,7 +73,8 @@ export class AssetManager {
   }
 
   dispose(): void {
-    for (const queued of this.modelQueue) queued.reject(new Error('Asset manager disposed before model load.'));
+    for (const queued of this.modelQueue)
+      queued.reject(new Error('Asset manager disposed before model load.'));
     this.modelQueue.length = 0;
     this.models.clear();
     this.textures.clear();
@@ -82,7 +89,8 @@ export class AssetManager {
       this.gltfLoader.load(
         request.url,
         (model) => this.finishModelLoad(request, model),
-        (event) => this.onProgress?.({ loaded: event.loaded, total: event.total, url: request.url }),
+        (event) =>
+          this.onProgress?.({ loaded: event.loaded, total: event.total, url: request.url }),
         (error: unknown) => this.failModelLoad(request, error),
       );
     }

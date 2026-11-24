@@ -6,6 +6,8 @@ export type TranslationKey =
   | 'notice.pedestrianImpact'
   | 'notice.busted'
   | 'notice.noVehicle'
+  | 'notice.audioMuted'
+  | 'notice.audioUnmuted'
   | 'controls.hint';
 
 const SPANISH: Readonly<Record<TranslationKey, string>> = {
@@ -15,7 +17,9 @@ const SPANISH: Readonly<Record<TranslationKey, string>> = {
   'notice.pedestrianImpact': 'Has atropellado a un peatón. Huye.',
   'notice.busted': 'Detenido. Volviendo a Plaza Mayor…',
   'notice.noVehicle': 'No hay ningún vehículo cerca.',
-  'controls.hint': 'WASD camina · Mayús corre · E roba/sale · clic captura el ratón',
+  'notice.audioMuted': 'Audio silenciado (M para activar)',
+  'notice.audioUnmuted': 'Audio activado',
+  'controls.hint': 'WASD camina/conduce · E entra/sale · Espacio frena · H claxon · M audio',
 };
 
 export function t(key: TranslationKey): string {

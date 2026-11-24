@@ -1,6 +1,15 @@
 # Progreso del proyecto
 
-## Fase actual: 6 - Hitos y fidelidad (ampliada); fases 7-9 implementadas, fase 10 pausada
+## Fase actual: 0 - Repositorio, herramientas y despliegue (revisión reiniciada)
+
+La revisión solicitada recorre las fases desde la 0. Los resultados y estados antiguos que siguen abajo describen trabajo previo; no se consideran revalidados hasta revisar sus criterios en orden. Se conserva el juego existente mientras se audita cada fase.
+
+### Revisión de fase 0
+- El proyecto ya tenía Vite, TypeScript estricto, Three.js, Vitest, ESLint, GitHub Pages, documentación y URLs relativas. Se conservaron las fases posteriores existentes.
+- Se añadió Prettier con formato aplicado al código y check automatizado. Se separó CI de PR del despliegue de Pages para que cada PR ejecute checks.
+- Se actualizó el runner de pruebas vulnerable y la instalación limpia con `npm ci` quedó sin vulnerabilidades. La revisión parte de `upstream/main` (`302c401`), que ya contiene las correcciones recientes de modelos y LOD.
+- Validación tras sincronizar: formato, lint, typecheck, 47 pruebas, build y auditoría pasan; dev, `/debug/map.html` y el sitio publicado responden HTTP 200.
+- Pendiente para cerrar la aceptación remota: publicar esta revisión en una rama nueva y confirmar el check de GitHub. El sitio público seguirá dependiendo de que se integre en `main`.
 
 ### Hecho
 - Repositorio inicializado desde `hhg-ptm/CTA`.
@@ -103,10 +112,6 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - `npm run dev` y abrir `/debug/map.html` para comparar el trayecto con OpenStreetMap.
 - `node tools/verify-streaming.mjs` hace el barrido de cinco minutos; falla si no visita las 16 teselas, rebasa 300 llamadas/600.000 triángulos, supera 16 ms durante streaming o no carga la ruta del inspector.
 - Alcance excluido de la fase 4: vehículos y tráfico de IA.
-
-## Fase actual: 9 - Vehículos (en curso)
-
-## Fase 6 - Hitos y fidelidad (en curso)
 
 ## Fase 5 - Edificios (completada)
 
@@ -356,22 +361,146 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - Abre `/?debug=1` y observa `Agentes por LOD`: los tres números suman el total de `Agentes`.
 - Al caminar, el nivel cercano cambia mientras los agentes lejanos siguen visibles y conservan sus colisionadores.
 
-## Corrección visual y colisión sobre calzadas (en curso)
+## Corrección visual y colisión sobre calzadas (completada)
 
 - El jugador ahora sigue la altura triangulada de calzadas, bordillos y aceras además del MDT05. Se añadió un índice por celdas espaciales y movimiento con pasos cortos para reducir hundimientos y atravesamientos.
 - Las calles asfaltadas contrastan más con aceras y piedra. Los peatones conservan colores naturales de piel y ropa; coches y patrullas tienen cristales separados, detalles de rueda y carrocería.
 - El LOD lejano de edificios conserva la huella de calle original y la forma de cubierta, en lugar de usar rectángulos alineados al mapa.
-- Pendiente: comprobar visualmente en ejecución local y revisar CI. La web pública sigue mostrando `main`; este trabajo está en el PR de mejoras y no aparece hasta que se integre y Pages termine su despliegue.
+- Integrado desde el PR #8 y corregido: `paneGeometry()` y `cabinGeometry()` generan `uv` para que `mergeGeometries()` no descarte el coche instanciado, y las pruebas de LOD de edificios y de colores de agentes reflejan el comportamiento real.
+- Validado con `lint`, `typecheck`, `test` (43/43) y `build`; sin advertencias de geometría. Pendiente únicamente la comprobación visual en ejecución local.
 
-### Pasada de atmósfera y personajes
+## Pasada visual de era PS2 (integrada en el PR #10)
 
-- El cielo plano se sustituye por un cielo de tarde procedural con bandas de nubes y resplandor solar; la iluminación cálida activa sombras direccionales según el preset de calidad.
-- Los peatones usan prendas de color variable en una malla instanciada separada, conservando tonos de piel y rasgos faciales.
-- Pendiente: inspección visual en navegador y revisión de los checks de GitHub.
+### Hecho
+- Integrado el trabajo del PR #9 de `delgadomin`: personaje y peatones con ropa por capas y rasgos más legibles, coches con carrocería esculpida, cristales, asientos, ruedas y molduras, fachadas con ventanas arqueadas y contraventanas, y guardabarros del coche conducible alineados con las ruedas.
+- El PR #9 no se podía mergear directamente (draft, conflicto en `npc-models.ts` y sin permisos sobre el fork), así que se integró como PR #10 conservando los commits originales.
+- Corregidos los 4 errores de TypeScript del moteado de fachada con `seededSequence()` y restablecido el atributo `uv` en las dos geometrías nuevas de vehículo.
 
-### Modelos CC0 locales
+### Verificación
+- `npm run lint`, `npm run typecheck`, `npm test` (43/43) y `npm run build`: correctos, sin advertencias de `mergeGeometries()`.
 
-- Jugador: Casual Walker de Tevy en LOD0, con idle y walk; mantiene el modelo anterior como respaldo de carga.
-- Peatones ambientales: LOD1 del mismo modelo con una pose walk horneada y render instanciado para conservar un coste acotado.
-- Coches conducibles: sedán genérico de Innerscene con piezas agrupadas por material al cargar; coches ambientales y patrullas conservan su malla instanciada.
-- Los GLB se sirven desde `public/models/`; licencias, fuentes y dimensiones están en `ATTRIBUTION.md`.
+### Pendiente
+- Revisar en ejecución local que las nuevas siluetas y fachadas se lean bien a distancia y que el coste de triángulos siga dentro del objetivo.
+
+### Cómo probarlo
+- Abre `/?debug=1`, camina por el casco antiguo y conduce un coche; compara fachadas, peatones y vehículos con la versión anterior.
+
+
+## Pasada de gráficos, atmósfera y pulido de NPCs (completada)
+
+### Hecho
+- **Atmósfera e iluminación:**
+  - Luz solar direccional (`sun`) con sombras suaves PCF (`PCFSoftShadowMap`) que se desplaza junto al jugador manteniendo nítidas las sombras de edificios, árboles y vehículos.
+  - El terreno y las carreteras ahora reciben sombras arrojadas proyectadas de forma natural.
+  - Cúpula de cielo procedimental con gradiente atmosférico cálido (horizonte dorado y cenit azul intenso) y niebla de distancia ajustada para evitar desvanecimientos grises prematuros.
+  - Luz de hemisferio con rebote inferior cálido para sombras menos oscuras y más ricas en contraste.
+- **Materiales y estética:**
+  - Material textil específico para peatones (acabado mate, alta rugosidad, bajo metalness).
+  - Material automotriz específico para vehículos con brillo de chapa, reflejos y cristales tintados translúcidos.
+  - Contraste acentuado entre calzadas de asfalto, calzadas de piedra, aceras peatonales de losa y bordillos.
+- **Comportamiento y variedad de NPCs:**
+  - 20 variantes de color de indumentaria y 14 de vehículos (ampliando la variedad de la multitud).
+  - Escalas aleatorias variadas en peatones (entre 0.88 y 1.12) para alturas y siluetas humanas no uniformes.
+  - Rotaciones de agentes suavizadas con interpolación angular (`turnRate`), eliminando giros bruscos/robóticos en intersecciones.
+  - Rampa diferenciada de aceleración y frenado para peatones y vehículos.
+  - Paso de caminata con inclinación frontal según velocidad y balanceo corporal orgánico.
+  - Filtro estricto de generación angular detrás de la cámara para prevenir apariciones visibles.
+- **Cámara y jugabilidad:**
+  - Suavizado cinemático con interpolación (*lerp*) en el seguimiento de la cámara en 3ª persona.
+  - FOV dinámico que se abre gradualmente al acelerar en coche, aumentando la sensación de velocidad.
+  - Postura y animaciones de carrera del protagonista mejoradas con inclinación de torso y braceo.
+  - Avisos HUD y estrellas de búsqueda estilizados con mayor legibilidad.
+
+### Verificación
+- `npm run lint`: sin errores.
+- `npm run typecheck`: sin errores de TypeScript.
+- `npm test`: 43/43 pruebas unitarias pasando.
+- `npm run build`: compilación de producción en Vite exitosa.
+
+### Cómo probarlo
+- Iniciar `npm run dev` y moverse a pie o en vehículo:
+  - Observar las sombras proyectadas sobre el asfalto y el suelo.
+  - Acelerar en coche para apreciar la apertura dinámica del campo de visión (FOV) y la cámara suave.
+  - Observar cómo los peatones y el tráfico giran de manera natural y suave en las esquinas.
+
+## Corrección de física y robo de vehículos (completada)
+
+### Hecho
+- El vehículo conducible ahora conserva el color procedural y el ángulo de marcha (`heading`) del coche ambiental requisado.
+- Corregida la cota del chasis a `y + 0.82` para equilibrar la suspensión y erradicar el impulso elástico de descompresión violenta contra el suelo.
+- Las instancias de agentes liberadas en `NpcSystem` se limpian de inmediato en el `InstancedMesh` para evitar artefactos visuales superpuestos.
+- Salida inteligente de vehículos evitando solapes con fachadas y edificios.
+
+### Verificación
+- `npm run lint`, `npm run typecheck`, `npm test` (43/43) y `npm run build` pasando correctamente.
+
+## Renovación visual drástica, modelos 3D y atmósfera cinematográfica (completada)
+
+### Hecho
+- **Relieve y texturas del terreno y calzadas:**
+  - Micro-relieve procedural de 512×512 píxeles (`createTerrainDetailTexture()`) con grava, tierra y motas minerales integrado con coordenadas UV planares en `ChunkManager`.
+  - Calzadas con adoquines de granito biselados y llagas de mortero (`stone`), aceras con losas serradas con relieve (`sidewalk`) y asfalto granular.
+  - Tejas árabes curvas con sombreado cilíndrico tridimensional en tejados y sillería de granito en hiladas regulares con juntas rehundidas para monumentos y muros.
+  - Ventanas con brillo diagonal de reflejo celeste y repisas de granito biseladas.
+- **Vegetación y mobiliario urbano:**
+  - Árboles mediterráneos orgánicos (estilo encina / pino piñonero) con troncos ramificados y 5 racimos de follaje dodecaédrico.
+  - Farolas históricas de forja con pedestal octogonal, poste estriado, jaula de linterna de 4 caras y remate, proyectando sombras reales.
+- **Vehículos y personajes:**
+  - Colores automotrices realistas (14 acabados metalizados elegantes).
+  - Llantas de aleación plateadas de 5 radios con discos de freno, tubos de escape dobles cromados, ópticas de xenón de alta emisión y matrículas europeas/españolas.
+  - Patrullas policiales con libreas verde/azul y puente de luces aerodinámico estroboscópico.
+  - Protagonista con gafas de sol polarizadas, cremallera metálica, cinturón, reloj de pulsera dorado y zapatillas con entresuela blanca.
+  - Peatones con accesorios urbanos (bandoleras, gafas de sol, calzado estilizado).
+- **Atmósfera y cielo:**
+  - Sol bajo de hora dorada (~33° de elevación, `#fff0d6`, intensidad 3.6) generando sombras largas espectaculares.
+  - Disco solar brillante y corona cálida visibles en el cielo, siguiendo al jugador.
+  - Gradiente de cielo cálido ibérico (melocotón en horizonte a azul profundo en cenit) con niebla atmosférica y tone mapping ACESFilmic a 1.14.
+
+### Verificación
+- `npm run lint`: sin errores.
+- `npm run typecheck`: sin errores de TypeScript.
+- `npm test`: 43/43 pruebas unitarias pasando.
+- `npm run build`: compilación de producción exitosa en 2.18s.
+
+## Integración gamedev-skills: Motor de audio procedural, minimapa y respuesta de cámara (completada)
+
+### Hecho
+- **Motor de audio procedural Web Audio API (`src/engine/audio-system.ts`):**
+  - Sistema de audio 100% procedural en tiempo real (cero archivos de audio externos, cero consumo de ancho de banda).
+  - Sonido dinámico de motor con oscilador sawtooth y filtro pasobajo reactivo a la velocidad y aceleración del coche.
+  - Generador de chirrido/derrape de neumáticos con ruido blanco filtrado en paso banda al usar freno de mano o giros a velocidad.
+  - Claxon vehicular bitonal armónico europeo con tecla `H`.
+  - Sirena de policía con modulación LFO bifásica y atenuación espacial según distancia a la patrulla más cercana.
+  - Efectos de pisadas por zancada (`stepTriggered`), crujido de impacto en colisiones y avisos sonoros de búsqueda/detención.
+  - Silenciado/activación de audio con tecla `M` y desbloqueo seguro de AudioContext por interacción de usuario.
+- **Minimapa de radar circular (`src/ui/minimap.ts`):**
+  - Radar táctico en esquina inferior izquierda con rotación según cámara, cuadrícula métrica y aguja indicadora de Norte ("N").
+  - Marcadores de posición en tiempo real para jugador, tráfico ambiental y patrullas policiales con estroboscopio rojo/azul.
+  - Borde con efecto pulsante animado durante persecuciones policiales activas.
+- **Impacto y sacudida de cámara (Trauma cuadrático):**
+  - Sacudida cinemática de cámara en 3 ejes ante colisiones y atropellos mediante `CameraRig.addTrauma()`.
+- **Controles y textos:**
+  - Actualizados los avisos y el hint de controles en HUD con las nuevas acciones (`H` claxon, `M` audio, `Espacio` freno de mano).
+
+### Verificación
+- `npm run lint`: sin errores.
+- `npm run typecheck`: sin errores de TypeScript.
+- `npm test`: 47/47 pruebas unitarias pasando (13/13 suites, incluyendo `tests/audio-and-ui.test.ts`).
+- `npm run build`: compilación de producción exitosa en 2.11s.
+
+- La triangulación de cada celda compara ambas diagonales y usa la más corta en 3D, adaptando la malla a las cotas MDT sin desplazar ni inventar alturas.
+
+## Integración de los PR #11 y #14 - modelos CC0 (completada)
+
+### Hecho
+- Se resuelve localmente el merge del PR #14 sobre `main` conservando las correcciones de los PR #10, #12 y #13; se añaden solo los modelos CC0 y su documentación. El PR #11 queda supersedido por el #14.
+- Jugador: GLB «Casual Walker» de Tevy con animaciones `idle`/`walk` y fallback procedural si falla la carga. Peatones: pose de marcha horneada del LOD1 en una sola malla instanciada, sin teñido por instancia. Coches manejables: sedán CC0 de Innerscene agrupado por material; los coches ambientales y patrullas siguen siendo procedurales.
+- Se descarta `atmosphere.ts` porque el cielo, el disco solar y la corona ya presentes en `main` cubren esa función con la paleta actual. No se toca `public/world` ni se introducen assets con copyright.
+- Atribuciones en `ATTRIBUTION.md`; decisiones de integración en `DECISIONS.md`.
+
+### Verificación
+- `npm run lint`: sin errores.
+- `npm run typecheck`: sin errores de TypeScript.
+- `npm test`: 47/47 pruebas unitarias pasando (13/13 suites).
+- `npm run build`: compilación de producción exitosa; solo el aviso preexistente de tamaño de chunks de Rapier/Three.
+- Pendiente de inspección visual en navegador: escala del sedán, orientación del personaje y ausencia de avisos de `mergeGeometries()`.

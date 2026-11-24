@@ -14,7 +14,9 @@ import { auditLandmarks, formatLandmarkAudit } from './landmark-audit.mjs';
 import { buildLandmarkDataset, writeLandmarkDataset } from './landmark-catalog.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const regionName = process.argv.find((argument) => argument.startsWith('--region='))?.split('=')[1] ?? 'cc-monumental';
+const regionName =
+  process.argv.find((argument) => argument.startsWith('--region='))?.split('=')[1] ??
+  'cc-monumental';
 const forceDownload = process.argv.includes('--fresh');
 const config = JSON.parse(await readFile(path.join(ROOT, 'tools/config/regions.json'), 'utf8'));
 const regionDefinition = config[regionName];
@@ -38,49 +40,107 @@ try {
   }
 } catch (error) {
   if (error.code !== 'ENOENT') throw error;
-  throw new Error([
-    `Terrain source is missing: ${elevationPath}`,
-    'Get the IGN/CNIG MDT05 elevation coverage for Cáceres and export it as an ESRI ASCII grid.',
-    `Save the grid as ${regionName}.asc and its projection sidecar as ${regionName}.prj in data/raw/elevation/.`,
-    'The sidecar must identify ETRS89 / UTM zone 29N (EPSG:25829). The build stops here to avoid invented heights.',
-  ].join('\n'));
+  throw new Error(
+    [
+      `Terrain source is missing: ${elevationPath}`,
+      'Get the IGN/CNIG MDT05 elevation coverage for Cáceres and export it as an ESRI ASCII grid.',
+      `Save the grid as ${regionName}.asc and its projection sidecar as ${regionName}.prj in data/raw/elevation/.`,
+      'The sidecar must identify ETRS89 / UTM zone 29N (EPSG:25829). The build stops here to avoid invented heights.',
+    ].join('\n'),
+  );
 }
 
 const osm = await getOsmData(regionName, regionDefinition, { fresh: forceDownload });
-if (osm.elements.length === 0) throw new Error(`OpenStreetMap returned no features for ${regionName}.`);
+if (osm.elements.length === 0)
+  throw new Error(`OpenStreetMap returned no features for ${regionName}.`);
 const osmRaw = await readFile(path.join(ROOT, 'data/raw/osm', `${regionName}.json`));
 const osmSha256 = createHash('sha256').update(osmRaw).digest('hex');
 const resolvedRegion = resolveRegion(regionDefinition);
-const elevation = await loadAsciiElevation(elevationPath, resolvedRegion.origin, regionDefinition.extentMeters, regionDefinition.chunkMeters);
-const brandBlocklist = JSON.parse(await readFile(path.join(ROOT, 'tools/brand-blocklist.json'), 'utf8'));
+const elevation = await loadAsciiElevation(
+  elevationPath,
+  resolvedRegion.origin,
+  regionDefinition.extentMeters,
+  regionDefinition.chunkMeters,
+);
+const brandBlocklist = JSON.parse(
+  await readFile(path.join(ROOT, 'tools/brand-blocklist.json'), 'utf8'),
+);
 const landmarkModelIds = await discoverLandmarkModels(path.join(ROOT, 'public'));
-const region = { ...regionDefinition, lon: regionDefinition.origin.lon, lat: regionDefinition.origin.lat };
+const region = {
+  ...regionDefinition,
+  lon: regionDefinition.origin.lon,
+  lat: regionDefinition.origin.lat,
+};
 const data = normalizeOsm(osm, region, brandBlocklist, elevation, landmarkModelIds);
-const landmarkCatalog = JSON.parse(await readFile(path.join(ROOT, 'data/landmarks/targets.json'), 'utf8'));
+const landmarkCatalog = JSON.parse(
+  await readFile(path.join(ROOT, 'data/landmarks/targets.json'), 'utf8'),
+);
 const sourceFeatures = [...data.roads, ...data.buildings, ...data.surfaces, ...data.pois];
-const landmarkDataset = buildLandmarkDataset(landmarkCatalog.landmarks, sourceFeatures, osm.elements, resolvedRegion.origin, regionName);
+const landmarkDataset = buildLandmarkDataset(
+  landmarkCatalog.landmarks,
+  sourceFeatures,
+  osm.elements,
+  resolvedRegion.origin,
+  regionName,
+);
 await writeLandmarkDataset(ROOT, landmarkDataset);
-const landmarkStatuses = JSON.parse(await readFile(path.join(ROOT, 'data/landmarks/status.json'), 'utf8'));
-const landmarkAudit = auditLandmarks(sourceFeatures, landmarkCatalog.landmarks, regionName, landmarkDataset);
-const pendingLandmarkApprovals = landmarkCatalog.landmarks.filter((landmark) => landmark.scope === regionName && landmarkStatuses.landmarks?.[landmark.id]?.status !== 'approved');
-const worldBuildings = new Map(data.chunks.flatMap((chunk) => chunk.features.filter((feature) => feature.featureType === 'building').map((feature) => [feature.id, feature])));
-const worldBuildingsByZone = Object.fromEntries(['casco', 'ensanche', 'periferia'].map((zone) => [zone, [...worldBuildings.values()].filter((building) => building.zone === zone).length]));
+const landmarkStatuses = JSON.parse(
+  await readFile(path.join(ROOT, 'data/landmarks/status.json'), 'utf8'),
+);
+const landmarkAudit = auditLandmarks(
+  sourceFeatures,
+  landmarkCatalog.landmarks,
+  regionName,
+  landmarkDataset,
+);
+const pendingLandmarkApprovals = landmarkCatalog.landmarks.filter(
+  (landmark) =>
+    landmark.scope === regionName &&
+    landmarkStatuses.landmarks?.[landmark.id]?.status !== 'approved',
+);
+const worldBuildings = new Map(
+  data.chunks.flatMap((chunk) =>
+    chunk.features
+      .filter((feature) => feature.featureType === 'building')
+      .map((feature) => [feature.id, feature]),
+  ),
+);
+const worldBuildingsByZone = Object.fromEntries(
+  ['casco', 'ensanche', 'periferia'].map((zone) => [
+    zone,
+    [...worldBuildings.values()].filter((building) => building.zone === zone).length,
+  ]),
+);
 const roadNetwork = buildRoadNetwork(data.roads);
-const walkRoute = regionName === 'cc-monumental' ? buildWalkRoute(osm, roadNetwork, regionDefinition.origin) : undefined;
-const elevationMetadata = JSON.parse(await readFile(path.join(ROOT, 'data/raw/elevation', `${regionName}.meta.json`), 'utf8'));
-if (data.issues.missingTerrainSamples === data.chunks.length * regionDefinition.heightGrid.samples ** 2) {
+const walkRoute =
+  regionName === 'cc-monumental'
+    ? buildWalkRoute(osm, roadNetwork, regionDefinition.origin)
+    : undefined;
+const elevationMetadata = JSON.parse(
+  await readFile(path.join(ROOT, 'data/raw/elevation', `${regionName}.meta.json`), 'utf8'),
+);
+if (
+  data.issues.missingTerrainSamples ===
+  data.chunks.length * regionDefinition.heightGrid.samples ** 2
+) {
   throw new Error('The selected MDT05 file contains no usable height samples for this region.');
 }
 
 const destination = path.join(ROOT, 'public/world', regionName);
 await mkdir(destination, { recursive: true });
-const inWorldFeatureIds = new Set(data.chunks.flatMap((chunk) => chunk.features.map((feature) => feature.id).filter(Boolean)));
+const inWorldFeatureIds = new Set(
+  data.chunks.flatMap((chunk) => chunk.features.map((feature) => feature.id).filter(Boolean)),
+);
 const sourceGeometry = {
   schemaVersion: 1,
   region: regionName,
   crs: 'EPSG:25829 local meters',
-  roads: data.roads.filter((feature) => inWorldFeatureIds.has(feature.id)).map(({ id, featureType, points }) => ({ id, featureType, points })),
-  buildings: data.buildings.filter((feature) => inWorldFeatureIds.has(feature.id)).map(({ id, points }) => ({ id, featureType: 'building', points })),
+  roads: data.roads
+    .filter((feature) => inWorldFeatureIds.has(feature.id))
+    .map(({ id, featureType, points }) => ({ id, featureType, points })),
+  buildings: data.buildings
+    .filter((feature) => inWorldFeatureIds.has(feature.id))
+    .map(({ id, points }) => ({ id, featureType: 'building', points })),
 };
 const sourceGeometryBytes = Buffer.from(`${JSON.stringify(sourceGeometry)}\n`, 'utf8');
 await writeFile(path.join(destination, 'source-fidelity.json'), sourceGeometryBytes);
@@ -101,13 +161,16 @@ if (walkRoute) {
 }
 const chunkManifest = [];
 for (const chunk of data.chunks) {
-  const payload = Buffer.from(JSON.stringify({
-    version: 1,
-    id: chunk.id,
-    bounds: chunk.bounds,
-    terrain: chunk.terrain,
-    features: chunk.features,
-  }), 'utf8');
+  const payload = Buffer.from(
+    JSON.stringify({
+      version: 1,
+      id: chunk.id,
+      bounds: chunk.bounds,
+      terrain: chunk.terrain,
+      features: chunk.features,
+    }),
+    'utf8',
+  );
   const compressed = deflateSync(payload, { level: 9 });
   const binary = Buffer.allocUnsafe(12 + compressed.length);
   binary.write('CTA2', 0, 4, 'ascii');
@@ -189,7 +252,11 @@ const manifest = {
   ...(walkRouteMetadata ? { walkRoute: walkRouteMetadata } : {}),
   chunks: chunkManifest,
 };
-await writeFile(path.join(destination, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+await writeFile(
+  path.join(destination, 'manifest.json'),
+  `${JSON.stringify(manifest, null, 2)}\n`,
+  'utf8',
+);
 
 const brandLines = [
   '# Revisión de marcas',
@@ -198,7 +265,9 @@ const brandLines = [
   '',
   '| Elemento | Categoría | Marca ficticia | Estado |',
   '| --- | --- | --- | --- |',
-  ...data.brandReport.map((brand) => `| ${brand.id} | ${brand.category} | ${brand.gameName} | ${brand.status} |`),
+  ...data.brandReport.map(
+    (brand) => `| ${brand.id} | ${brand.category} | ${brand.gameName} | ${brand.status} |`,
+  ),
   '',
 ];
 const fidelityLines = [
@@ -246,7 +315,9 @@ const fidelityLines = [
   ...formatLandmarkAudit(landmarkAudit),
   '### Aprobación humana pendiente',
   '',
-  pendingLandmarkApprovals.length ? pendingLandmarkApprovals.map((landmark) => `- ${landmark.name} (${landmark.id})`).join('\n') : 'Todos los hitos regionales tienen una aprobación humana registrada.',
+  pendingLandmarkApprovals.length
+    ? pendingLandmarkApprovals.map((landmark) => `- ${landmark.name} (${landmark.id})`).join('\n')
+    : 'Todos los hitos regionales tienen una aprobación humana registrada.',
   '',
   '',
   'Los puentes reciben solo un perfil visual de rampa (máximo 1,8 m) porque la extracción no aporta una cota vertical fiable; los túneles se conservan transitables a cota MDT05 hasta que exista geometría de excavación.',

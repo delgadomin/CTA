@@ -47,6 +47,7 @@ En tercera persona se controla el personaje; al acercarse a un vehículo y pulsa
 
 ```sh
 npm run lint
+npm run format:check
 npm run typecheck
 npm test
 npm run build

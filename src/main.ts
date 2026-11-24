@@ -15,9 +15,10 @@ import { PoliceSystem } from './world/police-system';
 import { RoadGraph } from './world/road-graph';
 import type { RoadNetwork } from './world/types';
 import { Vehicle } from './world/vehicle';
-import { createSkyDome } from './world/atmosphere';
 import { createPhysicsWorld } from './world/terrain-physics';
 import type { World } from '@dimforge/rapier3d-compat';
+import { AudioSystem } from './engine/audio-system';
+import { Minimap, type MinimapBlip } from './ui/minimap';
 import './style.css';
 
 function requiredElement<T extends Element>(selector: string): T {
@@ -43,49 +44,130 @@ const wantedLabel = requiredElement<HTMLElement>('#wanted');
 const noticeLabel = requiredElement<HTMLElement>('#notice');
 const statusLabel = requiredElement<HTMLElement>('#world-status');
 const debugPanel = requiredElement<HTMLElement>('.debug-panel');
+const minimapCanvas = requiredElement<HTMLCanvasElement>('#minimap');
+const minimap = new Minimap(minimapCanvas);
+const audio = new AudioSystem();
 requiredElement<HTMLElement>('#wanted-label').textContent = t('hud.wanted');
 requiredElement<HTMLElement>('#controls-hint').textContent = t('controls.hint');
 const debugMode = new URLSearchParams(window.location.search).get('debug') === '1';
 const quality = QUALITY_PRESETS.high;
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: quality.antialias, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: quality.antialias,
+  powerPreference: 'high-performance',
+});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality.pixelRatio));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.14;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.setClearColor('#c6c9c1');
-renderer.toneMappingExposure = 1.08;
+const fogColor = '#c8d7df';
+renderer.setClearColor(fogColor);
 
 const scene = new THREE.Scene();
-const atmosphericHaze = '#c6c9c1';
-scene.background = new THREE.Color(atmosphericHaze);
-scene.fog = new THREE.Fog(atmosphericHaze, quality.viewDistance * 0.42, quality.viewDistance);
-scene.add(createSkyDome(quality.viewDistance * 1.2));
-const camera = new THREE.PerspectiveCamera(54, window.innerWidth / window.innerHeight, 0.5, quality.viewDistance + 50);
+scene.background = new THREE.Color(fogColor);
+scene.fog = new THREE.Fog(fogColor, quality.viewDistance * 0.45, quality.viewDistance * 1.05);
+
+// Gradient sky sphere with warm Iberian horizon and rich azure zenith.
+const skyGeometry = new THREE.SphereGeometry(quality.viewDistance * 1.25, 32, 16);
+const skyPositions = skyGeometry.attributes.position as THREE.BufferAttribute;
+const skyColors = new Float32Array(skyPositions.count * 3);
+for (let i = 0; i < skyPositions.count; i += 1) {
+  const y = skyPositions.getY(i);
+  const t = Math.max(
+    0,
+    Math.min(1, (y + quality.viewDistance * 0.15) / (quality.viewDistance * 1.35)),
+  );
+  const r =
+    t < 0.28
+      ? THREE.MathUtils.lerp(0.96, 0.68, t / 0.28)
+      : THREE.MathUtils.lerp(0.68, 0.2, (t - 0.28) / 0.72);
+  const g =
+    t < 0.28
+      ? THREE.MathUtils.lerp(0.88, 0.81, t / 0.28)
+      : THREE.MathUtils.lerp(0.81, 0.48, (t - 0.28) / 0.72);
+  const b =
+    t < 0.28
+      ? THREE.MathUtils.lerp(0.78, 0.9, t / 0.28)
+      : THREE.MathUtils.lerp(0.9, 0.82, (t - 0.28) / 0.72);
+  skyColors[i * 3] = r;
+  skyColors[i * 3 + 1] = g;
+  skyColors[i * 3 + 2] = b;
+}
+skyGeometry.setAttribute('color', new THREE.BufferAttribute(skyColors, 3));
+const skyMaterial = new THREE.MeshBasicMaterial({
+  vertexColors: true,
+  side: THREE.BackSide,
+  depthWrite: false,
+});
+const sky = new THREE.Mesh(skyGeometry, skyMaterial);
+scene.add(sky);
+
+// Radiant Sun disc and warm atmospheric halo in the Iberian sky
+const sunDistance = quality.viewDistance * 1.18;
+const sunDir = new THREE.Vector3(-320, 240, 220).normalize();
+const sunDiskGeo = new THREE.CircleGeometry(quality.viewDistance * 0.045, 24);
+const sunDiskMat = new THREE.MeshBasicMaterial({
+  color: 0xfffaea,
+  side: THREE.DoubleSide,
+  depthWrite: false,
+});
+const sunDisk = new THREE.Mesh(sunDiskGeo, sunDiskMat);
+sunDisk.position.copy(sunDir).multiplyScalar(sunDistance);
+sunDisk.lookAt(0, 0, 0);
+scene.add(sunDisk);
+
+const sunCoronaGeo = new THREE.RingGeometry(
+  quality.viewDistance * 0.04,
+  quality.viewDistance * 0.12,
+  24,
+);
+const sunCoronaMat = new THREE.MeshBasicMaterial({
+  color: 0xffdf9a,
+  transparent: true,
+  opacity: 0.38,
+  side: THREE.DoubleSide,
+  depthWrite: false,
+});
+const sunCorona = new THREE.Mesh(sunCoronaGeo, sunCoronaMat);
+sunCorona.position.copy(sunDisk.position);
+sunCorona.lookAt(0, 0, 0);
+scene.add(sunCorona);
+
+const camera = new THREE.PerspectiveCamera(
+  54,
+  window.innerWidth / window.innerHeight,
+  0.5,
+  quality.viewDistance + 50,
+);
 camera.position.set(0, 570, 72);
 const input = new InputManager(canvas);
 const cameraRig = new CameraRig(camera, input, 5.2, 0.002, 2.07, -0.12);
 cameraRig.mode = 'thirdPerson';
 const logger = new Logger('world', 'info');
 const character = new Character();
-scene.add(new THREE.HemisphereLight('#c8dce2', '#4a4034', 1.75));
+scene.add(new THREE.HemisphereLight('#9ec6e8', '#5a4836', 2.0));
 scene.add(character.group);
-const sun = new THREE.DirectionalLight('#ffd09b', 2.9);
-sun.position.set(-480, 430, 620);
+
+// Dramatic warm afternoon sun angle creating authentic long shadows
+const sun = new THREE.DirectionalLight('#fff0d6', 3.6);
+sun.position.set(-320, 240, 220);
 sun.castShadow = true;
-sun.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
-sun.shadow.camera.left = -360;
-sun.shadow.camera.right = 360;
-sun.shadow.camera.top = 360;
-sun.shadow.camera.bottom = -360;
-sun.shadow.camera.near = 1;
-sun.shadow.camera.far = 1500;
-sun.shadow.camera.updateProjectionMatrix();
-sun.shadow.bias = -0.00015;
-sun.shadow.normalBias = 0.025;
-sun.shadow.radius = 3;
+sun.shadow.mapSize.width = quality.shadowMapSize;
+sun.shadow.mapSize.height = quality.shadowMapSize;
+sun.shadow.camera.near = 50;
+sun.shadow.camera.far = 850;
+const shadowSpan = 240;
+sun.shadow.camera.left = -shadowSpan;
+sun.shadow.camera.right = shadowSpan;
+sun.shadow.camera.top = shadowSpan;
+sun.shadow.camera.bottom = -shadowSpan;
+sun.shadow.bias = -0.0003;
+sun.shadow.normalBias = 0.035;
 scene.add(sun);
+scene.add(sun.target);
 
 let world: World | undefined;
 let chunks: ChunkManager | undefined;
@@ -95,18 +177,29 @@ let police: PoliceSystem | undefined;
 const crime = new CrimeSystem();
 const vehicles: Vehicle[] = [];
 
+function modelUrl(path: string): string {
+  const baseUrl = new URL(import.meta.env.BASE_URL, window.location.href);
+  return new URL(path, baseUrl).href;
+}
+
 function loadVehicleVisual(vehicle: Vehicle): void {
   if (!chunks) return;
-  const baseUrl = new URL(import.meta.env.BASE_URL, window.location.href);
-  const modelUrl = new URL('models/vehicles/graphite-sedan.glb', baseUrl);
-  void vehicle.loadModel(chunks, modelUrl.href).catch((error: unknown) => {
-    logger.warn('Detailed vehicle model failed to load; keeping the built-in vehicle', { error: String(error) });
-  });
+  void vehicle
+    .loadModel(chunks, modelUrl('models/vehicles/graphite-sedan.glb'))
+    .catch((error: unknown) => {
+      logger.warn('Detailed vehicle model failed to load; keeping the built-in vehicle', {
+        error: String(error),
+      });
+    });
 }
 
 let activeVehicle: Vehicle | null = null;
 let inVehicle = false;
 let spacePressed = false;
+let hornPressed = false;
+let previousStars = 0;
+const minimapVehicles: MinimapBlip[] = [];
+const minimapPolice: MinimapBlip[] = [];
 let showDebug = true;
 let showChunkBorders = true;
 let showColliderWireframes = false;
@@ -177,7 +270,8 @@ const debugConsole = new DebugConsole(
 
 function debugSnapshot(): DebugSnapshot {
   const position = character.position;
-  const browserMemory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
+  const browserMemory = (performance as Performance & { memory?: { usedJSHeapSize: number } })
+    .memory;
   return {
     position: { x: position.x, y: position.y, z: position.z },
     groundHeight: chunks?.groundHeightAt(position.x, position.z) ?? null,
@@ -215,17 +309,37 @@ function teleportForAudit(x: number, z: number): void {
 if (debugMode) window.__CTA_DEBUG__ = { teleport: teleportForAudit, metrics: debugSnapshot };
 
 function normalizeLandmarkQuery(value: string): string {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-ES').trim();
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('es-ES')
+    .trim();
 }
 
 async function teleportToLandmark(query: string): Promise<string> {
-  const response = await fetch(new URL('data/landmarks/landmarks.json', new URL(import.meta.env.BASE_URL, window.location.href)));
+  const response = await fetch(
+    new URL(
+      'data/landmarks/landmarks.json',
+      new URL(import.meta.env.BASE_URL, window.location.href),
+    ),
+  );
   if (!response.ok) throw new Error(`no se pudo leer el catálogo de hitos (${response.status}).`);
-  const catalog = await response.json() as { landmarks: { id: string; name: string; position?: { localMeters?: readonly [number, number] } }[] };
+  const catalog = (await response.json()) as {
+    landmarks: {
+      id: string;
+      name: string;
+      position?: { localMeters?: readonly [number, number] };
+    }[];
+  };
   const normalized = normalizeLandmarkQuery(query);
-  const landmark = catalog.landmarks.find((item) => normalizeLandmarkQuery(item.id) === normalized || normalizeLandmarkQuery(item.name) === normalized);
+  const landmark = catalog.landmarks.find(
+    (item) =>
+      normalizeLandmarkQuery(item.id) === normalized ||
+      normalizeLandmarkQuery(item.name) === normalized,
+  );
   const point = landmark?.position?.localMeters;
-  if (!landmark || !point) throw new Error(`no encuentro el hito «${query}» con coordenadas disponibles.`);
+  if (!landmark || !point)
+    throw new Error(`no encuentro el hito «${query}» con coordenadas disponibles.`);
   teleportForAudit(point[0], point[1]);
   return `Teletransporte: ${landmark.name}.`;
 }
@@ -236,7 +350,7 @@ function spawnDebugVehicle(): string {
   const x = position.x + 4;
   const z = position.z;
   const height = chunks.groundHeightAt(x, z) ?? position.y;
-  const vehicle = new Vehicle(world, x, height, z);
+  const vehicle = new Vehicle(world, x, height, z, cameraRig.getYaw());
   vehicles.push(vehicle);
   scene.add(vehicle.group);
   loadVehicleVisual(vehicle);
@@ -259,6 +373,8 @@ function showNotice(message: string, timestamp: number, durationMs = 3000): void
 function handleBust(timestamp: number): void {
   bustCooldownUntil = timestamp + 4000;
   crime.reset();
+  audio.playBusted();
+  cameraRig.addTrauma(0.5);
   inVehicle = false;
   activeVehicle = null;
   character.group.visible = true;
@@ -276,15 +392,23 @@ function updateDebug(timestamp: number): void {
   drawCallsLabel.textContent = String(renderer.info.render.calls);
   trianglesLabel.textContent = renderer.info.render.triangles.toLocaleString('es-ES');
   memoryLabel.textContent = `≈ ${chunks.memoryMiB.toFixed(1)} MiB`;
-  const browserMemory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
-  heapMemoryLabel.textContent = browserMemory ? `≈ ${(browserMemory.usedJSHeapSize / (1024 * 1024)).toFixed(1)} MiB` : 'n/d';
+  const browserMemory = (performance as Performance & { memory?: { usedJSHeapSize: number } })
+    .memory;
+  heapMemoryLabel.textContent = browserMemory
+    ? `≈ ${(browserMemory.usedJSHeapSize / (1024 * 1024)).toFixed(1)} MiB`
+    : 'n/d';
   systemTimesLabel.textContent = `física ${physicsQueryMs.toFixed(2)} · jugador ${actorUpdateMs.toFixed(2)} · streaming ${streamingUpdateMs.toFixed(2)} · render ${renderUpdateMs.toFixed(2)} ms`;
   const agents = npcs?.counts;
-  agentsLabel.textContent = agents ? `${agents.pedestrians} peatones · ${agents.vehicles} coches` : 'cargando red viaria…';
+  agentsLabel.textContent = agents
+    ? `${agents.pedestrians} peatones · ${agents.vehicles} coches`
+    : 'cargando red viaria…';
   agentsLodLabel.textContent = (npcs?.lodCounts ?? [0, 0, 0]).join(' / ');
   const stars = crime.stars;
   wantedLabel.textContent = stars > 0 ? `${'★'.repeat(stars)}${'☆'.repeat(5 - stars)}` : '—';
-  statusLabel.textContent = chunks.loadedCount > 0 ? 'Edificios, calles y terreno MDT05 en streaming' : 'Preparando la ciudad desde datos oficiales…';
+  statusLabel.textContent =
+    chunks.loadedCount > 0
+      ? 'Edificios, calles y terreno MDT05 en streaming'
+      : 'Preparando la ciudad desde datos oficiales…';
   if (noticeUntil > 0 && timestamp >= noticeUntil) {
     noticeLabel.hidden = true;
     noticeUntil = 0;
@@ -312,7 +436,14 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
       handbrake: spacePressed,
     };
     activeVehicle.update(frameSeconds, driveInput);
+    audio.updateVehicleEngine(true, activeVehicle.speed, driveInput.forward || driveInput.backward);
+    const isSkidding =
+      (driveInput.handbrake && activeVehicle.speed > 3) ||
+      ((driveInput.left || driveInput.right) && activeVehicle.speed > 9);
+    audio.updateSkid(isSkidding);
+    audio.setHorn(hornPressed);
     cameraRig.mode = 'thirdPerson';
+    cameraRig.setSpeedFov(activeVehicle.speed);
     cameraRig.update(frameSeconds, activeVehicle.position);
     const vh = chunks?.groundHeightAt(camera.position.x, camera.position.z);
     if (vh !== undefined && camera.position.y < vh + 0.5) camera.position.y = vh + 0.5;
@@ -322,13 +453,20 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
       if (dist > 0.1) {
         dir.normalize();
         for (let i = 0; i < 8; i += 1) {
-          camera.position.copy(activeVehicle.position).addScaledVector(dir, dist * (1 - (i + 1) / 9));
+          camera.position
+            .copy(activeVehicle.position)
+            .addScaledVector(dir, dist * (1 - (i + 1) / 9));
           if (!chunks.collidesWithBuilding(camera.position.x, camera.position.z, 0)) break;
         }
       }
     }
   } else if (cameraRig.mode === 'thirdPerson') {
+    cameraRig.resetFov();
+    audio.updateVehicleEngine(false, 0, false);
+    audio.updateSkid(false);
+    audio.setHorn(false);
     character.update(frameSeconds, input, chunks, cameraRig.getYaw(), spacePressed);
+    if (character.stepTriggered) audio.playFootstep();
     // The character is scripted (not a Rapier body), so resolve agent overlap here.
     npcs?.resolveCollision(character.position, 0.35);
     police?.resolveCollision(character.position, 0.35);
@@ -350,6 +488,9 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
       if (ch2 !== undefined && camera.position.y < ch2 + 0.5) camera.position.y = ch2 + 0.5;
     }
   } else {
+    audio.updateVehicleEngine(false, 0, false);
+    audio.updateSkid(false);
+    audio.setHorn(false);
     cameraRig.update(frameSeconds);
     character.position.copy(camera.position);
     const characterGround = chunks?.groundHeightAt(character.position.x, character.position.z);
@@ -364,10 +505,21 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
   }
   const focus = inVehicle && activeVehicle ? activeVehicle.position : character.position;
   let playerSpeed = 0;
-  if (focusInitialized) playerSpeed = Math.min(focus.distanceTo(previousFocus) / Math.max(frameSeconds, 1 / 120), 25);
+  if (focusInitialized)
+    playerSpeed = Math.min(focus.distanceTo(previousFocus) / Math.max(frameSeconds, 1 / 120), 25);
   previousFocus.copy(focus);
   focusInitialized = true;
   if (inVehicle && activeVehicle) playerSpeed = activeVehicle.speed;
+
+  sun.position.set(focus.x - 320, 240, focus.z + 220);
+  sun.target.position.set(focus.x, focus.y, focus.z);
+  sky.position.set(focus.x, focus.y * 0.2, focus.z);
+  sunDisk.position.set(
+    focus.x + sunDir.x * sunDistance,
+    focus.y * 0.2 + sunDir.y * sunDistance,
+    focus.z + sunDir.z * sunDistance,
+  );
+  sunCorona.position.copy(sunDisk.position);
 
   if (npcs && chunks) npcs.update(frameSeconds, focus, camera, chunks);
   if (police && chunks) {
@@ -375,19 +527,46 @@ const loop = new FixedStepLoop([], (interpolation, frameSeconds, timestamp) => {
     crime.update(frameSeconds, police.nearestDistance(focus), playerSpeed);
     if (crime.busted && timestamp > bustCooldownUntil) handleBust(timestamp);
   }
+  if (crime.stars > previousStars) {
+    audio.playCrimeAlert();
+  }
+  previousStars = crime.stars;
+  audio.updatePoliceSiren(crime.stars, police ? police.nearestDistance(focus) : 999);
 
-  if (npcs && inVehicle && activeVehicle && activeVehicle.speed > 6 && npcs.checkVehicleImpact(activeVehicle.position)) {
+  if (
+    npcs &&
+    inVehicle &&
+    activeVehicle &&
+    activeVehicle.speed > 6 &&
+    npcs.checkVehicleImpact(activeVehicle.position)
+  ) {
     if (crime.report('pedestrianImpact', activeVehicle.position.x, activeVehicle.position.z)) {
       npcs.alarm(activeVehicle.position.x, activeVehicle.position.z);
       showNotice(t('notice.pedestrianImpact'), timestamp);
+      audio.playCollision(0.8);
+      cameraRig.addTrauma(0.55);
     }
   }
   if (inVehicle && activeVehicle && activeVehicle.speed > 16) {
     recklessSeconds += frameSeconds;
-    if (recklessSeconds > 2.5 && crime.report('recklessDriving', focus.x, focus.z)) recklessSeconds = 0;
+    if (recklessSeconds > 2.5 && crime.report('recklessDriving', focus.x, focus.z))
+      recklessSeconds = 0;
   } else {
     recklessSeconds = 0;
   }
+
+  if (npcs) npcs.getVehiclePositions(minimapVehicles);
+  if (police) police.getPatrolPositions(minimapPolice);
+  minimap.update(
+    focus.x,
+    focus.z,
+    cameraRig.getYaw(),
+    inVehicle,
+    crime.stars,
+    minimapVehicles,
+    minimapPolice,
+    frameSeconds,
+  );
 
   systemStart = debugMode ? performance.now() : 0;
   chunks?.update(camera, timestamp);
@@ -472,13 +651,30 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
   updateDebugModeLabel();
 });
 
-canvas.addEventListener('click', () => input.requestPointerLock());
+canvas.addEventListener('click', () => {
+  input.requestPointerLock();
+  audio.resume();
+});
+window.addEventListener('pointerdown', () => audio.resume(), { once: true });
 window.addEventListener('keydown', (event: KeyboardEvent) => {
-  if (event.code === 'Space') { spacePressed = true; event.preventDefault(); }
+  audio.resume();
+  if (event.code === 'KeyH') hornPressed = true;
+  if (event.code === 'KeyM') {
+    const isMuted = audio.toggleMute();
+    showNotice(isMuted ? t('notice.audioMuted') : t('notice.audioUnmuted'), performance.now());
+  }
+  if (event.code === 'Space') {
+    spacePressed = true;
+    event.preventDefault();
+  }
   if (event.code === 'KeyE') {
     if (inVehicle && activeVehicle) {
-      character.position.copy(activeVehicle.position);
-      character.position.x += 2;
+      const side = new THREE.Vector3(1.8, 0, 0).applyQuaternion(activeVehicle.group.quaternion);
+      let exitPos = activeVehicle.position.clone().add(side);
+      if (chunks?.collidesWithBuilding(exitPos.x, exitPos.z, 0.4)) {
+        exitPos = activeVehicle.position.clone().sub(side);
+      }
+      character.position.copy(exitPos);
       const h = chunks?.groundHeightAt(character.position.x, character.position.z);
       if (h !== undefined) character.position.y = h;
       inVehicle = false;
@@ -491,12 +687,22 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
       let best = 3;
       for (const v of vehicles) {
         const d = v.position.distanceTo(character.position);
-        if (d < best) { best = d; nearest = v; }
+        if (d < best) {
+          best = d;
+          nearest = v;
+        }
       }
       if (!nearest && npcs && world) {
         const claimed = npcs.claimVehicle(character.position, 4.5);
         if (claimed) {
-          const stolen = new Vehicle(world, claimed.x, claimed.y, claimed.z);
+          const stolen = new Vehicle(
+            world,
+            claimed.x,
+            claimed.y,
+            claimed.z,
+            claimed.heading,
+            claimed.color,
+          );
           vehicles.push(stolen);
           scene.add(stolen.group);
           loadVehicleVisual(stolen);
@@ -521,6 +727,7 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
 });
 window.addEventListener('keyup', (event: KeyboardEvent) => {
   if (event.code === 'Space') spacePressed = false;
+  if (event.code === 'KeyH') hornPressed = false;
 });
 window.addEventListener('pagehide', () => {
   loop.stop();
@@ -538,27 +745,33 @@ async function initializeWorld(): Promise<void> {
   const worldBaseUrl = new URL(import.meta.env.BASE_URL, window.location.href);
   const manifestUrl = new URL('world/cc-monumental/manifest.json', worldBaseUrl);
   chunks = new ChunkManager(scene, world, manifestUrl, worldBaseUrl);
-  cameraRig.occlusion = (origin, dir, maxDist) => chunks?.cameraOcclusion(origin, dir, maxDist) ?? maxDist;
-  chunks.events.on('chunkLoaded', ({ id, lod }) => logger.debug('Terrain chunk loaded', { id, lod }));
+  cameraRig.occlusion = (origin, dir, maxDist) =>
+    chunks?.cameraOcclusion(origin, dir, maxDist) ?? maxDist;
+  chunks.events.on('chunkLoaded', ({ id, lod }) =>
+    logger.debug('Terrain chunk loaded', { id, lod }),
+  );
   chunks.events.on('chunkUnloaded', ({ id }) => logger.debug('Terrain chunk unloaded', { id }));
   await chunks.initialize();
   const startHeight = chunks.groundHeightAt(0, 0);
   if (startHeight !== undefined) character.position.y = startHeight;
   if (world) {
     const spawnH = chunks.groundHeightAt(8, 8) ?? 0;
-    const vehicle = new Vehicle(world, 8, spawnH, 8);
+    const vehicle = new Vehicle(world, 8, spawnH, 8, 0);
     vehicles.push(vehicle);
     scene.add(vehicle.group);
     // The chassis collider was created outside TerrainColliders.
     world.updateSceneQueries();
   }
   await chunks.prepareRenderer(renderer, camera);
-  const playerBaseUrl = new URL(import.meta.env.BASE_URL, window.location.href);
-  void character.loadModel(chunks, new URL('models/characters/casual-walker.glb', playerBaseUrl).href).catch((error: unknown) => {
-    logger.warn('Detailed player model failed to load; keeping the built-in character', { error: String(error) });
-  });
-  for (const vehicle of vehicles) loadVehicleVisual(vehicle);
   chunks.setDebugBorders(showDebug);
+  void character
+    .loadModel(chunks, modelUrl('models/characters/casual-walker.glb'))
+    .catch((error: unknown) => {
+      logger.warn('Detailed player model failed to load; keeping the built-in character', {
+        error: String(error),
+      });
+    });
+  for (const vehicle of vehicles) loadVehicleVisual(vehicle);
   statusLabel.textContent = 'Ciudad lista · WASD camina · clic captura el ratón';
   logger.info('World streaming initialized', { region: 'cc-monumental', stepHz: 60, lods: 3 });
   void initializeNpcs(worldBaseUrl).catch((error: unknown) => {
@@ -575,17 +788,25 @@ async function initializeNpcs(worldBaseUrl: URL): Promise<void> {
   if (!response.ok) throw new Error(`road-network.json HTTP ${response.status}`);
   const network = (await response.json()) as RoadNetwork;
   const graph = new RoadGraph(network);
-  npcs = new NpcSystem(graph, {
-    pedestrians: Math.round(150 * quality.populationDensity),
-    vehicles: Math.round(60 * quality.populationDensity),
-  }, agentColliders);
-  try {
-    const modelUrl = new URL('models/characters/casual-walker-lod1.glb', worldBaseUrl);
-    npcs.setPedestrianModel(await chunks!.loadModel(modelUrl.href, 60));
-  } catch (error) {
-    logger.warn('Detailed pedestrian crowd model failed to load; keeping built-in crowd models', { error: String(error) });
-  }
+  npcs = new NpcSystem(
+    graph,
+    {
+      pedestrians: Math.round(150 * quality.populationDensity),
+      vehicles: Math.round(60 * quality.populationDensity),
+    },
+    agentColliders,
+  );
   scene.add(npcs.group);
+  if (chunks) {
+    void chunks
+      .loadModel(modelUrl('models/characters/casual-walker-lod1.glb'), 60)
+      .then((gltf) => npcs?.setPedestrianModel(gltf))
+      .catch((error: unknown) => {
+        logger.warn('Detailed pedestrian model failed to load; keeping the built-in crowd', {
+          error: String(error),
+        });
+      });
+  }
   police = new PoliceSystem(graph, agentColliders);
   scene.add(police.group);
   logger.info('Traffic and pedestrians initialized', {
@@ -596,7 +817,10 @@ async function initializeNpcs(worldBaseUrl: URL): Promise<void> {
 }
 
 void initializeWorld().catch((error: unknown) => {
-  statusLabel.textContent = error instanceof Error ? `No se pudo iniciar el mundo: ${error.message}` : 'No se pudo iniciar el mundo.';
+  statusLabel.textContent =
+    error instanceof Error
+      ? `No se pudo iniciar el mundo: ${error.message}`
+      : 'No se pudo iniciar el mundo.';
   logger.error('World initialization failed', { error: String(error) });
 });
 loop.start();

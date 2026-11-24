@@ -11,8 +11,15 @@ import { sampleHeight } from './road-geometry';
 import { RoadRenderer } from './road-renderer';
 import { RoadHeightIndex } from './road-height-index';
 import { createStork, updateStork } from './stork';
+import { createTerrainDetailTexture } from './materials';
 import { TerrainColliders } from './terrain-physics';
-import type { BuiltTerrainChunk, ChunkEntry, TerrainChunkEvents, TerrainLodData, WorldManifest } from './types';
+import type {
+  BuiltTerrainChunk,
+  ChunkEntry,
+  TerrainChunkEvents,
+  TerrainLodData,
+  WorldManifest,
+} from './types';
 
 type ChunkState = 'queued' | 'loading' | 'loaded' | 'error';
 
@@ -60,15 +67,29 @@ function distanceToCenter(x: number, z: number, entry: ChunkEntry): number {
   return Math.hypot(x - centerX, z - centerZ);
 }
 
-function geometryForLod(level: TerrainLodData, result: BuiltTerrainChunk, chunkMeters: number): THREE.BufferGeometry {
+function geometryForLod(
+  level: TerrainLodData,
+  result: BuiltTerrainChunk,
+  chunkMeters: number,
+): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(level.positions, 3));
   geometry.setAttribute('normal', new THREE.BufferAttribute(level.normals, 3));
   geometry.setAttribute('color', new THREE.BufferAttribute(level.colors, 3));
+  const vertexCount = level.positions.length / 3;
+  const uvs = new Float32Array(vertexCount * 2);
+  for (let i = 0; i < vertexCount; i += 1) {
+    uvs[i * 2] = (level.positions[i * 3] ?? 0) / 10;
+    uvs[i * 2 + 1] = (level.positions[i * 3 + 2] ?? 0) / 10;
+  }
+  geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   geometry.setIndex(new THREE.BufferAttribute(level.indices, 1));
   const half = chunkMeters / 2;
   const verticalRadius = (result.maximumHeight - result.minimumHeight) / 2 + 4;
-  geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, (result.maximumHeight + result.minimumHeight) / 2, 0), Math.hypot(half, half, verticalRadius));
+  geometry.boundingSphere = new THREE.Sphere(
+    new THREE.Vector3(0, (result.maximumHeight + result.minimumHeight) / 2, 0),
+    Math.hypot(half, half, verticalRadius),
+  );
   return geometry;
 }
 
@@ -88,13 +109,19 @@ function objectByteSize(object: THREE.Object3D): number {
   object.traverse((node) => {
     if (!(node instanceof THREE.Mesh)) return;
     const geometry = node.geometry;
-    for (const name of Object.keys(geometry.attributes)) bytes += geometry.getAttribute(name).array.byteLength;
+    for (const name of Object.keys(geometry.attributes))
+      bytes += geometry.getAttribute(name).array.byteLength;
     if (geometry.index) bytes += geometry.index.array.byteLength;
   });
   return bytes;
 }
 
-function createBrandSign(slot: { readonly name: string; readonly position: readonly [number, number, number]; readonly heading: number; readonly width: number }): THREE.Mesh {
+function createBrandSign(slot: {
+  readonly name: string;
+  readonly position: readonly [number, number, number];
+  readonly heading: number;
+  readonly width: number;
+}): THREE.Mesh {
   const name = slot.name || 'Tienda';
   const canvas = document.createElement('canvas');
   canvas.width = 256;
@@ -114,7 +141,11 @@ function createBrandSign(slot: { readonly name: string; readonly position: reado
   }
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
-  const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
+  const material = new THREE.MeshBasicMaterial({
+    map: texture,
+    transparent: true,
+    side: THREE.DoubleSide,
+  });
   const geometry = new THREE.PlaneGeometry(Math.max(1.2, slot.width), 0.6);
   const mesh = new THREE.Mesh(geometry, material);
   mesh.position.set(slot.position[0], slot.position[1], slot.position[2]);
@@ -124,20 +155,31 @@ function createBrandSign(slot: { readonly name: string; readonly position: reado
   return mesh;
 }
 
-function pointInPolygon(x: number, z: number, points: readonly (readonly [number, number])[]): boolean {
+function pointInPolygon(
+  x: number,
+  z: number,
+  points: readonly (readonly [number, number])[],
+): boolean {
   let inside = false;
   for (let i = 0, j = points.length - 1; i < points.length; j = i, i += 1) {
     const xi = points[i]?.[0] ?? 0;
     const zi = points[i]?.[1] ?? 0;
     const xj = points[j]?.[0] ?? 0;
     const zj = points[j]?.[1] ?? 0;
-    const intersect = ((zi > z) !== (zj > z)) && (x < ((xj - xi) * (z - zi)) / (zj - zi) + xi);
+    const intersect = zi > z !== zj > z && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi;
     if (intersect) inside = !inside;
   }
   return inside;
 }
 
-function distancePointToSegment(px: number, pz: number, ax: number, az: number, bx: number, bz: number): number {
+function distancePointToSegment(
+  px: number,
+  pz: number,
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
+): number {
   const dx = bx - ax;
   const dz = bz - az;
   const lenSq = dx * dx + dz * dz;
@@ -153,11 +195,20 @@ export class ChunkManager {
   private readonly scene: THREE.Scene;
   private readonly world: World;
   private readonly colliders: TerrainColliders;
-  private readonly material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.94, side: THREE.DoubleSide });
+  private readonly material = new THREE.MeshStandardMaterial({
+    map: createTerrainDetailTexture(),
+    vertexColors: true,
+    roughness: 0.9,
+    side: THREE.DoubleSide,
+  });
   private readonly roadRenderer = new RoadRenderer();
   private readonly buildingRenderer = new BuildingRenderer();
   private readonly debugOverlays: ChunkDebugOverlays;
-  private readonly debugBorderMaterial = new THREE.LineBasicMaterial({ color: '#f06d4e', depthTest: true, toneMapped: false });
+  private readonly debugBorderMaterial = new THREE.LineBasicMaterial({
+    color: '#f06d4e',
+    depthTest: true,
+    toneMapped: false,
+  });
   private readonly records = new Map<string, ChunkRecord>();
   private readonly roadHeights = new Map<string, RoadHeightIndex>();
   private readonly completed: CompletedChunk[] = [];
@@ -187,8 +238,9 @@ export class ChunkManager {
   async initialize(): Promise<void> {
     const response = await fetch(this.manifestUrl);
     if (!response.ok) throw new Error(`Could not load world manifest (${response.status}).`);
-    const manifest = await response.json() as WorldManifest;
-    if (manifest.schemaVersion !== 1 || !manifest.chunks.length || manifest.chunkMeters <= 0) throw new Error('World manifest is invalid or empty.');
+    const manifest = (await response.json()) as WorldManifest;
+    if (manifest.schemaVersion !== 1 || !manifest.chunks.length || manifest.chunkMeters <= 0)
+      throw new Error('World manifest is invalid or empty.');
     this.manifest = manifest;
   }
 
@@ -201,7 +253,8 @@ export class ChunkManager {
   }
 
   loadModel(url: string, priority = 0): Promise<GLTF> {
-    if (!this.assets) return Promise.reject(new Error('The renderer must be prepared before loading models.'));
+    if (!this.assets)
+      return Promise.reject(new Error('The renderer must be prepared before loading models.'));
     return this.assets.loadModel(url, priority);
   }
 
@@ -228,7 +281,15 @@ export class ChunkManager {
         record = undefined;
       }
       if (!record && distance <= loadRadius) {
-        record = { entry, state: 'queued', distance, lod: this.lodForDistance(distance), memoryBytes: 0, debugMemoryBytes: 0, hasCollider: false };
+        record = {
+          entry,
+          state: 'queued',
+          distance,
+          lod: this.lodForDistance(distance),
+          memoryBytes: 0,
+          debugMemoryBytes: 0,
+          hasCollider: false,
+        };
         this.records.set(entry.id, record);
       }
       if (!record) continue;
@@ -245,7 +306,11 @@ export class ChunkManager {
         this.syncDebugOverlays(record);
       }
     }
-    nextQueue.sort((left, right) => (this.records.get(left)?.distance ?? Infinity) - (this.records.get(right)?.distance ?? Infinity));
+    nextQueue.sort(
+      (left, right) =>
+        (this.records.get(left)?.distance ?? Infinity) -
+        (this.records.get(right)?.distance ?? Infinity),
+    );
     this.loadQueue.length = 0;
     this.loadQueue.push(...nextQueue);
     this.dispatchNext();
@@ -259,7 +324,8 @@ export class ChunkManager {
 
   get pendingCount(): number {
     let count = 0;
-    for (const record of this.records.values()) if (record.state === 'queued' || record.state === 'loading') count += 1;
+    for (const record of this.records.values())
+      if (record.state === 'queued' || record.state === 'loading') count += 1;
     return count;
   }
 
@@ -375,6 +441,7 @@ export class ChunkManager {
     for (const record of this.records.values()) this.unload(record, false);
     this.records.clear();
     this.colliders.clear();
+    this.material.map?.dispose();
     this.material.dispose();
     this.roadRenderer.dispose();
     this.buildingRenderer.dispose();
@@ -397,21 +464,31 @@ export class ChunkManager {
       current.visible = false;
       this.scene.remove(current);
     }
-    for (const mesh of record.buildingMeshes?.[record.lod] ?? []) { mesh.visible = false; this.scene.remove(mesh); }
+    for (const mesh of record.buildingMeshes?.[record.lod] ?? []) {
+      mesh.visible = false;
+      this.scene.remove(mesh);
+    }
     record.lod = lod;
     const next = record.meshes?.[lod];
     if (next) {
       next.visible = true;
       this.scene.add(next);
     }
-    for (const mesh of record.buildingMeshes?.[lod] ?? []) { mesh.visible = true; this.scene.add(mesh); }
+    for (const mesh of record.buildingMeshes?.[lod] ?? []) {
+      mesh.visible = true;
+      this.scene.add(mesh);
+    }
     this.syncDebugOverlays(record);
   }
 
   private processCompleted(): void {
     const start = performance.now();
     let attachments = 0;
-    while (this.completed.length > 0 && attachments < MAX_ATTACHMENTS_PER_FRAME && performance.now() - start < GEOMETRY_BUDGET_MS) {
+    while (
+      this.completed.length > 0 &&
+      attachments < MAX_ATTACHMENTS_PER_FRAME &&
+      performance.now() - start < GEOMETRY_BUDGET_MS
+    ) {
       const item = this.completed.shift();
       if (!item) return;
       const record = this.records.get(item.id);
@@ -419,26 +496,38 @@ export class ChunkManager {
       const centerX = (record.entry.bounds.minX + record.entry.bounds.maxX) / 2;
       const centerZ = (record.entry.bounds.minZ + record.entry.bounds.maxZ) / 2;
       const meshes = item.result.levels.map((level) => {
-        const mesh = new THREE.Mesh(geometryForLod(level, item.result, this.manifest?.chunkMeters ?? 256), this.material);
+        const mesh = new THREE.Mesh(
+          geometryForLod(level, item.result, this.manifest?.chunkMeters ?? 256),
+          this.material,
+        );
         mesh.position.set(centerX, 0, centerZ);
         mesh.visible = level.level === record.lod;
+        mesh.receiveShadow = true;
         return mesh;
       });
       const activeMesh = meshes[record.lod];
       if (activeMesh) this.scene.add(activeMesh);
       const decorationMeshes = this.roadRenderer.createMeshes(item.result.roads, centerX, centerZ);
       for (const mesh of decorationMeshes) this.scene.add(mesh);
-      const buildingMeshes = this.buildingRenderer.createMeshes(item.result.buildings, centerX, centerZ);
-      for (const mesh of buildingMeshes[record.lod] ?? []) { mesh.visible = true; this.scene.add(mesh); }
+      const buildingMeshes = this.buildingRenderer.createMeshes(
+        item.result.buildings,
+        centerX,
+        centerZ,
+      );
+      for (const mesh of buildingMeshes[record.lod] ?? []) {
+        mesh.visible = true;
+        this.scene.add(mesh);
+      }
       record.result = item.result;
-      if (item.result.roads) this.roadHeights.set(item.id, new RoadHeightIndex(item.result.roads, record.entry.bounds));
+      if (item.result.roads)
+        this.roadHeights.set(item.id, new RoadHeightIndex(item.result.roads, record.entry.bounds));
       record.meshes = meshes;
       record.buildingMeshes = buildingMeshes;
       record.decorationMeshes = decorationMeshes;
       record.storks = (item.result.buildings?.storks ?? []).map((instance) => {
         const stork = createStork();
         stork.position.set(instance.position[0], instance.position[1], instance.position[2]);
-        stork.rotation.y = (instance.buildingId.length % 8) * Math.PI / 4;
+        stork.rotation.y = ((instance.buildingId.length % 8) * Math.PI) / 4;
         this.scene.add(stork);
         return stork;
       });
@@ -449,17 +538,31 @@ export class ChunkManager {
       });
       const roadBuffers = item.result.roads;
       const roadDataBytes = roadBuffers
-        ? roadBuffers.colliderPositions.byteLength + roadBuffers.colliderIndices.byteLength + roadBuffers.props.reduce((sum, prop) => sum + prop.positions.byteLength + prop.headings.byteLength, 0)
+        ? roadBuffers.colliderPositions.byteLength +
+          roadBuffers.colliderIndices.byteLength +
+          roadBuffers.props.reduce(
+            (sum, prop) => sum + prop.positions.byteLength + prop.headings.byteLength,
+            0,
+          )
         : 0;
       const buildingDataBytes = item.result.buildings
-        ? item.result.buildings.colliderPositions.byteLength + item.result.buildings.colliderIndices.byteLength
+        ? item.result.buildings.colliderPositions.byteLength +
+          item.result.buildings.colliderIndices.byteLength
         : 0;
-      record.memoryBytes = byteSize([...meshes, ...decorationMeshes, ...buildingMeshes.flat()]) + item.result.heights.byteLength + roadDataBytes + buildingDataBytes;
+      record.memoryBytes =
+        byteSize([...meshes, ...decorationMeshes, ...buildingMeshes.flat()]) +
+        item.result.heights.byteLength +
+        roadDataBytes +
+        buildingDataBytes;
       record.state = 'loaded';
       this.memoryBytes += record.memoryBytes;
       this.addDebugBorder(record);
       this.syncDebugOverlays(record);
-      this.events.emit('chunkLoaded', { id: item.id, lod: record.lod, memoryBytes: record.memoryBytes });
+      this.events.emit('chunkLoaded', {
+        id: item.id,
+        lod: record.lod,
+        memoryBytes: record.memoryBytes,
+      });
       this.syncCollider(record);
       this.loadLandmarkModels(record, item.result);
       attachments += 1;
@@ -468,18 +571,39 @@ export class ChunkManager {
 
   private syncCollider(record: ChunkRecord): void {
     if (!record.result || !this.manifest) return;
-    if (record.distance <= this.manifest.chunkMeters * 0.75 && !record.hasCollider) this.addColliders(record);
+    if (record.distance <= this.manifest.chunkMeters * 0.75 && !record.hasCollider)
+      this.addColliders(record);
   }
 
   private addColliders(record: ChunkRecord): void {
     if (!record.result || !this.manifest || record.hasCollider) return;
-    this.colliders.add(record.entry.id, record.entry.bounds, this.manifest.chunkMeters, record.result.heights, record.result.samples);
+    this.colliders.add(
+      record.entry.id,
+      record.entry.bounds,
+      this.manifest.chunkMeters,
+      record.result.heights,
+      record.result.samples,
+    );
     const centerX = (record.entry.bounds.minX + record.entry.bounds.maxX) / 2;
     const centerZ = (record.entry.bounds.minZ + record.entry.bounds.maxZ) / 2;
     const roads = record.result.roads;
-    if (roads) this.colliders.addRoads(record.entry.id, centerX, centerZ, roads.colliderPositions, roads.colliderIndices);
+    if (roads)
+      this.colliders.addRoads(
+        record.entry.id,
+        centerX,
+        centerZ,
+        roads.colliderPositions,
+        roads.colliderIndices,
+      );
     const buildings = record.result.buildings;
-    if (buildings) this.colliders.addBuildings(record.entry.id, centerX, centerZ, buildings.colliderPositions, buildings.colliderIndices);
+    if (buildings)
+      this.colliders.addBuildings(
+        record.entry.id,
+        centerX,
+        centerZ,
+        buildings.colliderPositions,
+        buildings.colliderIndices,
+      );
     record.hasCollider = true;
     this.syncDebugOverlays(record);
   }
@@ -501,21 +625,34 @@ export class ChunkManager {
     for (const instance of models) {
       if (!/^landmarks\/w\d+\.glb$/.test(instance.path)) continue;
       const url = new URL(instance.path, this.worldBaseUrl);
-      void this.assets.loadModel(url.href, 10).then((gltf: GLTF) => {
-        if (this.closed || this.records.get(record.entry.id) !== record || record.state !== 'loaded') return;
-        const object = gltf.scene.clone(true);
-        object.position.set(instance.position[0], instance.position[1], instance.position[2]);
-        object.traverse((node) => { if (node instanceof THREE.Mesh) { node.castShadow = true; node.receiveShadow = true; } });
-        this.scene.add(object);
-        record.landmarkObjects ??= [];
-        record.landmarkObjects.push(object);
-        const bytes = objectByteSize(object);
-        record.memoryBytes += bytes;
-        this.memoryBytes += bytes;
-      }).catch((error: unknown) => {
-        this.errorCount += 1;
-        console.error(`Could not load landmark model ${instance.path}.`, error);
-      });
+      void this.assets
+        .loadModel(url.href, 10)
+        .then((gltf: GLTF) => {
+          if (
+            this.closed ||
+            this.records.get(record.entry.id) !== record ||
+            record.state !== 'loaded'
+          )
+            return;
+          const object = gltf.scene.clone(true);
+          object.position.set(instance.position[0], instance.position[1], instance.position[2]);
+          object.traverse((node) => {
+            if (node instanceof THREE.Mesh) {
+              node.castShadow = true;
+              node.receiveShadow = true;
+            }
+          });
+          this.scene.add(object);
+          record.landmarkObjects ??= [];
+          record.landmarkObjects.push(object);
+          const bytes = objectByteSize(object);
+          record.memoryBytes += bytes;
+          this.memoryBytes += bytes;
+        })
+        .catch((error: unknown) => {
+          this.errorCount += 1;
+          console.error(`Could not load landmark model ${instance.path}.`, error);
+        });
     }
   }
 
@@ -553,14 +690,18 @@ export class ChunkManager {
 
   private async fetchAndSend(record: ChunkRecord): Promise<void> {
     try {
-      if (record.entry.path !== `${record.entry.id}.bin` || record.entry.bytes > MAX_CHUNK_BYTES) throw new Error(`Unsafe chunk path or size: ${record.entry.id}`);
+      if (record.entry.path !== `${record.entry.id}.bin` || record.entry.bytes > MAX_CHUNK_BYTES)
+        throw new Error(`Unsafe chunk path or size: ${record.entry.id}`);
       const url = new URL(`world/${this.manifest?.region}/${record.entry.path}`, this.worldBaseUrl);
       const response = await fetch(url);
-      if (!response.ok) throw new Error(`Could not load chunk ${record.entry.id} (${response.status}).`);
+      if (!response.ok)
+        throw new Error(`Could not load chunk ${record.entry.id} (${response.status}).`);
       const buffer = await response.arrayBuffer();
-      if (buffer.byteLength !== record.entry.bytes || buffer.byteLength > MAX_CHUNK_BYTES) throw new Error(`Chunk ${record.entry.id} size check failed.`);
+      if (buffer.byteLength !== record.entry.bytes || buffer.byteLength > MAX_CHUNK_BYTES)
+        throw new Error(`Chunk ${record.entry.id} size check failed.`);
       const actualHash = toHex(await crypto.subtle.digest('SHA-256', buffer));
-      if (actualHash !== record.entry.sha256) throw new Error(`Chunk ${record.entry.id} integrity check failed.`);
+      if (actualHash !== record.entry.sha256)
+        throw new Error(`Chunk ${record.entry.id} integrity check failed.`);
       this.worker.postMessage({ id: record.entry.id, buffer }, [buffer]);
     } catch (error) {
       this.workerBusy = false;
@@ -574,7 +715,8 @@ export class ChunkManager {
   private readonly handleWorkerMessage = (event: MessageEvent<WorkerResponse>): void => {
     this.workerBusy = false;
     const record = this.records.get(event.data.id);
-    if (event.data.result && record?.state === 'loading') this.completed.push({ id: event.data.id, result: event.data.result });
+    if (event.data.result && record?.state === 'loading')
+      this.completed.push({ id: event.data.id, result: event.data.result });
     else if (event.data.error && record) {
       record.state = 'error';
       this.errorCount += 1;
@@ -603,12 +745,23 @@ export class ChunkManager {
     }
     if (record.buildingMeshes) {
       for (const level of record.buildingMeshes) {
-        for (const mesh of level) { this.scene.remove(mesh); mesh.geometry.dispose(); }
+        for (const mesh of level) {
+          this.scene.remove(mesh);
+          mesh.geometry.dispose();
+        }
       }
     }
-    if (record.landmarkObjects) for (const object of record.landmarkObjects) this.scene.remove(object);
+    if (record.landmarkObjects)
+      for (const object of record.landmarkObjects) this.scene.remove(object);
     if (record.storks) for (const stork of record.storks) this.scene.remove(stork);
-    if (record.signs) for (const sign of record.signs) { this.scene.remove(sign); (sign.material as THREE.Material).dispose(); sign.geometry.dispose(); (sign.material as { map?: THREE.Texture }).map?.dispose(); }
-    if (emit && record.state === 'loaded') this.events.emit('chunkUnloaded', { id: record.entry.id });
+    if (record.signs)
+      for (const sign of record.signs) {
+        this.scene.remove(sign);
+        (sign.material as THREE.Material).dispose();
+        sign.geometry.dispose();
+        (sign.material as { map?: THREE.Texture }).map?.dispose();
+      }
+    if (emit && record.state === 'loaded')
+      this.events.emit('chunkUnloaded', { id: record.entry.id });
   }
 }

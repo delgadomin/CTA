@@ -4,7 +4,11 @@ export interface GameSystem {
   update(deltaSeconds: number): void;
 }
 
-export type RenderCallback = (interpolation: number, frameSeconds: number, timestamp: number) => void;
+export type RenderCallback = (
+  interpolation: number,
+  frameSeconds: number,
+  timestamp: number,
+) => void;
 
 /** Fixed-step accumulator with an explicit spiral-of-death guard. */
 export class FixedStepLoop {
@@ -17,9 +21,16 @@ export class FixedStepLoop {
   private lastTimestamp = 0;
   private running = false;
 
-  constructor(systems: readonly GameSystem[], render: RenderCallback, stepSeconds = 1 / 60, maxStepsPerFrame = 5) {
-    if (!Number.isFinite(stepSeconds) || stepSeconds <= 0) throw new RangeError('The fixed step must be greater than zero.');
-    if (!Number.isInteger(maxStepsPerFrame) || maxStepsPerFrame < 1) throw new RangeError('At least one fixed step must be allowed per frame.');
+  constructor(
+    systems: readonly GameSystem[],
+    render: RenderCallback,
+    stepSeconds = 1 / 60,
+    maxStepsPerFrame = 5,
+  ) {
+    if (!Number.isFinite(stepSeconds) || stepSeconds <= 0)
+      throw new RangeError('The fixed step must be greater than zero.');
+    if (!Number.isInteger(maxStepsPerFrame) || maxStepsPerFrame < 1)
+      throw new RangeError('At least one fixed step must be allowed per frame.');
     this.systems = [...systems].sort((left, right) => left.order - right.order);
     this.render = render;
     this.stepSeconds = stepSeconds;

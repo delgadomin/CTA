@@ -1,15 +1,39 @@
-import type { BuiltRoadChunk, BuiltTerrainChunk, ChunkFeature, ProjectedBounds, RoadPropBatch, RoadSurfaceStyle } from './types';
-import { RoadGeometryBuilder, roadStyle, roadWidth, sampleHeight, smoothRoadCenterline, sidewalkSides, type RoadPoint } from './road-geometry';
+import type {
+  BuiltRoadChunk,
+  BuiltTerrainChunk,
+  ChunkFeature,
+  ProjectedBounds,
+  RoadPropBatch,
+  RoadSurfaceStyle,
+} from './types';
+import {
+  RoadGeometryBuilder,
+  roadStyle,
+  roadWidth,
+  sampleHeight,
+  smoothRoadCenterline,
+  sidewalkSides,
+  type RoadPoint,
+} from './road-geometry';
 import { addCrossingAndControlMarkings, addLaneMarkings } from './road-markings';
 
 const CURB_WIDTH = 0.2;
 const SIDEWALK_WIDTH = 1.65;
 const ROAD_LIFT = 0.055;
 
-export function buildRoadChunk(features: readonly ChunkFeature[], terrain: BuiltTerrainChunk, bounds: ProjectedBounds): BuiltRoadChunk {
+export function buildRoadChunk(
+  features: readonly ChunkFeature[],
+  terrain: BuiltTerrainChunk,
+  bounds: ProjectedBounds,
+): BuiltRoadChunk {
   const centerX = (bounds.minX + bounds.maxX) / 2;
   const centerZ = (bounds.minZ + bounds.maxZ) / 2;
-  const roads = features.filter((feature) => (feature.featureType === 'road' || feature.featureType === 'pedestrian') && feature.points && feature.points.length >= 2);
+  const roads = features.filter(
+    (feature) =>
+      (feature.featureType === 'road' || feature.featureType === 'pedestrian') &&
+      feature.points &&
+      feature.points.length >= 2,
+  );
   const props = features.filter((feature) => feature.featureType === 'prop');
   const builders = new Map<Exclude<RoadSurfaceStyle, 'marking'>, RoadGeometryBuilder>();
   const builderFor = (style: Exclude<RoadSurfaceStyle, 'marking'>): RoadGeometryBuilder => {
@@ -28,28 +52,64 @@ export function buildRoadChunk(features: readonly ChunkFeature[], terrain: Built
     const lift = road.tunnel ? ROAD_LIFT + 0.015 : ROAD_LIFT;
     const offsetAt = road.bridge ? bridgeOffset(centerline) : undefined;
     if (road.featureType === 'pedestrian' && road.area) {
-      builderFor(roadStyle(road)).addPolygon(road.points ?? [], bounds, lift, `${road.id ?? 'pedestrian'}:area`);
+      builderFor(roadStyle(road)).addPolygon(
+        road.points ?? [],
+        bounds,
+        lift,
+        `${road.id ?? 'pedestrian'}:area`,
+      );
       continue;
     }
-    addCorridor(builderFor(road.tunnel ? 'asphalt' : roadStyle(road)), centerline, width, bounds, lift, `${road.id ?? 'road'}:surface`, offsetAt);
+    addCorridor(
+      builderFor(road.tunnel ? 'asphalt' : roadStyle(road)),
+      centerline,
+      width,
+      bounds,
+      lift,
+      `${road.id ?? 'road'}:surface`,
+      offsetAt,
+    );
     for (const side of sidewalkSides(road)) {
-      const sidewalk = side > 0
-        ? [width / 2 + CURB_WIDTH, width / 2 + CURB_WIDTH + SIDEWALK_WIDTH] as const
-        : [-width / 2 - CURB_WIDTH - SIDEWALK_WIDTH, -width / 2 - CURB_WIDTH] as const;
-      addCorridor(builderFor('sidewalk'), centerline, SIDEWALK_WIDTH, bounds, lift + 0.15, `${road.id ?? 'road'}:sidewalk:${side}`, offsetAt, sidewalk);
-      const curb = side > 0
-        ? [width / 2, width / 2 + CURB_WIDTH] as const
-        : [-width / 2 - CURB_WIDTH, -width / 2] as const;
-      addCorridor(builderFor('concrete'), centerline, CURB_WIDTH, bounds, lift + 0.075, `${road.id ?? 'road'}:curb:${side}`, offsetAt, curb);
+      const sidewalk =
+        side > 0
+          ? ([width / 2 + CURB_WIDTH, width / 2 + CURB_WIDTH + SIDEWALK_WIDTH] as const)
+          : ([-width / 2 - CURB_WIDTH - SIDEWALK_WIDTH, -width / 2 - CURB_WIDTH] as const);
+      addCorridor(
+        builderFor('sidewalk'),
+        centerline,
+        SIDEWALK_WIDTH,
+        bounds,
+        lift + 0.15,
+        `${road.id ?? 'road'}:sidewalk:${side}`,
+        offsetAt,
+        sidewalk,
+      );
+      const curb =
+        side > 0
+          ? ([width / 2, width / 2 + CURB_WIDTH] as const)
+          : ([-width / 2 - CURB_WIDTH, -width / 2] as const);
+      addCorridor(
+        builderFor('concrete'),
+        centerline,
+        CURB_WIDTH,
+        bounds,
+        lift + 0.075,
+        `${road.id ?? 'road'}:curb:${side}`,
+        offsetAt,
+        curb,
+      );
     }
-    if (road.highway === 'steps') addStairTreads(builderFor(roadStyle(road)), centerline, width, terrain, bounds, road);
+    if (road.highway === 'steps')
+      addStairTreads(builderFor(roadStyle(road)), centerline, width, terrain, bounds, road);
   }
 
   addIntersectionPatches(roads, builders, builderFor, bounds);
   const markingBuilder = new RoadGeometryBuilder('marking', terrain, centerX, centerZ);
   addLaneMarkings(markingBuilder, roads, terrain, bounds);
   addCrossingAndControlMarkings(markingBuilder, roads, props, bounds);
-  const surfaces = [...builders.values()].map((builder) => builder.build()).filter((geometry) => geometry.indices.length > 0);
+  const surfaces = [...builders.values()]
+    .map((builder) => builder.build())
+    .filter((geometry) => geometry.indices.length > 0);
   const markings = markingBuilder.build();
   const collider = mergeSurfaces(surfaces);
   const batches = buildPropBatches(props, terrain, centerX, centerZ);
@@ -59,7 +119,10 @@ export function buildRoadChunk(features: readonly ChunkFeature[], terrain: Built
     colliderPositions: collider.positions,
     colliderIndices: collider.indices,
     props: batches,
-    triangleCount: [...surfaces, markings].reduce((sum, surface) => sum + surface.indices.length / 3, 0),
+    triangleCount: [...surfaces, markings].reduce(
+      (sum, surface) => sum + surface.indices.length / 3,
+      0,
+    ),
   };
 }
 
@@ -95,17 +158,28 @@ function offsetPolyline(line: readonly RoadPoint[], offset: number): RoadPoint[]
     const next = line[Math.min(line.length - 1, index + 1)] ?? point;
     const previousLength = Math.hypot(point[0] - previous[0], point[1] - previous[1]);
     const nextLength = Math.hypot(next[0] - point[0], next[1] - point[1]);
-    const before: RoadPoint = previousLength > 1e-4 ? [(point[0] - previous[0]) / previousLength, (point[1] - previous[1]) / previousLength] : [0, 0];
-    const after: RoadPoint = nextLength > 1e-4 ? [(next[0] - point[0]) / nextLength, (next[1] - point[1]) / nextLength] : before;
+    const before: RoadPoint =
+      previousLength > 1e-4
+        ? [(point[0] - previous[0]) / previousLength, (point[1] - previous[1]) / previousLength]
+        : [0, 0];
+    const after: RoadPoint =
+      nextLength > 1e-4
+        ? [(next[0] - point[0]) / nextLength, (next[1] - point[1]) / nextLength]
+        : before;
     const normalBefore: RoadPoint = [-before[1], before[0]];
     const normalAfter: RoadPoint = [-after[1], after[0]];
     const sumX = normalBefore[0] + normalAfter[0];
     const sumZ = normalBefore[1] + normalAfter[1];
     const sumLength = Math.hypot(sumX, sumZ);
-    if (sumLength < 1e-4) return [point[0] + normalAfter[0] * offset, point[1] + normalAfter[1] * offset];
+    if (sumLength < 1e-4)
+      return [point[0] + normalAfter[0] * offset, point[1] + normalAfter[1] * offset];
     const bisector: RoadPoint = [sumX / sumLength, sumZ / sumLength];
-    const denominator = Math.max(0.5, Math.abs(bisector[0] * normalAfter[0] + bisector[1] * normalAfter[1]));
-    const miter = Math.min(Math.abs(offset) / denominator, Math.abs(offset) * 2) * Math.sign(offset);
+    const denominator = Math.max(
+      0.5,
+      Math.abs(bisector[0] * normalAfter[0] + bisector[1] * normalAfter[1]),
+    );
+    const miter =
+      Math.min(Math.abs(offset) / denominator, Math.abs(offset) * 2) * Math.sign(offset);
     return [point[0] + bisector[0] * miter, point[1] + bisector[1] * miter];
   });
 }
@@ -128,7 +202,13 @@ function bridgeOffset(line: readonly RoadPoint[]): (point: RoadPoint) => number 
       const dx = b[0] - a[0];
       const dz = b[1] - a[1];
       const lengthSquared = dx * dx + dz * dz;
-      const t = lengthSquared < 1e-8 ? 0 : Math.max(0, Math.min(1, ((point[0] - a[0]) * dx + (point[1] - a[1]) * dz) / lengthSquared));
+      const t =
+        lengthSquared < 1e-8
+          ? 0
+          : Math.max(
+              0,
+              Math.min(1, ((point[0] - a[0]) * dx + (point[1] - a[1]) * dz) / lengthSquared),
+            );
       const distance = Math.hypot(point[0] - a[0] - dx * t, point[1] - a[1] - dz * t);
       if (distance < nearestDistance) {
         nearestDistance = distance;
@@ -139,7 +219,14 @@ function bridgeOffset(line: readonly RoadPoint[]): (point: RoadPoint) => number 
   };
 }
 
-function addStairTreads(builder: RoadGeometryBuilder, line: readonly RoadPoint[], width: number, terrain: BuiltTerrainChunk, bounds: ProjectedBounds, road: ChunkFeature): void {
+function addStairTreads(
+  builder: RoadGeometryBuilder,
+  line: readonly RoadPoint[],
+  width: number,
+  terrain: BuiltTerrainChunk,
+  bounds: ProjectedBounds,
+  road: ChunkFeature,
+): void {
   const distances = cumulativeDistances(line);
   const total = distances.at(-1) ?? 0;
   if (total < 0.4) return;
@@ -151,14 +238,21 @@ function addStairTreads(builder: RoadGeometryBuilder, line: readonly RoadPoint[]
     if (!start || !end || !segment) continue;
     const directionLength = Math.hypot(segment[0] - start[0], segment[1] - start[1]);
     if (directionLength < 0.03) continue;
-    const tangent: RoadPoint = [(segment[0] - start[0]) / directionLength, (segment[1] - start[1]) / directionLength];
+    const tangent: RoadPoint = [
+      (segment[0] - start[0]) / directionLength,
+      (segment[1] - start[1]) / directionLength,
+    ];
     const normal: RoadPoint = [-tangent[1], tangent[0]];
-    const elevation = sampleHeight(terrain, start[0], start[1]) + ROAD_LIFT + 0.02 + distance / total * inclineRise(road, total);
+    const elevation =
+      sampleHeight(terrain, start[0], start[1]) +
+      ROAD_LIFT +
+      0.02 +
+      (distance / total) * inclineRise(road, total);
     const polygon: RoadPoint[] = [
-      [start[0] + normal[0] * width / 2, start[1] + normal[1] * width / 2],
-      [end[0] + normal[0] * width / 2, end[1] + normal[1] * width / 2],
-      [end[0] - normal[0] * width / 2, end[1] - normal[1] * width / 2],
-      [start[0] - normal[0] * width / 2, start[1] - normal[1] * width / 2],
+      [start[0] + (normal[0] * width) / 2, start[1] + (normal[1] * width) / 2],
+      [end[0] + (normal[0] * width) / 2, end[1] + (normal[1] * width) / 2],
+      [end[0] - (normal[0] * width) / 2, end[1] - (normal[1] * width) / 2],
+      [start[0] - (normal[0] * width) / 2, start[1] - (normal[1] * width) / 2],
     ];
     builder.addFlatPolygon(polygon, elevation, bounds, `${road.id ?? 'steps'}:tread:${index}`);
   }
@@ -169,7 +263,7 @@ function inclineRise(road: ChunkFeature, total: number): number {
   if (incline === 'up') return total * 0.08;
   if (incline === 'down') return -total * 0.08;
   const percent = Number.parseFloat(incline.replace('%', ''));
-  return Number.isFinite(percent) ? total * percent / 100 : 0;
+  return Number.isFinite(percent) ? (total * percent) / 100 : 0;
 }
 
 function cumulativeDistances(line: readonly RoadPoint[]): number[] {
@@ -182,7 +276,11 @@ function cumulativeDistances(line: readonly RoadPoint[]): number[] {
   return result;
 }
 
-function pointAtDistance(line: readonly RoadPoint[], distances: readonly number[], distance: number): RoadPoint | undefined {
+function pointAtDistance(
+  line: readonly RoadPoint[],
+  distances: readonly number[],
+  distance: number,
+): RoadPoint | undefined {
   for (let index = 0; index < line.length - 1; index += 1) {
     const start = distances[index] ?? 0;
     const end = distances[index + 1] ?? start;
@@ -202,22 +300,41 @@ function addIntersectionPatches(
   builderFor: (style: Exclude<RoadSurfaceStyle, 'marking'>) => RoadGeometryBuilder,
   bounds: ProjectedBounds,
 ): void {
-  const nodes = new Map<string, { point: RoadPoint; directions: Set<string>; radius: number; style: Exclude<RoadSurfaceStyle, 'marking'> }>();
+  const nodes = new Map<
+    string,
+    {
+      point: RoadPoint;
+      directions: Set<string>;
+      radius: number;
+      style: Exclude<RoadSurfaceStyle, 'marking'>;
+    }
+  >();
   for (const road of roads) {
     const points = road.points ?? [];
     const refs = road.nodeIds ?? [];
     for (let index = 0; index < points.length; index += 1) {
       const point = points[index];
       if (!point) continue;
-      const nodeId = refs.length === points.length ? `n${refs[index]}` : `${Math.round(point[0] * 2)}:${Math.round(point[1] * 2)}`;
-      const node = nodes.get(nodeId) ?? { point, directions: new Set<string>(), radius: roadWidth(road) / 2 + 0.35, style: roadStyle(road) };
+      const nodeId =
+        refs.length === points.length
+          ? `n${refs[index]}`
+          : `${Math.round(point[0] * 2)}:${Math.round(point[1] * 2)}`;
+      const node = nodes.get(nodeId) ?? {
+        point,
+        directions: new Set<string>(),
+        radius: roadWidth(road) / 2 + 0.35,
+        style: roadStyle(road),
+      };
       node.radius = Math.max(node.radius, roadWidth(road) / 2 + 0.35);
       for (const adjacent of [points[index - 1], points[index + 1]]) {
         if (!adjacent) continue;
         const dx = adjacent[0] - point[0];
         const dz = adjacent[1] - point[1];
         const length = Math.hypot(dx, dz);
-        if (length > 0.1) node.directions.add(`${Math.round(dx / length * 10)}:${Math.round(dz / length * 10)}`);
+        if (length > 0.1)
+          node.directions.add(
+            `${Math.round((dx / length) * 10)}:${Math.round((dz / length) * 10)}`,
+          );
       }
       nodes.set(nodeId, node);
     }
@@ -226,34 +343,56 @@ function addIntersectionPatches(
     if (node.directions.size < 3) continue;
     const builder = builders.get(node.style) ?? builderFor(node.style);
     const polygon: RoadPoint[] = Array.from({ length: 16 }, (_, index) => {
-      const angle = index * Math.PI * 2 / 16;
-      return [node.point[0] + Math.cos(angle) * node.radius, node.point[1] + Math.sin(angle) * node.radius];
+      const angle = (index * Math.PI * 2) / 16;
+      return [
+        node.point[0] + Math.cos(angle) * node.radius,
+        node.point[1] + Math.sin(angle) * node.radius,
+      ];
     });
     builder.addPolygon(polygon, bounds, ROAD_LIFT + 0.025, 'intersection');
   }
 }
 
-function buildPropBatches(props: readonly ChunkFeature[], terrain: BuiltTerrainChunk, centerX: number, centerZ: number): RoadPropBatch[] {
+function buildPropBatches(
+  props: readonly ChunkFeature[],
+  terrain: BuiltTerrainChunk,
+  centerX: number,
+  centerZ: number,
+): RoadPropBatch[] {
   const supported = new Map<RoadPropBatch['kind'], { positions: number[]; headings: number[] }>([
-    ['traffic_signals', { positions: [], headings: [] }], ['stop', { positions: [], headings: [] }],
-    ['give_way', { positions: [], headings: [] }], ['street_lamp', { positions: [], headings: [] }],
-  ['tree', { positions: [], headings: [] }],
+    ['traffic_signals', { positions: [], headings: [] }],
+    ['stop', { positions: [], headings: [] }],
+    ['give_way', { positions: [], headings: [] }],
+    ['street_lamp', { positions: [], headings: [] }],
+    ['tree', { positions: [], headings: [] }],
   ]);
   for (const prop of props) {
-    const kind = prop.kind === 'traffic_sign' && (prop.trafficSign ?? '').includes('206') ? 'give_way' : prop.kind as RoadPropBatch['kind'];
+    const kind =
+      prop.kind === 'traffic_sign' && (prop.trafficSign ?? '').includes('206')
+        ? 'give_way'
+        : (prop.kind as RoadPropBatch['kind']);
     const batch = supported.get(kind);
     if (!batch || !prop.position) continue;
-    batch.positions.push(prop.position[0] - centerX, sampleHeight(terrain, prop.position[0], prop.position[1]), prop.position[1] - centerZ);
-    batch.headings.push((prop.directionDegrees ?? 0) * Math.PI / 180);
+    batch.positions.push(
+      prop.position[0] - centerX,
+      sampleHeight(terrain, prop.position[0], prop.position[1]),
+      prop.position[1] - centerZ,
+    );
+    batch.headings.push(((prop.directionDegrees ?? 0) * Math.PI) / 180);
   }
-  return [...supported].filter(([, batch]) => batch.positions.length > 0).map(([kind, batch]) => ({
-    kind,
-    positions: Float32Array.from(batch.positions),
-    headings: Float32Array.from(batch.headings),
-  }));
+  return [...supported]
+    .filter(([, batch]) => batch.positions.length > 0)
+    .map(([kind, batch]) => ({
+      kind,
+      positions: Float32Array.from(batch.positions),
+      headings: Float32Array.from(batch.headings),
+    }));
 }
 
-function mergeSurfaces(surfaces: readonly BuiltRoadChunk['surfaces'][number][]): { positions: Float32Array; indices: Uint32Array } {
+function mergeSurfaces(surfaces: readonly BuiltRoadChunk['surfaces'][number][]): {
+  positions: Float32Array;
+  indices: Uint32Array;
+} {
   const positionCount = surfaces.reduce((sum, surface) => sum + surface.positions.length, 0);
   const indexCount = surfaces.reduce((sum, surface) => sum + surface.indices.length, 0);
   const positions = new Float32Array(positionCount);
@@ -263,7 +402,8 @@ function mergeSurfaces(surfaces: readonly BuiltRoadChunk['surfaces'][number][]):
   let indexOffset = 0;
   for (const surface of surfaces) {
     positions.set(surface.positions, positionOffset);
-    for (let index = 0; index < surface.indices.length; index += 1) indices[indexOffset + index] = (surface.indices[index] ?? 0) + vertexOffset;
+    for (let index = 0; index < surface.indices.length; index += 1)
+      indices[indexOffset + index] = (surface.indices[index] ?? 0) + vertexOffset;
     positionOffset += surface.positions.length;
     vertexOffset += surface.positions.length / 3;
     indexOffset += surface.indices.length;

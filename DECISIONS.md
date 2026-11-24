@@ -8,6 +8,11 @@
 - ECS usa capacidad fija, SoA en arreglos tipados y handles con generación para evitar asignaciones por entidad en el bucle caliente.
 - La simulación corre a 60 Hz, limita la recuperación a cinco pasos por fotograma y el render interpola el giro de diagnóstico.
 - GLB se carga con MeshoptDecoder; KTX2 usa el transcodificador Basis servido desde el mismo sitio y se atribuye por separado.
+
+## 2026-11-24 - Auditoría de la fase 0
+- Prettier se añade como dependencia de desarrollo para mantener formato reproducible; no forma parte del bundle del juego.
+- Vitest se actualiza a la versión 5 porque la versión bloqueada anterior tenía vulnerabilidades críticas en el entorno de pruebas; la instalación limpia queda sin avisos de auditoría.
+- La validación de pull requests se separa del despliegue: CI comprueba formato, lint, tipos, pruebas y build al abrir o actualizar una PR; Pages conserva el despliegue desde `main`.
 # Fase 6 - hitos y fidelidad (actualización)
 
 - Los soportales de Plaza Mayor se aproximan con pilares y losa plana sobre el polígono OSM; las medidas (espaciado 4,5 m, altura 3,1 m) son fallback visual pendiente de foto.
@@ -84,14 +89,8 @@
 
 - La colisión peatonal consulta la altura de las caras triangulares renderizadas de calzada, bordillo y acera, además de la altura MDT05. Se usa un índice espacial por chunk para mantener acotada la consulta; el desnivel visual del pavimento deja de hacer que el jugador se hunda bajo la calle.
 - Las fachadas conservan la huella OSM también en LOD lejano y las cubiertas mantienen la forma inferida, en vez de sustituir toda planta por la caja de su bounding box.
-- Los vehículos ambientales y patrullas siguen siendo mallas procedurales instanciadas. El jugador y la multitud usan un personaje rigged CC0 en GLB local; los coches conducibles usan un sedán CC0 local agrupado por material para limitar llamadas de dibujo. No se incorpora contenido de GTA/Rockstar.
+- Los vehículos y peatones siguen siendo mallas procedurales originales de bajo poligonaje, ahora con cristales separados, detalles de rueda/carrocería y siluetas humanas con prendas diferenciadas. No se incorporan assets ni contenido de GTA/Rockstar.
 - El asfalto usa un valor más oscuro que piedra, hormigón y acera para separar visualmente la calzada de los espacios peatonales sin inventar marcas viales.
-
-## Dirección visual y atmósfera
-
-- Se adapta del repositorio `jhanva/gamedev-skills` la recomendación de mantener una paleta coherente y siluetas fáciles de leer; sus instrucciones de Godot/pixel art no se aplican al juego 3D de Three.js.
-- El cielo de tarde, las nubes y el resplandor solar se generan con Canvas y geometría local. La luz cálida usa sombras direccionales con el tamaño de mapa definido por el preset gráfico; no se incorporan recursos externos.
-- Los peatones separan el cuerpo y la ropa en dos mallas instanciadas. Una paleta terrosa varía las prendas sin teñir piel ni rostro; el coste añade una llamada de dibujo.
 
 - El inventario usa los nombres orientativos de la guía del proyecto y separa los objetivos de `cc-monumental` de los que requieren una futura región de ciudad. Los nombres se comparan exactamente después de normalizar mayúsculas, espacios y tildes; no se aplican coincidencias difusas.
 - Un objetivo no encontrado se informa como ausente del extracto OSM de la región, no como inexistente. Los objetivos de ciudad se muestran fuera de alcance mientras se procesa `cc-monumental`.
@@ -140,23 +139,98 @@
 - `agentsByLod` cuenta agentes ambientales cercanos, intermedios y lejanos; no incluye patrullas. La población total de peatones y coches se muestra aparte en `agents`.
 - No se añaden dependencias: Playwright ya figuraba en `devDependencies` y los overlays usan Three.js.
 
-## Modelos externos de personajes y coches (noviembre de 2026)
-
-- Se incorporan dos assets CC0 con atribución en `ATTRIBUTION.md`: Casual Walker de Tevy y Graphite four-door sedan de Innerscene.
-- LOD0 del personaje (27.997 triángulos) se usa en el jugador con animaciones idle/walk; LOD1 (8.999 triángulos) se usa en los peatones ambientales tras hornear una pose, manteniendo instancing y variaciones de color.
-- El GLB del sedán contiene 304 mallas fuente. Se transforma a los ejes y escala del juego y se fusiona por material durante la carga, reduciendo el número de lotes de dibujo; la malla procedural permanece como respaldo de carga.
-- Coches ambientales y patrullas conservan la malla instanciada; el sedán detallado se aplica a los vehículos conducibles para mantener acotado el coste gráfico.
-
 # LOD de simulación de agentes (post integración del PR #4)
 
 ## Ajustes visuales y de movimiento (noviembre de 2026)
 
 - La colisión peatonal consulta la altura de las caras triangulares renderizadas de calzada, bordillo y acera, además de la altura MDT05. Se usa un índice espacial por chunk para mantener acotada la consulta; el desnivel visual del pavimento deja de hacer que el jugador se hunda bajo la calle.
-- Las fachadas conservan la huella OSM también en LOD lejano y las cubiertas mantienen la forma inferida, en vez de sustituir toda planta por la caja de su bounding box.
-- Los vehículos ambientales y patrullas siguen siendo mallas procedurales instanciadas. El jugador y la multitud usan un personaje rigged CC0 en GLB local; los coches conducibles usan un sedán CC0 local agrupado por material para limitar llamadas de dibujo. No se incorpora contenido de GTA/Rockstar.
+- Las fachadas conservan la huella OSM también en LOD lejano y las cubiertas mantienen la forma inferida, en vez de sustituir toda planta por la caja de su bounding box. El LOD lejano puede tener un par de triángulos más que el intermedio (que usa cubierta plana); ambos siguen estando muy por debajo del LOD detallado, así que la prueba compara contra ese nivel en vez de exigir orden estricto entre los dos simplificados.
+- `paneGeometry()` genera también el atributo `uv`: sin él, `mergeGeometries()` descartaba todas las piezas del coche instanciado y caía en la cápsula de reserva. Los peatones usan colores por vértice (piel, ropa, calzado) y no se tiñen por instancia; solo los vehículos conservan `instanceColor`.
+- Los vehículos y peatones siguen siendo mallas procedurales originales de bajo poligonaje, ahora con cristales separados, detalles de rueda/carrocería y siluetas humanas con prendas diferenciadas. No se incorporan assets ni contenido de GTA/Rockstar.
 - El asfalto usa un valor más oscuro que piedra, hormigón y acera para separar visualmente la calzada de los espacios peatonales sin inventar marcas viales.
 
 - El quinto commit del fork (`251c794`) proponía un LOD por distancia, pero estaba escrito contra un `NpcSystem` sin los colisionadores de la fase 11. Se adapta la idea al sistema actual en lugar de aplicar el parche tal cual.
 - Umbrales: 90 m para el nivel cercano, 210 m para el intermedio y el resto como lejano. Cadencias de actualización 1/2/4 frames respectivamente; los tres niveles siguen dibujándose y conservando su colisionador cinemático, así que el mundo no cambia de aspecto ni de physicalidad con la distancia.
 - El tiempo de simulación se acumula por agente y se reparte entre frames (`slot % cadence`) para no concentrar el trabajo en un solo fotograma. Cada paso se limita a 0,05 s para que un agente lejano no salte una arista corta; el coste es que avanza más despacio fuera del nivel cercano. `lodCounts` expone los tres recuentos al HUD de depuración; antes se mostraba un `0 / 0 / 0` fijo porque no existía el planificador.
 - El despawn usa distancia al cuadrado y se comprueba solo cada 0,25 s, igual que el spawn, para reducir raíces cuadradas en el bucle caliente. Sin fuentes geográficas ni assets nuevos.
+
+# Pasada visual de era PS2 (integración del PR #9)
+
+- Se integra el trabajo de `delgadomin` del PR #9 mediante el PR #10: el original estaba en draft, tenía un conflicto en `npc-models.ts` contra el arreglo de `uv` del PR #8 y la rama del fork no se puede actualizar desde esta cuenta. El PR #10 conserva la autoría original y añade solo las correcciones.
+- `seededSequence()` genera los moteados del estuco. El PR #9 trataba `random` (un número devuelto por `seeded()`) como función, lo que rompía `typecheck` y `build`; la nueva secuencia mantiene la apariencia determinista sin llamadas aleatorias por fotograma.
+- `createSedanBodyGeometry()` y `createWheelArchGeometry()` generan `uv`. Sin ese atributo, `mergeGeometries()` volvía a descartar el coche instanciado y caía en la malla de reserva.
+- Las siluetas, prendas, ventanas arqueadas, contraventanas y detalles de coches siguen siendo geometría procedural original; no se añaden assets con copyright ni se modifica `public/world`.
+
+# Pasada de pulido de gráficos, atmósfera y comportamiento de NPCs (noviembre de 2026)
+
+- Iluminación y sombras direccionales: la luz solar (`sun`) activa sombras suaves PCF con caja ortográfica centrada en el jugador, desplazándose en cada fotograma para proyectar sombras nítidas sobre el terreno y las calles sin exceder el presupuesto de rendimiento.
+- Cúpula celeste y niebla: gradiente atmosférico cálido (horizonte ibérico dorado en transición a azul cenital) y niebla suavizada que empieza a 0.5× la distancia de visión para evitar el corte gris plano previo.
+- Materiales diferenciados: peatones con material textil mate (roughness 0.88, metalness 0.02) y vehículos con acabado automotriz pulido (roughness 0.28-0.32, metalness 0.48-0.55) con reflejos en carrocería y cristales.
+- Variedad y comportamiento de NPCs: paleta ampliada a 20 tonos de ropa/piel y 14 de vehículos; escalas humanas variadas (0.88-1.12); interpolación angular de giros (`turnRate`) y rampa suave de aceleración/frenado para erradicar movimientos robóticos; balanceo y ligera inclinación hacia adelante al caminar/correr.
+- Sensación de velocidad y cámara: interpolación suave de seguimiento con lerp en la cámara y apertura dinámica del FOV en vehículos según la velocidad punta. Postura de carrera en el personaje con inclinación de torso y braceo natural.
+
+## Corrección de robo de vehículo y física de entrada (noviembre de 2026)
+
+- Al subirse a un vehículo ambiental (`E`), el coche robado hereda la orientación angular (`heading`) del vehículo ambiental en la calle y su color procedural exacto. Anteriormente se creaba con `heading = 0` y color rojo por defecto, lo que hacía que el coche apareciera atravesado en la calle (a menudo penetrando edificios o bordillos) y cambiara de color.
+- Cota de spawn físico: el chasis dinámico se sitúa a `y + 0.82` (en lugar de `y + 0.60`). A `0.60` los muelles de la suspensión (longitud de reposo 0.30 m + radio 0.35 m + conexión 0.20 m = 0.85 m) se comprimían 25 cm contra el suelo en el primer frame, liberando una fuerza de restitución que lanzaba el coche catapultado hacia arriba. A `0.82` el vehículo apoya suavemente en equilibrio.
+- Matriz de instancia fantasma: al requisar o liberar un agente en `NpcSystem.release()`, su matriz en el `InstancedMesh` se colapsa a escala cero bajo el suelo (`y = -9999`) de inmediato. Esto evita que la geometría ambiental anterior quede congelada en el mismo sitio que el nuevo vehículo manejable solapándose visualmente.
+- Salida de vehículo segura: al bajarse con `E`, el jugador calcula el vector lateral a partir de la orientación del vehículo y comprueba colisión con edificios (`collidesWithBuilding`) antes de elegir el lado izquierdo o derecho, evitando quedar atrapado dentro de una pared.
+
+# Gran renovación visual, modelos 3D y ambientación atmosférica (noviembre de 2026)
+
+## 1. Texturizado procedural y relieve de superficies
+- **Micro-relieve de terreno:** Se incorpora un mapa de detalle procedural de 512×512 píxeles (`createTerrainDetailTexture()`) con ruido multifrecuencia, motas de grava, esquirlas de cuarzo y partículas minerales de tierra. Se generan coordenadas UV planares en `ChunkManager.geometryForLod()` (repetición cada 10 m), modulando los colores de vértice del terreno para erradicar la apariencia plana y artificial de 1995.
+- **Pavimentos y calzadas (256×256):** Texturas procedurales enriquecidas con adoquines de granito con biseles de cincelado y llagas de mortero para calles del casco histórico (`stone`), losas de granito serradas con relieve para aceras (`sidewalk`), y asfalto granular con áridos para vías de ensanche y periferia.
+- **Tejas curvas y sillería monumental:** Textura de tejados con sombreado cilíndrico tridimensional emulando la curvatura y solapes de las tejas árabes tradicionales de Cáceres; sillería de granito con hiladas regulares, juntas de mortero rehundidas y destellos minerales. Ventanas con reflejo oblicuo de cielo y repisas de granito biseladas.
+
+## 2. Vegetación orgánica y mobiliario urbano histórico
+- **Árboles mediterráneos:** Sustitución de los conos de 8 segmentos por mallas compuestas (`createTreeTrunkGeometry` y `createTreeFoliageGeometry`) fusionadas con `BufferGeometryUtils.mergeGeometries`: troncos ramificados con corteza leñosa y copas multirracimo de cinco volúmenes dodecaédricos orgánicos inspirados en encinas y pinos piñoneros ibéricos.
+- **Farolas fernandinas de forja:** Sustitución de los cilindros simples por farolas históricas con base octogonal, fuste estriado, collar de capitel, jaula de linterna de cuatro caras y remate cónico, con emisión suave y proyección de sombras suaves en el suelo.
+
+## 3. Renovación de vehículos y personajes
+- **Pinturas automotrices realistas:** Sustitución del generador de colores HSL estridentes por una paleta curada de acabados de automoción (Blanco Nácar, Negro Profundo, Gris Grafito, Plata Metalizada, Azul Medianoche, Rojo Burdeos, Verde Bosque, Arena Ibérica, etc.).
+- **Detallado vehicular 3D:** Llantas de aleación plateadas de 5 radios con discos de freno oscuros, ópticas de xenón delanteras (`emissive: 0xfffae8`, intensidad 1.2), pilotos traseros rojo rubí (`emissiveIntensity: 1.0`), tubos de escape dobles cromados en la zaga y matrículas delantera y trasera formato español/europeo con banda azul de la UE.
+- **Patrullas policiales:** Librea lateral con franjas verde/azul inspirada en la Policía Local y Guardia Civil, puente de luces aerodinámico con estroboscopios azul/rojo y bocina central.
+- **Diseño del protagonista:** Gafas de sol oscuras de acetato polarizado, cremallera metálica plateada con tirador dorado en la chaqueta, cinturón de cuero con hebilla dorada, reloj de pulsera en la muñeca izquierda y zapatillas urbanas con entresuela blanca y suela de caucho.
+- **Peatones:** Paleta de prendas europeas sobrias, gafas de sol, bandoleras y bolsos cruzados de cuero, y zapatillas con suela blanca contrastada.
+
+## 4. Iluminación cinematográfica, sol dorado y cúpula celeste
+- **Ángulo solar de hora dorada:** Orientación de la luz solar a ~33° de elevación (`dx = -320, dy = 240, dz = 220`), generando sombras diagonales largas y estilizadas que realzan el relieve arquitectónico de torres, palacios y arcos.
+- **Sol radiante y halo en el cielo:** Incorporación de un disco solar luminoso y corona cálida translúcida en la cúpula celeste que se desplazan sincronizados con el jugador.
+- **Cúpula celeste ibérica:** Gradiente tricromático cálido con tono melocotón/ámbar en el horizonte, transición a azul celeste y cenit zafiro profundo, sincronizado con niebla atmosférica (`#c8d7df`) y exposición fílmica ACES a 1.14.
+- **Ajustes de sombras:** Reducción de la distancia de cámara de sombras (`near: 50, far: 850`) y calibración de `normalBias = 0.035` para erradicar el *shadow acne* y maximizar la precisión de profundidad.
+
+# Integración de estándares gamedev-skills (audio procedural, minimapa y game feel)
+
+Siguiendo las metodologías y directrices del repositorio `gamedev-skills` (`sound-brief`, `design-system`, `game-arch` y `smoke-test`):
+
+## 1. Arquitectura de audio procedural Web Audio API (`src/engine/audio-system.ts`)
+- **Jerarquía de buses sin assets externos:** Para respetar la regla de no incorporar ficheros con copyright ni sobrecargar la red, todo el sonido se sintetiza en tiempo real mediante la Web Audio API estándar:
+  - **Motor de vehículo:** Oscilador en diente de sierra modulado dinámicamente con filtro pasobajo. El tono sube de 42 Hz (ralentí) hasta 200 Hz según la velocidad y aceleración, con volumen continuo.
+  - **Derrapes y frenadas:** Generador de ruido blanco procedural filtrado en paso banda (~850 Hz) que se activa suavemente al frenar con espacio o girar bruscamente a velocidad.
+  - **Claxon europeo:** Oscilador bitonal armónico (420 Hz + 525 Hz) accionado con la tecla `H`.
+  - **Sirena policial:** Oscilador sinusoidal modulado por un LFO a 1.1 Hz (barrido de 420 Hz a 780 Hz), cuyo volumen se atenúa proporcionalmente a la distancia de la patrulla más cercana al jugador.
+  - **Pisadas:** Ráfagas cortas de ruido filtrado sincronizadas con el medio ciclo de zancada (`stepTriggered`) del personaje al caminar y correr.
+  - **Impactos:** Golpe con caída exponencial de tono (140 Hz a 32 Hz) y crujido de baja frecuencia en choques y atropellos.
+  - **Alertas y detención:** Arpegio ascendente al subir estrellas de calor y fanfarria descendente al ser detenido.
+  - **Muteo accesible:** Tecla `M` conmuta el volumen maestro con aviso en pantalla. Desbloqueo automático tras primer clic/tecla.
+
+## 2. Minimapa de radar táctico (`src/ui/minimap.ts`)
+- Radar circular estilo mundo abierto en esquina inferior izquierda, renderizado sobre canvas 2D con rotación solidaria a la orientación de cámara y aguja indicadora de Norte ("N").
+- Marcadores de posición (blips): flecha direccional del jugador, puntos ámbar para tráfico circundante, y estroboscopios parpadeantes azul/rojo para vehículos policiales en persecución.
+- Borde dinámico con animación pulsante de persecución activa durante niveles de búsqueda.
+
+## 3. Jugabilidad y respuesta cinemática de cámara (Trauma / Shake)
+- Se incorpora el modelo matemático de trauma cuadrático en `CameraRig.addTrauma()`: en impactos de tráfico o atropellos, la cámara experimenta una sacudida proporcional amortiguada en 3 ejes, dotando a la conducción de peso y fisicidad.
+
+- Las celdas de terreno conservan las alturas MDT originales y el mismo presupuesto de triángulos; la diagonal se elige según la menor diferencia vertical para reducir el error de interpolación local.
+
+# Integración de los PR #11 y #14 - modelos CC0 locales (noviembre de 2026)
+
+- El PR #14 resultó ser un superset del PR #11 y partía de una base antigua. Se integra resolviendo el merge sobre `main` para conservar las correcciones de `uv`, colisión, LOD, audio, minimapa y cámara ya aceptadas. El PR #11 se cierra como supersedido acreditando a `delgadomin`.
+- Se incorporan tres GLB CC0 servidos desde `public/models/`: «Casual Walker» de Tevy (LOD0 para el jugador, LOD1 para la multitud) y «Graphite four-door sedan» de Innerscene para los vehículos manejables. Licencias y URLs en `ATTRIBUTION.md`. No se usa contenido de GTA/Rockstar ni se modifican los hashes de `public/world`.
+- El jugador sustituye su malla procedural cuando termina de cargar el GLB y reproduce las animaciones `idle`/`walk` del asset; el disparo de pisadas sigue ligado a `stepTriggered`. La geometría original se oculta, no se elimina, para servir de fallback ante un fallo de carga.
+- La multitud usa una pose `walk` horneada del LOD1 en un único `InstancedMesh`. Se descarta el teñido por instancia del PR porque coloreaba por igual piel y ropa; los coches ambientales y las patrullas siguen siendo geometría original instanciada.
+- El sedán CC0 se agrupa por material al cargarlo para limitar las llamadas de dibujo. El chasis, el colisionador y la cota de spawn (`y + 0.82`) siguen siendo los de `main`; el modelo no altera la física.
+- La cúpula procedural del PR #11 (`atmosphere.ts`) se descarta: `main` ya aporta gradiente ibérico, disco solar y corona con exposición ACES 1.14. Dos cielos simultáneos duplicarían dibujo y romperían la paleta actual.
+- Coste: ~7,52 MB de GLB con texturas embebidas, cargados de forma diferida tras `prepareRenderer()`; dentro del objetivo de <25 MB de carga inicial y sin URIs externos en tiempo de ejecución.

@@ -68,7 +68,9 @@ export class EntityStore {
     this.setVector(this.rotation, this.requireSlot(id), x, y, z);
   }
 
-  forEachTransform(callback: (id: EntityId, x: number, y: number, z: number, rotationY: number) => void): void {
+  forEachTransform(
+    callback: (id: EntityId, x: number, y: number, z: number, rotationY: number) => void,
+  ): void {
     for (let slot = 0; slot < this.capacity; slot += 1) {
       if (this.active[slot] === 0) continue;
       const offset = slot * 3;

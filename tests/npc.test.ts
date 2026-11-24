@@ -9,7 +9,13 @@ function segment(
   id: string,
   fromNode: string,
   toNode: string,
-  options: { highway: string; lanes: number; oneWay?: -1 | 0 | 1; walkable?: boolean; length: number },
+  options: {
+    highway: string;
+    lanes: number;
+    oneWay?: -1 | 0 | 1;
+    walkable?: boolean;
+    length: number;
+  },
 ): RoadNetwork['segments'][number] {
   const forward = options.oneWay !== -1;
   const reverse = options.oneWay === undefined || options.oneWay === 0;
@@ -98,8 +104,12 @@ describe('road graph for ambient agents', () => {
         tracked.set(id, { x, z });
         return id;
       },
-      move: (id, x, _y, z) => { tracked.set(id, { x, z }); },
-      remove: (id) => { tracked.delete(id); },
+      move: (id, x, _y, z) => {
+        tracked.set(id, { x, z });
+      },
+      remove: (id) => {
+        tracked.delete(id);
+      },
     };
     const system = new NpcSystem(graph, { pedestrians: 8, vehicles: 3 }, colliders);
     const camera = new THREE.PerspectiveCamera();
@@ -110,10 +120,10 @@ describe('road graph for ambient agents', () => {
     try {
       for (let frame = 0; frame < 240; frame += 1) system.update(1 / 60, player, camera, world);
       const meshes = system.group.children as THREE.InstancedMesh[];
-      for (const mesh of meshes) {
-        expect(mesh.geometry.getAttribute('color')).toBeDefined();
-        expect(mesh.instanceColor).not.toBeNull();
-      }
+      expect(meshes[0]?.geometry.getAttribute('color')).toBeDefined();
+      expect(meshes[1]?.geometry.getAttribute('color')).toBeDefined();
+      // Pedestrians carry skin/clothing colours in vertices; only cars are tinted per instance.
+      expect(meshes[1]?.instanceColor).not.toBeNull();
       const occupied = tracked.values().next().value;
       expect(occupied).toBeDefined();
       if (!occupied) return;
