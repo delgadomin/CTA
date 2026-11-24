@@ -190,7 +190,7 @@ function modelUrl(path: string): string {
 function loadVehicleVisual(vehicle: Vehicle): void {
   if (!chunks) return;
   void vehicle
-    .loadModel(chunks, modelUrl('models/vehicles/graphite-sedan.glb'))
+    .loadModel(chunks, modelUrl('models/vehicles/caceres-sedan.glb'))
     .catch((error: unknown) => {
       logger.warn('Detailed vehicle model failed to load; keeping the built-in vehicle', {
         error: String(error),
@@ -776,7 +776,7 @@ async function initializeWorld(): Promise<void> {
   await chunks.prepareRenderer(renderer, camera);
   chunks.setDebugBorders(showDebug);
   void character
-    .loadModel(chunks, modelUrl('models/characters/casual-walker.glb'))
+    .loadModel(chunks, modelUrl('models/characters/caceres-pedestrian.glb'))
     .catch((error: unknown) => {
       logger.warn('Detailed player model failed to load; keeping the built-in character', {
         error: String(error),
@@ -810,7 +810,7 @@ async function initializeNpcs(worldBaseUrl: URL): Promise<void> {
   scene.add(npcs.group);
   if (chunks) {
     void chunks
-      .loadModel(modelUrl('models/characters/casual-walker-lod1.glb'), 60)
+      .loadModel(modelUrl('models/characters/caceres-pedestrian.glb'), 60)
       .then((gltf) => npcs?.setPedestrianModel(gltf))
       .catch((error: unknown) => {
         logger.warn('Detailed pedestrian model failed to load; keeping the built-in crowd', {

@@ -29,9 +29,22 @@ La ruta de Blender depende de la instalación local; el script no se ejecuta en 
 
 | Asset | Archivo | Licencia | Fuente | Atribución |
 | --- | --- | --- | --- | --- |
-| Tevy — Casual Walker | `public/models/characters/casual-walker.glb`, `casual-walker-lod1.glb` | CC0 1.0 | https://tevy.dev/models/casual-walker | Registrada en `ATTRIBUTION.md`. Pendiente de sustituir en la siguiente tanda. |
-| Innerscene — Graphite four-door sedan | `public/models/vehicles/graphite-sedan.glb` | CC0 | https://www.innerscene.com/tools/library/3d-parts/graphite-four-door-sedan-eed96d12 | Registrada en `ATTRIBUTION.md`. Pendiente de sustituir en la siguiente tanda. |
+| Kenney — Animated Characters: Protagonists | `public/models/characters/caceres-pedestrian.glb` | CC0 1.0 | https://kenney.nl/assets/animated-characters-protagonists | Rig convertido de FBX a GLB con `tools/generate_cc0_assets.py`; textura `skaterMaleA` embebida y clips `idle`/`walk`. Sustituye a Tevy «Casual Walker». |
+| Kenney — Car Kit | `public/models/vehicles/caceres-sedan.glb` | CC0 1.0 | https://kenney.nl/assets/car-kit | Sedán GLB reexportado con `colormap.png` embebida, sin marcas. Sustituye a Innerscene «Graphite sedan». |
+
+Los archivos antiguos (`casual-walker*.glb` y `graphite-sedan.glb`) se han eliminado. El peatón sirve jugador y multitud: `character.ts` reproduce sus animaciones y `npc-system.ts` hornea una pose de marcha para el `InstancedMesh`, que actúa como LOD1 sin segundo archivo.
+
+Para regenerar los derivados (requiere Blender 5.x y los paquetes CC0 descargados en directorios separados):
+
+```powershell
+& 'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe' `
+  --background --factory-startup --python tools/generate_cc0_assets.py -- `
+  --characters <kenney-animated-characters-protagonists> `
+  --cars <kenney-car-kit> `
+  --output <repository-root>
+```
 
 ## Pendiente
 
-Los modelos CC0/procedurales de personajes y coches de la siguiente tanda se añadirán aquí antes de tocar `src/main.ts`, `src/world/character.ts` o `src/world/vehicle.ts`.
+- Revisar en navegador la escala del peatón y la alineación del sedán con el colisionador y las ruedas animadas.
+- Valorar variantes adicionales de Kenney (taxi, patrulla) para tráfico ambiental sin romper el instanciado por color.

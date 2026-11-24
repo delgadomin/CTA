@@ -4,8 +4,9 @@
 
 - **Fases completadas:** 0 a 11 implementadas, auditadas y fusionadas en `main`.
 - **Nuevas directrices estratégicas:** Implementadas en [`strategy/`](strategy/README.md) y [`AGENTS.md`](AGENTS.md) (modelos GLB CC0/CC-BY, Catastro de España para 12.000 portales, oficios cacereños, minimapa táctico de radar y audio procedural Web Audio).
-- **City kit integrado:** El primer kit GLB procedural (edificios/props) está activo por defecto en `main` y se puede comparar con `?citykit=0`. Falta la revisión visual humana y la sustitución de personajes/coches.
-- **Próxima fase:** Fase 12 — Combate ligero estilizado e inicio de los oficios urbanos (Línea 1/8 autobús, paquetería en Judería). La tanda de assets continuará con personajes y coches antes de tocar esa fase.
+- **City kit integrado:** El primer kit GLB procedural (edificios/props) está activo por defecto en `main` y se puede comparar con `?citykit=0`. Falta la revisión visual humana de escala/orientación.
+- **Personaje y coche sustituidos:** Los GLB de Tevy e Innerscene se han retirado y reemplazado por derivados CC0 de Kenney (`caceres-pedestrian.glb` y `caceres-sedan.glb`), con licencias registradas y fallback procedural intacto. Falta la revisión visual en navegador.
+- **Próxima fase:** Fase 12 — Combate ligero estilizado e inicio de los oficios urbanos (Línea 1/8 autobús, paquetería en Judería), después de validar visualmente esta tanda de assets.
 - **Despliegue corregido:** `format:check` volvió a pasar en GitHub Actions tras formatear `src/world/city-kit.ts`; el flujo de Pages ya puede publicar el build del city kit.
 
 ## City Kit GLB procedural (rama `feat/assets-citykit`)
@@ -566,3 +567,25 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - `npm run typecheck`: sin errores de TypeScript.
 - `npm test`: 47/47 pruebas unitarias pasando (13/13 suites).
 - `npm run build`: compilación de producción exitosa en 5.3s.
+
+## Sustitución de personaje y coche CC0 (completada)
+
+### Hecho
+- `tools/generate_cc0_assets.py` convierte el personaje FBX de Kenney a `public/models/characters/caceres-pedestrian.glb` (230 KB): textura embebida, escala de 1,88 m y clips `idle`/`walk`. Copia además el sedán CC0 de Kenney como `public/models/vehicles/caceres-sedan.glb` (172 KB).
+- `src/main.ts` carga el mismo GLB para el jugador y para la multitud. El jugador reproduce las animaciones; los peatones instanciados hornean una pose de marcha en tiempo de carga.
+- `src/world/vehicle.ts` descarta las ruedas estáticas del GLB, conserva las ruedas animadas de Rapier, escala la carrocería al colisionador existente y aplica el color del coche requisado al material `colormap`.
+- Se eliminan `casual-walker.glb`, `casual-walker-lod1.glb` y `graphite-sedan.glb`. Licencias y URLs en `ATTRIBUTION.md` y `ASSETS_LICENSES.md`; decisiones en `DECISIONS.md`.
+- La descarga de modelos baja de ~7,52 MB a ~0,40 MB. No se añaden dependencias ni se modifica `public/world`.
+
+### Verificación
+- `format:check` (con salto de fin de línea), `lint`, `typecheck`, `test` (53/53) y `build` pasan.
+- Navegador con 5 chunks: peatón y sedán responden 200, cero errores de consola, 111 draw calls y 447.755 triángulos a pie; 485.183 triángulos dentro del coche. El sedán se reexportó con `colormap.png` embebida para eliminar la única petición externa detectada.
+- Capturas para revisión humana: `reports/cc0-on-foot.png` y `reports/cc0-in-car.png` (fuera del repo). El FPS de la prueba (1–2) no es representativo porque Chromium usa WebGL por software.
+
+### Pendiente
+- Revisar visualmente la orientación del peatón, la altura de la carrocería y que no haya ruedas duplicadas.
+- Decidir si el tráfico ambiental y las patrullas adoptan también variantes GLB de Kenney sin perder el instanciado por color.
+
+### Cómo probarlo
+- `npm run dev` y abrir `http://localhost:5173/?debug=1`: caminar, correr y observar a los peatones; entrar en el coche con `E` y comprobar la carrocería, las ruedas y el color al requisar un vehículo ambiental.
+- Regenerar los GLB con Blender 5.2 según el comando documentado en `ASSETS_LICENSES.md`.

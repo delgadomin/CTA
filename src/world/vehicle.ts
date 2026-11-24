@@ -369,8 +369,7 @@ export class Vehicle {
   async loadModel(chunks: ChunkManager, url: string): Promise<void> {
     const gltf = await chunks.loadModel(url, 80);
     const model = createMergedVehicleVisual(gltf, this.color);
-    model.name = 'CC0 detailed graphite sedan';
-    model.rotation.y = Math.PI / 2;
+    model.name = 'Kenney CC0 sedan';
     model.traverse((object) => {
       if (!(object instanceof THREE.Mesh)) return;
       object.castShadow = true;
@@ -404,9 +403,15 @@ function taperedCabinGeometry(): THREE.BufferGeometry {
   return geometry;
 }
 
-/** Clone the CC0 sedan and merge its 300+ meshes into one batch per material. */
+/** Merge the Kenney sedan body into one batch per material and reuse the animated wheels. */
 function createMergedVehicleVisual(gltf: GLTF, paintColor?: number): THREE.Group {
   const source = gltf.scene.clone(true);
+  // Kenney ships four static wheels; the procedural wheels keep steering and rolling.
+  source.traverse((object) => {
+    if (object instanceof THREE.Mesh && object.name.toLowerCase().includes('wheel')) {
+      object.parent?.remove(object);
+    }
+  });
   source.updateMatrixWorld(true);
   const batches = new Map<
     string,
@@ -415,7 +420,8 @@ function createMergedVehicleVisual(gltf: GLTF, paintColor?: number): THREE.Group
   const bounds = new THREE.Box3().setFromObject(source);
   if (bounds.isEmpty()) throw new Error('The sedan model has no renderable geometry.');
   const center = bounds.getCenter(new THREE.Vector3());
-  const scale = new THREE.Vector3(0.84, 1.3, 0.98);
+  // The source body is 1.5 × 1.15 × 2.55 m; this matches the 1.8 × 4.1 m chassis.
+  const scale = new THREE.Vector3(1.2, 1, 1.6);
 
   source.traverse((object) => {
     if (!(object instanceof THREE.Mesh) || object instanceof THREE.SkinnedMesh) return;
@@ -439,7 +445,8 @@ function createMergedVehicleVisual(gltf: GLTF, paintColor?: number): THREE.Group
         paintColor !== undefined &&
         material instanceof THREE.MeshStandardMaterial &&
         (material.name.toLowerCase().includes('paint') ||
-          material.name.toLowerCase().includes('body'))
+          material.name.toLowerCase().includes('body') ||
+          material.name.toLowerCase().includes('colormap'))
       ) {
         material = material.clone();
         material.color.setHex(paintColor);
@@ -451,7 +458,7 @@ function createMergedVehicleVisual(gltf: GLTF, paintColor?: number): THREE.Group
         sourceGeometry.groups.length > 0,
       );
       geometry.applyMatrix4(object.matrixWorld);
-      geometry.translate(-center.x, -center.y, -center.z);
+      geometry.translate(-center.x, -center.y + 0.35, -center.z);
       geometry.scale(scale.x, scale.y, scale.z);
       const signature = Object.entries(geometry.attributes)
         .map(([name, attribute]) => `${name}:${attribute.itemSize}:${attribute.normalized}`)
