@@ -482,3 +482,10 @@ Los datos fuente se guardan en caché local ignorada por git; el juego usa los c
 - `npm run typecheck`: sin errores de TypeScript.
 - `npm test`: 47/47 pruebas unitarias pasando (13/13 suites, incluyendo `tests/audio-and-ui.test.ts`).
 - `npm run build`: compilación de producción exitosa en 2.11s.
+
+
+## Pasada de atmósfera y personajes
+
+- El cielo procedural añade gradiente cálido, bandas de nubes y resplandor solar; la iluminación proyecta sombras direccionales.
+- Las prendas de peatones varían por instancia en una malla separada, conservando los tonos de piel y los rasgos faciales.
+- Pendiente: inspección visual en navegador y revisión de los checks de GitHub.
